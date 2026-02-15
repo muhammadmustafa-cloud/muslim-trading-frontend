@@ -1,0 +1,440 @@
+import { useState, useEffect, useMemo } from "react";
+import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { FaBoxOpen, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import Modal from "../components/Modal.jsx";
+import ConfirmDialog from "../components/ConfirmDialog.jsx";
+import TablePagination from "../components/TablePagination.jsx";
+
+const today = new Date().toISOString().slice(0, 10);
+
+export default function StockEntries() {
+  const [list, setList] = useState([]);
+  const [items, setItems] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({
+    date: today,
+    itemId: "",
+    supplierId: "",
+    kattay: "",
+    kgPerKata: "",
+    amount: "",
+    amountPaid: "",
+    accountId: "",
+    notes: "",
+    outputs: [{ partId: "", quantity: "" }],
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
+  const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", supplierId: "" });
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const fetchItems = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/items`);
+      const data = await res.json();
+      if (res.ok) setItems(data.data || []);
+    } catch (_) {}
+  };
+  const fetchSuppliers = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/suppliers`);
+      const data = await res.json();
+      if (res.ok) setSuppliers(data.data || []);
+    } catch (_) {}
+  };
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/accounts`);
+      const data = await res.json();
+      if (res.ok) setAccounts(data.data || []);
+    } catch (_) {}
+  };
+
+  const fetchList = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.set("dateTo", filters.dateTo);
+      if (filters.itemId) params.set("itemId", filters.itemId);
+      if (filters.supplierId) params.set("supplierId", filters.supplierId);
+      const res = await fetch(`${API_BASE_URL}/stock-entries?${params}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      setList(data.data || []);
+    } catch (e) {
+      setError(e.message);
+      setList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+    fetchSuppliers();
+    fetchAccounts();
+  }, []);
+  useEffect(() => {
+    fetchList();
+  }, [filters.dateFrom, filters.dateTo, filters.itemId, filters.supplierId]);
+
+  const selectedItem = useMemo(() => items.find((i) => i._id === form.itemId), [items, form.itemId]);
+  const itemParts = selectedItem?.parts || [];
+
+  const resetForm = () => {
+    setForm({
+      date: today,
+      itemId: "",
+      supplierId: "",
+      kattay: "",
+      kgPerKata: "",
+      amount: "",
+      amountPaid: "",
+      accountId: "",
+      notes: "",
+      outputs: [{ partId: "", quantity: "" }],
+    });
+    setEditingId(null);
+    setModalOpen(false);
+  };
+  const openAddModal = () => {
+    resetForm();
+    setForm((f) => ({ ...f, date: today }));
+    setModalOpen(true);
+  };
+
+  const addOutputRow = () => setForm((f) => ({ ...f, outputs: [...f.outputs, { partId: "", quantity: "" }] }));
+  const removeOutputRow = (index) => setForm((f) => ({ ...f, outputs: f.outputs.filter((_, i) => i !== index) }));
+  const updateOutput = (index, field, value) =>
+    setForm((f) => ({
+      ...f,
+      outputs: f.outputs.map((o, i) => (i === index ? { ...o, [field]: value } : o)),
+    }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.itemId || !form.supplierId) {
+      setError("Item aur supplier zaroori hain.");
+      return;
+    }
+    const outputsToSend = form.outputs
+      .filter((o) => o.partId && Number(o.quantity) >= 0)
+      .map((o) => ({ partId: o.partId, quantity: Number(o.quantity) }));
+    if (outputsToSend.length === 0) {
+      setError("Kam az kam ek output (part + quantity) add karein.");
+      return;
+    }
+    setError("");
+    try {
+      const payload = {
+        date: form.date,
+        itemId: form.itemId,
+        supplierId: form.supplierId,
+        kattay: Number(form.kattay) || 0,
+        kgPerKata: Number(form.kgPerKata) || 0,
+        amount: Number(form.amount) || 0,
+        amountPaid: Number(form.amountPaid) || 0,
+        accountId: form.accountId || undefined,
+        notes: form.notes || "",
+        outputs: outputsToSend,
+      };
+      if (editingId) await apiPut(`/stock-entries/${editingId}`, payload);
+      else await apiPost("/stock-entries", payload);
+      resetForm();
+      fetchList();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleEdit = (row) => {
+    const itemId = row.itemId?._id || row.itemId;
+    const outputs =
+      (row.outputs && row.outputs.length)
+        ? row.outputs.map((o) => ({ partId: o.partId?.toString?.() || o.partId, quantity: o.quantity }))
+        : [{ partId: "", quantity: "" }];
+    setForm({
+      date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
+      itemId: itemId || "",
+      supplierId: row.supplierId?._id || row.supplierId || "",
+      kattay: row.kattay ?? "",
+      kgPerKata: row.kgPerKata ?? "",
+      amount: row.amount ?? "",
+      amountPaid: row.amountPaid ?? "",
+      accountId: row.accountId?._id || row.accountId || "",
+      notes: row.notes || "",
+      outputs: outputs.length ? outputs : [{ partId: "", quantity: "" }],
+    });
+    setEditingId(row._id);
+    setModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.id) return;
+    setError("");
+    try {
+      await apiDelete(`/stock-entries/${deleteConfirm.id}`);
+      if (editingId === deleteConfirm.id) resetForm();
+      fetchList();
+    } catch (e) {
+      setError(e.message);
+    }
+    setDeleteConfirm({ open: false, id: null });
+  };
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir(key === "date" ? "desc" : "asc");
+    }
+  };
+
+  const sortedList = useMemo(() => {
+    const arr = [...list];
+    arr.sort((a, b) => {
+      if (sortKey === "date") {
+        const va = new Date(a.date).getTime();
+        const vb = new Date(b.date).getTime();
+        return sortDir === "asc" ? va - vb : vb - va;
+      }
+      if (sortKey === "item") {
+        const va = (a.itemId?.name || "").toLowerCase();
+        const vb = (b.itemId?.name || "").toLowerCase();
+        return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
+      }
+      if (sortKey === "supplier") {
+        const va = (a.supplierId?.name || "").toLowerCase();
+        const vb = (b.supplierId?.name || "").toLowerCase();
+        return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
+      }
+      if (sortKey === "kgPerKata") {
+        const va = Number(a.kgPerKata) || 0;
+        const vb = Number(b.kgPerKata) || 0;
+        return sortDir === "asc" ? va - vb : vb - va;
+      }
+      if (sortKey === "amount") {
+        const va = Number(a.amount) || 0;
+        const vb = Number(b.amount) || 0;
+        return sortDir === "asc" ? va - vb : vb - va;
+      }
+      return 0;
+    });
+    return arr;
+  }, [list, sortKey, sortDir]);
+
+  const paginatedList = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedList.slice(start, start + pageSize);
+  }, [sortedList, page, pageSize]);
+
+  const SortIcon = ({ columnKey }) => {
+    if (sortKey !== columnKey) return <FaSort className="w-3.5 h-3.5 ml-1 opacity-50" />;
+    return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
+  };
+
+  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="page-title flex items-center gap-2">
+            <FaBoxOpen className="w-7 h-7 text-amber-500" />
+            Stock Entry
+          </h1>
+          <p className="page-subtitle">Jab stock aaye: kattay, aik katta kitne kg, price/amount aap daalein. Phir hisson ki output quantity.</p>
+        </div>
+        <button type="button" onClick={openAddModal} className="btn-primary">
+          <FaPlus className="w-4 h-4" /> Add stock entry
+        </button>
+      </header>
+
+      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit stock entry" : "Nayi stock entry add karein"}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="input-label">Tarikh *</label>
+              <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required />
+            </div>
+            <div>
+              <label className="input-label">Item *</label>
+              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value, outputs: [{ partId: "", quantity: "" }] }))} className="input-field" required>
+                <option value="">Select item</option>
+                {items.map((i) => (
+                  <option key={i._id} value={i._id}>{i.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="input-label">Supplier *</label>
+              <select value={form.supplierId} onChange={(e) => setForm((f) => ({ ...f, supplierId: e.target.value }))} className="input-field" required>
+                <option value="">Select supplier</option>
+                {suppliers.map((s) => (
+                  <option key={s._id} value={s._id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="input-label">Kitne kattay aaye</label>
+              <input type="number" placeholder="0" value={form.kattay} onChange={(e) => setForm((f) => ({ ...f, kattay: e.target.value }))} className="input-field" min="0" step="1" />
+            </div>
+            <div>
+              <label className="input-label">Aik katta kitne kg ka he</label>
+              <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => setForm((f) => ({ ...f, kgPerKata: e.target.value }))} className="input-field" min="0" step="any" />
+            </div>
+            <div>
+              <label className="input-label">Price / Amount</label>
+              <input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" min="0" step="1" />
+            </div>
+            <div>
+              <label className="input-label">Amount paid (optional)</label>
+              <input type="number" placeholder="0" value={form.amountPaid} onChange={(e) => setForm((f) => ({ ...f, amountPaid: e.target.value }))} className="input-field" min="0" step="1" />
+            </div>
+            <div>
+              <label className="input-label">Account (if paid)</label>
+              <select value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))} className="input-field">
+                <option value="">—</option>
+                {accounts.map((a) => (
+                  <option key={a._id} value={a._id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="input-label mb-0">Produced (output) * — hisse + quantity</label>
+              <button type="button" onClick={addOutputRow} className="btn-secondary text-sm py-2">
+                <FaPlus className="w-3.5 h-3.5 mr-1" /> Add row
+              </button>
+            </div>
+            <div className="space-y-2">
+              {form.outputs.map((o, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <select
+                    value={o.partId}
+                    onChange={(e) => updateOutput(index, "partId", e.target.value)}
+                    className="input-field flex-1"
+                  >
+                    <option value="">Select part</option>
+                    {itemParts.map((p) => (
+                      <option key={p._id} value={p._id}>{p.partName}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Qty"
+                    value={o.quantity}
+                    onChange={(e) => updateOutput(index, "quantity", e.target.value)}
+                    className="input-field w-24"
+                    min="0"
+                    step="any"
+                  />
+                  <button type="button" onClick={() => removeOutputRow(index)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    <FaTrash className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="input-label">Notes</label>
+            <input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button type="submit" className="btn-primary">{editingId ? "Update" : "Add entry"}</button>
+            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Stock entry delete karein?" message="Is entry ko delete karne se current stock change ho jayega. Continue?" confirmLabel="Haan, delete karein" />
+
+      <section className="card">
+        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
+          <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" placeholder="From" />
+          <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" placeholder="To" />
+          <select value={filters.itemId} onChange={(e) => setFilters((f) => ({ ...f, itemId: e.target.value }))} className="input-field w-48">
+            <option value="">All items</option>
+            {items.map((i) => (
+              <option key={i._id} value={i._id}>{i.name}</option>
+            ))}
+          </select>
+          <select value={filters.supplierId} onChange={(e) => setFilters((f) => ({ ...f, supplierId: e.target.value }))} className="input-field w-48">
+            <option value="">All suppliers</option>
+            {suppliers.map((s) => (
+              <option key={s._id} value={s._id}>{s.name}</option>
+            ))}
+          </select>
+          <p className="text-sm text-slate-500">{list.length} entry(ies)</p>
+        </div>
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="empty-state"><div className="loading-spinner mb-3" /><p>Loading...</p></div>
+          ) : (
+            <>
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="table-header px-5 py-3.5">
+                      <button type="button" onClick={() => toggleSort("date")} className="flex items-center hover:text-slate-800">Date<SortIcon columnKey="date" /></button>
+                    </th>
+                    <th className="table-header px-5 py-3.5">
+                      <button type="button" onClick={() => toggleSort("item")} className="flex items-center hover:text-slate-800">Item<SortIcon columnKey="item" /></button>
+                    </th>
+                    <th className="table-header px-5 py-3.5">
+                      <button type="button" onClick={() => toggleSort("supplier")} className="flex items-center hover:text-slate-800">Supplier<SortIcon columnKey="supplier" /></button>
+                    </th>
+                    <th className="table-header px-5 py-3.5">Kattay</th>
+                    <th className="table-header px-5 py-3.5">Kg/kata</th>
+                    <th className="table-header px-5 py-3.5">Amount</th>
+                    <th className="table-header px-5 py-3.5">Output</th>
+                    <th className="table-header px-5 py-3.5 w-28">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedList.map((row) => (
+                    <tr key={row._id} className="table-row-hover">
+                      <td className="table-cell">{formatDate(row.date)}</td>
+                      <td className="table-cell font-medium">{row.itemId?.name || "—"}</td>
+                      <td className="table-cell">{row.supplierId?.name || "—"}</td>
+                      <td className="table-cell">{row.kattay != null && row.kattay > 0 ? row.kattay : "—"}</td>
+                      <td className="table-cell">{row.kgPerKata != null && row.kgPerKata > 0 ? row.kgPerKata : "—"}</td>
+                      <td className="table-cell font-medium">{row.amount != null && row.amount > 0 ? Number(row.amount).toLocaleString("en-PK") : "—"}</td>
+                      <td className="table-cell text-slate-600 text-sm">
+                        {row.outputs?.length ? row.outputs.map((o) => `${o.quantity}`).join(", ") : "—"}
+                      </td>
+                      <td className="table-cell">
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
+                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <TablePagination page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} totalItems={sortedList.length} />
+            </>
+          )}
+          {!loading && list.length === 0 && (
+            <div className="empty-state">
+              <FaBoxOpen className="w-12 h-12 text-slate-300 mb-2" />
+              <p>Abhi koi stock entry nahi. Add stock entry button se add karein.</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
