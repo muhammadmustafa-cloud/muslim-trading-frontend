@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaWallet, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt } from "react-icons/fa";
+import { downloadAccountsPdf } from "../utils/exportPdf.js";
+import { FaWallet, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -162,6 +163,7 @@ export default function Accounts() {
             <input type="text" placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input pl-9" />
           </div>
           <p className="text-sm text-slate-500">{list.length} account(s)</p>
+          <button type="button" onClick={() => downloadAccountsPdf(sortedList)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (

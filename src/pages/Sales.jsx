@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
-import { FaShoppingCart, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport } from "react-icons/fa";
+import { downloadSalesPdf } from "../utils/exportPdf.js";
+import { FaShoppingCart, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -338,6 +339,7 @@ export default function Sales() {
             ))}
           </select>
           <p className="text-sm text-slate-500">{list.length} sale(s)</p>
+          <button type="button" onClick={() => downloadSalesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
           <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemId.name", label: "Item" }, { key: "partName", label: "Part" }, { key: "quantity", label: "Quantity" }, { key: "amountReceived", label: "Amount Received" }, { key: "accountId.name", label: "Account" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
         </div>
         <div className="overflow-x-auto">

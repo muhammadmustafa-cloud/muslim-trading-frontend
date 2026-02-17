@@ -2,65 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../config/api.js";
 import { FaArrowLeft, FaBox, FaFilePdf } from "react-icons/fa";
-import { jsPDF } from "jspdf";
-import { autoTable } from "jspdf-autotable";
+import { downloadKhataPdf } from "../utils/historyPdf.js";
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
-
-function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue, profit, filters) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  let y = 15;
-  doc.setFontSize(16);
-  doc.text(`${name} Khata`, 14, y);
-  y += 8;
-  if (filters.dateFrom || filters.dateTo) {
-    doc.setFontSize(9);
-    doc.text([filters.dateFrom && `From: ${filters.dateFrom}`, filters.dateTo && `To: ${filters.dateTo}`].filter(Boolean).join(" | "), 14, y);
-    y += 6;
-  }
-  doc.setFontSize(10);
-  doc.text(`Total daala (cost): ${totalCost.toLocaleString("en-PK")}  |  Total becha (revenue): ${totalRevenue.toLocaleString("en-PK")}  |  Profit: ${profit.toLocaleString("en-PK")}`, 14, y);
-  y += 10;
-
-  if (purchases && purchases.length > 0) {
-    doc.setFontSize(11);
-    doc.text("Jitna daala (Purchase)", 14, y);
-    y += 6;
-    autoTable(doc, {
-      startY: y,
-      head: [["Date", "Supplier", "Weight", "Paid"]],
-      body: purchases.slice(0, 80).map((p) => [
-        formatDate(p.date),
-        (p.supplierId && p.supplierId.name) || "—",
-        p.receivedWeight ?? "—",
-        formatMoney(p.amountPaid),
-      ]),
-      margin: { left: 14 },
-      styles: { fontSize: 8 },
-    });
-    y = doc.lastAutoTable.finalY + 10;
-  }
-  if (sales && sales.length > 0) {
-    doc.setFontSize(11);
-    doc.text("Kis ko kitna becha (Sales)", 14, y);
-    y += 6;
-    autoTable(doc, {
-      startY: y,
-      head: [["Date", "Customer", "Part", "Qty", "Received"]],
-      body: sales.slice(0, 80).map((s) => [
-        formatDate(s.date),
-        (s.customerId && s.customerId.name) || "—",
-        s.partName || "—",
-        `${s.quantity || ""} ${s.partUnit || ""}`.trim(),
-        formatMoney(s.amountReceived),
-      ]),
-      margin: { left: 14 },
-      styles: { fontSize: 8 },
-    });
-  }
-  doc.save(`${(name || "item").replace(/\s+/g, "-")}-khata.pdf`);
-}
 
 export default function ItemKhata() {
   const { id } = useParams();

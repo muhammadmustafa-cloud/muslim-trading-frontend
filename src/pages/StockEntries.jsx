@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaBoxOpen, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { downloadStockEntriesPdf } from "../utils/exportPdf.js";
+import { FaBoxOpen, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -377,6 +378,7 @@ export default function StockEntries() {
             ))}
           </select>
           <p className="text-sm text-slate-500">{list.length} entry(ies)</p>
+          <button type="button" onClick={() => downloadStockEntriesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (

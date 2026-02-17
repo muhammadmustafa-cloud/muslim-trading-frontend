@@ -4,19 +4,23 @@ import {
   FaUsers,
   FaTruck,
   FaUser,
+  FaClipboardList,
   FaWallet,
   FaBox,
   FaBoxOpen,
   FaBoxes,
   FaShoppingCart,
   FaExchangeAlt,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 
 const navItems = [
   { to: "/", end: true, icon: FaChartLine, label: "Dashboard" },
+  { to: "/daily-cash-memo", icon: FaFileInvoiceDollar, label: "Daily Cash Memo" },
   { to: "/customers", icon: FaUsers, label: "Customers" },
   { to: "/suppliers", icon: FaTruck, label: "Suppliers" },
   { to: "/mazdoor", icon: FaUser, label: "Mazdoor" },
+  { to: "/mazdoor/management", icon: FaClipboardList, label: "Mazdoor Management" },
   { to: "/accounts", icon: FaWallet, label: "Accounts" },
   { to: "/items", icon: FaBox, label: "Items" },
   { to: "/stock-entries", icon: FaBoxOpen, label: "Stock Entry" },

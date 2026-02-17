@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../config/api.js";
 import { FaArrowLeft, FaFilePdf, FaUser } from "react-icons/fa";
-import { jsPDF } from "jspdf";
-import { autoTable } from "jspdf-autotable";
+import { downloadMazdoorHistoryPdf } from "../utils/historyPdf.js";
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
@@ -16,41 +15,6 @@ function getRowType(t) {
 function getRowAccount(t) {
   if (t.type === "deposit" && t.toAccountId) return t.toAccountId.name || "—";
   return (t.fromAccountId && t.fromAccountId.name) || "—";
-}
-
-function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalReceived, filters) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  let y = 15;
-  doc.setFontSize(16);
-  doc.text(`Mazdoor History — ${name}`, 14, y);
-  y += 8;
-  if (filters.dateFrom || filters.dateTo) {
-    doc.setFontSize(9);
-    doc.text([filters.dateFrom && `From: ${filters.dateFrom}`, filters.dateTo && `To: ${filters.dateTo}`].filter(Boolean).join(" | "), 14, y);
-    y += 6;
-  }
-  doc.setFontSize(10);
-  doc.text(`Total diya: ${(totalPaid ?? 0).toLocaleString("en-PK")}  |  Total wapas liya: ${(totalReceived ?? 0).toLocaleString("en-PK")}  |  Net: ${((totalPaid ?? 0) - (totalReceived ?? 0)).toLocaleString("en-PK")}`, 14, y);
-  y += 10;
-  if (transactions && transactions.length > 0) {
-    doc.setFontSize(11);
-    doc.text("Transactions (salary / udhaar diya + udhaar wapas liya)", 14, y);
-    y += 6;
-    autoTable(doc, {
-      startY: y,
-      head: [["Date", "Account", "Type", "Amount", "Note"]],
-      body: transactions.slice(0, 80).map((t) => [
-        formatDate(t.date),
-        getRowAccount(t),
-        getRowType(t),
-        formatMoney(t.amount),
-        (t.note || "").slice(0, 30),
-      ]),
-      margin: { left: 14 },
-      styles: { fontSize: 8 },
-    });
-  }
-  doc.save(`mazdoor-history-${(name || "mazdoor").replace(/\s+/g, "-")}.pdf`);
 }
 
 export default function MazdoorHistory() {

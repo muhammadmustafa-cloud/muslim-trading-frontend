@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
-import { FaExchangeAlt, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport } from "react-icons/fa";
+import { downloadTransactionsPdf } from "../utils/exportPdf.js";
+import { FaExchangeAlt, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -320,6 +321,7 @@ export default function Transactions() {
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
           <p className="text-sm text-slate-500">{list.length} transaction(s)</p>
+          <button type="button" onClick={() => downloadTransactionsPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
           <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "type", label: "Type" }, { key: "fromAccountId.name", label: "From Account" }, { key: "toAccountId.name", label: "To Account" }, { key: "amount", label: "Amount" }, { key: "category", label: "Category" }, { key: "note", label: "Note" }]); downloadCsv(csv, "transactions.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
         </div>
         <div className="overflow-x-auto">

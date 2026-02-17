@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL } from "../config/api.js";
-import { FaBoxes, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { downloadCurrentStockPdf } from "../utils/exportPdf.js";
+import { FaBoxes, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import TablePagination from "../components/TablePagination.jsx";
 
 export default function CurrentStock() {
@@ -82,6 +83,7 @@ export default function CurrentStock() {
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
           <p className="text-sm text-slate-500">{list.length} part(s) in stock</p>
+          <button type="button" onClick={() => downloadCurrentStockPdf(sortedList)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
