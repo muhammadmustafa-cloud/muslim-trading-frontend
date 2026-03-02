@@ -74,7 +74,7 @@ export default function CurrentStock() {
             <FaBoxes className="w-7 h-7 text-amber-500" />
             Current Stock
           </h1>
-          <p className="page-subtitle">Har part ki current quantity (inventory). Sales Phase 4 ke baad out bhi minus hoga.</p>
+          <p className="page-subtitle">Har item ki current quantity (kg) — stock entries minus sales.</p>
         </div>
       </header>
 
@@ -82,7 +82,7 @@ export default function CurrentStock() {
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
-          <p className="text-sm text-slate-500">{list.length} part(s) in stock</p>
+          <p className="text-sm text-slate-500">{list.length} item(s) in stock</p>
           <button type="button" onClick={() => downloadCurrentStockPdf(sortedList)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
@@ -102,23 +102,25 @@ export default function CurrentStock() {
                       </button>
                     </th>
                     <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("partName")} className="flex items-center hover:text-slate-800">
-                        Part (Hisse)<SortIcon columnKey="partName" />
+                      <button type="button" onClick={() => toggleSort("category")} className="flex items-center hover:text-slate-800">
+                        Category<SortIcon columnKey="category" />
                       </button>
                     </th>
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">
-                        Quantity<SortIcon columnKey="quantity" />
+                        Quantity (kg)<SortIcon columnKey="quantity" />
                       </button>
                     </th>
+                    <th className="table-header px-5 py-3.5">Quality</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedList.map((row, idx) => (
-                    <tr key={row.partId?.toString?.() || idx} className="table-row-hover">
+                    <tr key={row.itemId?.toString?.() || idx} className="table-row-hover">
                       <td className="table-cell font-medium">{row.itemName || "—"}</td>
-                      <td className="table-cell">{row.partName || "—"}</td>
+                      <td className="table-cell">{row.category || "—"}</td>
                       <td className="table-cell font-semibold text-slate-800">{row.quantity != null ? Number(row.quantity) : "—"}</td>
+                      <td className="table-cell">{row.quality || "—"}</td>
                     </tr>
                   ))}
                 </tbody>

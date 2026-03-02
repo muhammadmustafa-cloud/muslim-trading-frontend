@@ -76,13 +76,13 @@ export function downloadCustomerHistoryPdf(name, sales, stockEntries, filters = 
     doc.setFont(undefined, "normal");
     autoTable(doc, {
       startY: y,
-      head: [["#", "Date", "Item", "Part", "Qty", "Received"]],
+      head: [["#", "Date", "Item", "Category", "Qty", "Received"]],
       body: sales.map((s, i) => [
         i + 1,
         formatDate(s.date),
-        (s.itemId && s.itemId.name) || "—",
-        s.partName || "—",
-        `${s.quantity || ""} ${s.partUnit || ""}`.trim(),
+        s.itemName || (s.itemId && s.itemId.name) || "—",
+        s.category || "—",
+        `${s.quantity || ""} ${s.quality || ""}`.trim(),
         formatMoney(s.amountReceived),
       ]),
       ...tableTheme,
@@ -169,13 +169,13 @@ export function downloadSupplierHistoryPdf(name, stockEntries, sales, filters = 
     doc.setFont(undefined, "normal");
     autoTable(doc, {
       startY: y,
-      head: [["#", "Date", "Item", "Part", "Qty", "Received"]],
+      head: [["#", "Date", "Item", "Category", "Qty", "Received"]],
       body: sales.map((s, i) => [
         i + 1,
         formatDate(s.date),
-        (s.itemId && s.itemId.name) || "—",
-        s.partName || "—",
-        `${s.quantity || ""} ${s.partUnit || ""}`.trim(),
+        s.itemName || (s.itemId && s.itemId.name) || "—",
+        s.category || "—",
+        `${s.quantity || ""} ${s.quality || ""}`.trim(),
         formatMoney(s.amountReceived),
       ]),
       ...tableTheme,
@@ -313,13 +313,13 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
     doc.setFont(undefined, "normal");
     autoTable(doc, {
       startY: y,
-      head: [["#", "Date", "Customer", "Part", "Qty", "Received"]],
+      head: [["#", "Date", "Customer", "Item", "Qty", "Received"]],
       body: sales.map((s, i) => [
         i + 1,
         formatDate(s.date),
         (s.customerId && s.customerId.name) || "—",
-        s.partName || "—",
-        `${s.quantity || ""} ${s.partUnit || ""}`.trim(),
+        s.itemName || (s.itemId && s.itemId.name) || "—",
+        `${s.quantity || ""} ${s.quality || ""}`.trim(),
         formatMoney(s.amountReceived),
       ]),
       ...tableTheme,

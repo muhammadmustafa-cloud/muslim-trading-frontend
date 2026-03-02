@@ -74,6 +74,7 @@ export default function Transactions() {
     setError("");
     try {
       const params = new URLSearchParams();
+      params.set("unified", "true");
       if (filters.accountId) params.set("accountId", filters.accountId);
       if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
       if (filters.dateTo) params.set("dateTo", filters.dateTo);
@@ -215,7 +216,7 @@ export default function Transactions() {
     return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
   };
 
-  const typeLabel = (t) => (t === "deposit" ? "Deposit" : t === "withdraw" ? "Withdraw" : t === "transfer" ? "Transfer" : t);
+  const typeLabel = (t) => (t === "deposit" ? "Deposit" : t === "withdraw" ? "Withdraw" : t === "transfer" ? "Transfer" : t === "sale" ? "Sale" : t === "purchase" ? "Purchase" : t);
 
   return (
     <div className="space-y-6">
@@ -225,7 +226,7 @@ export default function Transactions() {
             <FaExchangeAlt className="w-7 h-7 text-amber-500" />
             Transactions (Lena-dena)
           </h1>
-          <p className="page-subtitle">Deposit, withdraw aur account-to-account transfer record karein.</p>
+          <p className="page-subtitle">Saari account movement: manual deposit/withdraw/transfer plus Sales aur Stock entries jahan account select kiya ho.</p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
           <FaPlus className="w-4 h-4" /> Add transaction
@@ -233,6 +234,11 @@ export default function Transactions() {
       </header>
 
       <Modal open={modalOpen} onClose={resetForm} title="Naya transaction add karein">
+        {accounts.length === 0 && (
+          <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm mb-4">
+            Pehle <strong>Accounts</strong> page se kam az kam ek account (e.g. Cash ya Bank) add karein, phir yahan transaction add kar sakte hain.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -354,7 +360,7 @@ export default function Transactions() {
                       <td className="table-cell">{formatDate(row.date)}</td>
                       <td className="table-cell">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                          row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                          row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
                         }`}>{typeLabel(row.type)}</span>
                       </td>
                       <td className="table-cell">{row.fromAccountId?.name ?? "—"}</td>
@@ -363,7 +369,11 @@ export default function Transactions() {
                       <td className="table-cell">{row.category || "—"}</td>
                       <td className="table-cell max-w-[180px] truncate" title={row.note}>{row.note || "—"}</td>
                       <td className="table-cell">
-                        <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
+                        {row.source === "transaction" ? (
+                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
+                        ) : (
+                          <span className="text-xs text-slate-500">{row.source === "sale" ? "From Sale" : "From Stock"}</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -375,7 +385,13 @@ export default function Transactions() {
           {!loading && list.length === 0 && (
             <div className="empty-state">
               <FaExchangeAlt className="w-12 h-12 text-slate-300 mb-2" />
-              <p>Abhi koi transaction nahi. Add transaction button se add karein.</p>
+              <p className="font-medium text-slate-700">Abhi koi transaction nahi.</p>
+              <p className="text-sm text-slate-500 mt-1 max-w-md">
+                Yahan manual transactions (deposit/withdraw/transfer) plus <strong>Sales</strong> aur <strong>Stock entries</strong> jahan aap ne account select kiya ho — sab ek saath dikhti hain. Manual entry ke liye pehle Accounts banaen, phir Add transaction use karein.
+              </p>
+              <button type="button" onClick={openAddModal} className="btn-primary mt-4">
+                <FaPlus className="w-4 h-4 inline mr-1.5" /> Add first transaction
+              </button>
             </div>
           )}
         </div>

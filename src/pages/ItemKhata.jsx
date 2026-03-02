@@ -152,14 +152,14 @@ export default function ItemKhata() {
                 <p className="p-6 text-slate-500">Abhi koi sale nahi.</p>
               ) : (
                 <table className="w-full">
-                  <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Customer</th><th className="table-header px-4 py-2 text-left">Part</th><th className="table-header px-4 py-2">Qty</th><th className="table-header px-4 py-2 text-right">Received</th></tr></thead>
+                  <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Customer</th><th className="table-header px-4 py-2 text-left">Item</th><th className="table-header px-4 py-2">Qty</th><th className="table-header px-4 py-2 text-right">Received</th></tr></thead>
                   <tbody>
                     {data.sales?.map((s) => (
                       <tr key={s._id} className="table-row-hover border-b border-slate-100">
                         <td className="table-cell py-2">{formatDate(s.date)}</td>
                         <td className="table-cell font-medium">{s.customerId?.name || "—"}</td>
-                        <td className="table-cell">{s.partName || "—"}</td>
-                        <td className="table-cell">{s.quantity} {s.partUnit || ""}</td>
+                        <td className="table-cell">{s.itemName || "—"}</td>
+                        <td className="table-cell">{s.quantity} {s.quality || ""}</td>
                         <td className="table-cell text-right font-medium">{formatMoney(s.amountReceived)}</td>
                       </tr>
                     ))}

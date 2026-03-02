@@ -22,10 +22,10 @@ export default function Sales() {
     date: today,
     customerId: "",
     itemId: "",
-    partId: "",
     quantity: "",
     rate: "",
     totalAmount: "",
+    truckNumber: "",
     amountReceived: "",
     accountId: "",
     notes: "",
@@ -36,9 +36,7 @@ export default function Sales() {
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  const selectedItem = useMemo(() => items.find((i) => i._id === form.itemId), [items, form.itemId]);
-  const itemParts = selectedItem?.parts || [];
+  const [availableStock, setAvailableStock] = useState(null);
 
   const fetchCustomers = async () => {
     try {
@@ -92,15 +90,33 @@ export default function Sales() {
     fetchList();
   }, [filters.dateFrom, filters.dateTo, filters.customerId, filters.itemId]);
 
+  useEffect(() => {
+    if (!form.itemId) {
+      setAvailableStock(null);
+      return;
+    }
+    let cancelled = false;
+    const params = new URLSearchParams({ itemId: form.itemId });
+    if (editingId) params.set('excludeSaleId', editingId);
+    fetch(`${API_BASE_URL}/sales/available?${params}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.success && data.data) setAvailableStock(data.data.available);
+        else setAvailableStock(null);
+      })
+      .catch(() => { if (!cancelled) setAvailableStock(null); });
+    return () => { cancelled = true; };
+  }, [form.itemId, editingId]);
+
   const resetForm = () => {
     setForm({
       date: today,
       customerId: "",
       itemId: "",
-      partId: "",
       quantity: "",
       rate: "",
       totalAmount: "",
+      truckNumber: "",
       amountReceived: "",
       accountId: "",
       notes: "",
@@ -108,6 +124,18 @@ export default function Sales() {
     setEditingId(null);
     setModalOpen(false);
   };
+
+  const updateSaleAutoAmount = (updates) => {
+    setForm((prev) => {
+      const next = { ...prev, ...updates };
+      const qty = Number(next.quantity) || 0;
+      const rate = Number(next.rate) || 0;
+      if (qty > 0 && rate > 0) next.totalAmount = String(Math.round(qty * rate));
+      else if ("quantity" in updates || "rate" in updates) next.totalAmount = "";
+      return next;
+    });
+  };
+
   const openAddModal = () => {
     resetForm();
     setForm((f) => ({ ...f, date: today }));
@@ -116,8 +144,8 @@ export default function Sales() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.customerId || !form.itemId || !form.partId) {
-      setError("Customer, item aur part select karein.");
+    if (!form.customerId || !form.itemId) {
+      setError("Customer aur item select karein.");
       return;
     }
     const qty = Number(form.quantity);
@@ -131,10 +159,10 @@ export default function Sales() {
         date: form.date,
         customerId: form.customerId,
         itemId: form.itemId,
-        partId: form.partId,
         quantity: qty,
         rate: Number(form.rate) || 0,
         totalAmount: Number(form.totalAmount) || 0,
+        truckNumber: (form.truckNumber || "").trim(),
         amountReceived: Number(form.amountReceived) || 0,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
@@ -149,15 +177,17 @@ export default function Sales() {
   };
 
   const handleEdit = (row) => {
-    const partId = row.partId?.toString?.() || row.partId;
+    const qty = row.quantity != null ? row.quantity : "";
+    const total = row.totalAmount != null ? row.totalAmount : "";
+    const rate = qty && total && Number(qty) > 0 ? String(Number(total) / Number(qty)) : (row.rate ?? "");
     setForm({
       date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
       customerId: row.customerId?._id || row.customerId || "",
       itemId: row.itemId?._id || row.itemId || "",
-      partId: partId || "",
-      quantity: row.quantity ?? "",
-      rate: row.rate ?? "",
-      totalAmount: row.totalAmount ?? "",
+      quantity: qty !== "" ? String(qty) : "",
+      rate: rate !== "" ? String(rate) : "",
+      totalAmount: total !== "" ? String(total) : "",
+      truckNumber: row.truckNumber || "",
       amountReceived: row.amountReceived ?? "",
       accountId: row.accountId?._id || row.accountId || "",
       notes: row.notes || "",
@@ -241,7 +271,7 @@ export default function Sales() {
             <FaShoppingCart className="w-7 h-7 text-amber-500" />
             Sales (Bechai)
           </h1>
-          <p className="page-subtitle">Customer ko bechi hui cheez, quantity aur amount record karein. Stock auto-deduct, account mein amount add.</p>
+          <p className="page-subtitle">Jis item ki bechai kar rahe ho, customer select karo, kitni quantity bechi aur kitne ka becha — total auto niklega. Jo quantity yahan daalogi wo us item ki stock se cut ho jayegi.</p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
           <FaPlus className="w-4 h-4" /> Add sale
@@ -266,33 +296,35 @@ export default function Sales() {
             </div>
             <div>
               <label className="input-label">Item *</label>
-              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value, partId: "" }))} className="input-field" required>
+              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required>
                 <option value="">Select item</option>
                 {items.map((i) => (
-                  <option key={i._id} value={i._id}>{i.name}</option>
+                  <option key={i._id} value={i._id}>{i.name}{i.categoryId?.name ? ` (${i.categoryId.name})` : ""}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="input-label">Part (Hisse) *</label>
-              <select value={form.partId} onChange={(e) => setForm((f) => ({ ...f, partId: e.target.value }))} className="input-field" required>
-                <option value="">Select part</option>
-                {itemParts.map((p) => (
-                  <option key={p._id} value={p._id}>{p.partName}</option>
-                ))}
-              </select>
+              <label className="input-label">Kitne kg beche / cut ki *</label>
+              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateSaleAutoAmount({ quantity: e.target.value })} className="input-field" min="0" step="any" required />
+              <p className="text-xs text-slate-500 mt-0.5">Weight in kg — same unit as stock (kattay × kg/katta).</p>
+              {availableStock != null && (
+                <p className="text-xs text-slate-600 mt-0.5">Is item ki available stock: <strong>{availableStock} kg</strong> — jo yahan daalogi wo yahi se cut ho jayegi.</p>
+              )}
+              {form.itemId && availableStock == null && <p className="text-xs text-slate-500 mt-0.5">Yahi quantity (kg) is item ki stock se minus ho jayegi.</p>}
             </div>
             <div>
-              <label className="input-label">Quantity *</label>
-              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} className="input-field" min="0" step="any" required />
+              <label className="input-label">Aik kg kitne ka becha (Rs)</label>
+              <input type="number" placeholder="0" value={form.rate} onChange={(e) => updateSaleAutoAmount({ rate: e.target.value })} className="input-field" min="0" step="any" />
+              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kg × rate per kg</p>
             </div>
             <div>
-              <label className="input-label">Rate (optional)</label>
-              <input type="number" placeholder="0" value={form.rate} onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))} className="input-field" min="0" step="any" />
+              <label className="input-label">Total amount (Rs)</label>
+              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field" min="0" step="1" title="Auto: quantity × rate" />
+              <p className="text-xs text-slate-500 mt-0.5">Auto nikalta he: bechi hui quantity × rate</p>
             </div>
             <div>
-              <label className="input-label">Total amount</label>
-              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field" min="0" step="1" />
+              <label className="input-label">Truck number</label>
+              <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
             </div>
             <div>
               <label className="input-label">Amount received</label>
@@ -340,7 +372,7 @@ export default function Sales() {
           </select>
           <p className="text-sm text-slate-500">{list.length} sale(s)</p>
           <button type="button" onClick={() => downloadSalesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
-          <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemId.name", label: "Item" }, { key: "partName", label: "Part" }, { key: "quantity", label: "Quantity" }, { key: "amountReceived", label: "Amount Received" }, { key: "accountId.name", label: "Account" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
+          <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemName", label: "Item" }, { key: "category", label: "Category" }, { key: "quantity", label: "Quantity (kg)" }, { key: "rate", label: "Rate (Rs/kg)" }, { key: "totalAmount", label: "Total Amount" }, { key: "amountReceived", label: "Amount Received" }, { key: "truckNumber", label: "Truck" }, { key: "accountId.name", label: "Account" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
@@ -359,13 +391,16 @@ export default function Sales() {
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("item")} className="flex items-center hover:text-slate-800">Item<SortIcon columnKey="item" /></button>
                     </th>
-                    <th className="table-header px-5 py-3.5">Part</th>
+                    <th className="table-header px-5 py-3.5">Category</th>
                     <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">Qty<SortIcon columnKey="quantity" /></button>
+                      <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">Kg beche (stock se cut)<SortIcon columnKey="quantity" /></button>
                     </th>
+                    <th className="table-header px-5 py-3.5">Rate (Rs/kg)</th>
+                    <th className="table-header px-5 py-3.5">Total amount</th>
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center hover:text-slate-800">Received<SortIcon columnKey="amount" /></button>
                     </th>
+                    <th className="table-header px-5 py-3.5">Truck</th>
                     <th className="table-header px-5 py-3.5 w-28">Actions</th>
                   </tr>
                 </thead>
@@ -374,10 +409,13 @@ export default function Sales() {
                     <tr key={row._id} className="table-row-hover">
                       <td className="table-cell">{formatDate(row.date)}</td>
                       <td className="table-cell font-medium">{row.customerId?.name || "—"}</td>
-                      <td className="table-cell">{row.itemId?.name || "—"}</td>
-                      <td className="table-cell">{row.partName || "—"}</td>
-                      <td className="table-cell">{row.quantity != null ? row.quantity : "—"}</td>
+                      <td className="table-cell">{row.itemName || row.itemId?.name || "—"}</td>
+                      <td className="table-cell">{row.category || "—"}</td>
+                      <td className="table-cell">{row.quantity != null ? `${row.quantity} ${row.quality || ""}`.trim() : "—"}</td>
+                      <td className="table-cell">{row.rate != null ? formatMoney(row.rate) : "—"}</td>
+                      <td className="table-cell font-medium">{formatMoney(row.totalAmount)}</td>
                       <td className="table-cell font-medium">{formatMoney(row.amountReceived)}</td>
+                      <td className="table-cell">{row.truckNumber ? row.truckNumber : "—"}</td>
                       <td className="table-cell">
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>

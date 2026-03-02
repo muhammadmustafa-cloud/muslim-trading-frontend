@@ -72,17 +72,18 @@ export function downloadSalesPdf(sales, filters = {}) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Customer", "Item", "Part", "Qty", "Rate", "Total", "Received", "Account", "Notes"]],
+    head: [["#", "Date", "Customer", "Item", "Category", "Qty", "Rate", "Total", "Received", "Truck", "Account", "Notes"]],
     body: sales.map((row, i) => [
       i + 1,
       formatDate(row.date),
       (row.customerId && row.customerId.name) || "—",
-      (row.itemId && row.itemId.name) || "—",
-      row.partName || "—",
+      row.itemName || (row.itemId && row.itemId.name) || "—",
+      row.category || "—",
       row.quantity != null ? row.quantity : "—",
       formatMoney(row.rate),
       formatMoney(row.totalAmount),
       formatMoney(row.amountReceived),
+      (row.truckNumber || "—").slice(0, 12),
       (row.accountId && row.accountId.name) || "—",
       (row.notes || "—").slice(0, 25),
     ]),
@@ -90,15 +91,16 @@ export function downloadSalesPdf(sales, filters = {}) {
     columnStyles: {
       0: { cellWidth: 10 },
       1: { cellWidth: 22 },
-      2: { cellWidth: 28 },
+      2: { cellWidth: 26 },
       3: { cellWidth: 22 },
-      4: { cellWidth: 22 },
-      5: { cellWidth: 14 },
-      6: { cellWidth: 18 },
+      4: { cellWidth: 20 },
+      5: { cellWidth: 12 },
+      6: { cellWidth: 16 },
       7: { cellWidth: 18 },
-      8: { cellWidth: 22 },
-      9: { cellWidth: 22 },
-      10: { cellWidth: 35 },
+      8: { cellWidth: 18 },
+      9: { cellWidth: 18 },
+      10: { cellWidth: 20 },
+      11: { cellWidth: 30 },
     },
   });
 
@@ -129,33 +131,39 @@ export function downloadStockEntriesPdf(entries, filters = {}) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Item", "Supplier", "Kattay", "Kg/Kata", "Amount", "Paid", "Account", "Output", "Notes"]],
+    head: [["#", "Date", "Item", "Supplier", "Truck", "Kattay", "Kg/Kata", "Weight", "Mill (kg)", "Supplier (kg)", "Amount", "Paid", "Account", "Notes"]],
     body: entries.map((row, i) => [
       i + 1,
       formatDate(row.date),
       (row.itemId && row.itemId.name) || "—",
       (row.supplierId && row.supplierId.name) || "—",
+      (row.truckNumber || "—").slice(0, 12),
       row.kattay != null && row.kattay > 0 ? row.kattay : "—",
       row.kgPerKata != null && row.kgPerKata > 0 ? row.kgPerKata : "—",
+      row.receivedWeight != null ? row.receivedWeight : "—",
+      row.millWeight != null && row.millWeight > 0 ? row.millWeight : "—",
+      row.supplierWeight != null && row.supplierWeight > 0 ? row.supplierWeight : "—",
       formatMoney(row.amount),
       formatMoney(row.amountPaid),
       (row.accountId && row.accountId.name) || "—",
-      row.outputs?.length ? row.outputs.map((o) => o.quantity).join(", ") : "—",
       (row.notes || "—").slice(0, 20),
     ]),
     ...tableTheme,
     columnStyles: {
       0: { cellWidth: 10 },
       1: { cellWidth: 22 },
-      2: { cellWidth: 28 },
-      3: { cellWidth: 28 },
-      4: { cellWidth: 14 },
-      5: { cellWidth: 16 },
-      6: { cellWidth: 20 },
-      7: { cellWidth: 20 },
-      8: { cellWidth: 22 },
-      9: { cellWidth: 25 },
-      10: { cellWidth: 30 },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 24 },
+      4: { cellWidth: 18 },
+      5: { cellWidth: 12 },
+      6: { cellWidth: 14 },
+      7: { cellWidth: 14 },
+      8: { cellWidth: 12 },
+      9: { cellWidth: 12 },
+      10: { cellWidth: 18 },
+      11: { cellWidth: 18 },
+      12: { cellWidth: 18 },
+      13: { cellWidth: 24 },
     },
   });
 
@@ -224,7 +232,7 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
  */
 export function downloadCurrentStockPdf(stockList) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const subtitleLines = [`Total parts: ${stockList.length}`];
+  const subtitleLines = [`Total items: ${stockList.length}`];
   let startY = addReportHeader(doc, "Current Stock Report", subtitleLines);
 
   if (!stockList.length) {
@@ -236,13 +244,13 @@ export function downloadCurrentStockPdf(stockList) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Item", "Part (Hisse)", "Quantity", "Unit"]],
+    head: [["#", "Item", "Category", "Quantity (kg)", "Quality"]],
     body: stockList.map((row, i) => [
       i + 1,
       row.itemName || "—",
-      row.partName || "—",
+      row.category || "—",
       row.quantity != null ? row.quantity : "—",
-      row.unit || "kg",
+      row.quality || "—",
     ]),
     ...tableTheme,
     columnStyles: {

@@ -23,11 +23,14 @@ export default function StockEntries() {
     supplierId: "",
     kattay: "",
     kgPerKata: "",
+    ratePerKata: "",
     amount: "",
+    millWeight: "",
+    supplierWeight: "",
+    truckNumber: "",
     amountPaid: "",
     accountId: "",
     notes: "",
-    outputs: [{ partId: "", quantity: "" }],
   });
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", supplierId: "" });
@@ -88,9 +91,6 @@ export default function StockEntries() {
     fetchList();
   }, [filters.dateFrom, filters.dateTo, filters.itemId, filters.supplierId]);
 
-  const selectedItem = useMemo(() => items.find((i) => i._id === form.itemId), [items, form.itemId]);
-  const itemParts = selectedItem?.parts || [];
-
   const resetForm = () => {
     setForm({
       date: today,
@@ -98,14 +98,28 @@ export default function StockEntries() {
       supplierId: "",
       kattay: "",
       kgPerKata: "",
+      ratePerKata: "",
       amount: "",
+      millWeight: "",
+      supplierWeight: "",
+      truckNumber: "",
       amountPaid: "",
       accountId: "",
       notes: "",
-      outputs: [{ partId: "", quantity: "" }],
     });
     setEditingId(null);
     setModalOpen(false);
+  };
+
+  const updateFormWithAutoCalc = (updates) => {
+    setForm((prev) => {
+      const next = { ...prev, ...updates };
+      const kattay = Number(next.kattay) || 0;
+      const ratePerKata = Number(next.ratePerKata) || 0;
+      if (kattay > 0 && ratePerKata > 0) next.amount = String(Math.round(kattay * ratePerKata));
+      else if ("kattay" in updates || "ratePerKata" in updates) next.amount = "";
+      return next;
+    });
   };
   const openAddModal = () => {
     resetForm();
@@ -113,40 +127,30 @@ export default function StockEntries() {
     setModalOpen(true);
   };
 
-  const addOutputRow = () => setForm((f) => ({ ...f, outputs: [...f.outputs, { partId: "", quantity: "" }] }));
-  const removeOutputRow = (index) => setForm((f) => ({ ...f, outputs: f.outputs.filter((_, i) => i !== index) }));
-  const updateOutput = (index, field, value) =>
-    setForm((f) => ({
-      ...f,
-      outputs: f.outputs.map((o, i) => (i === index ? { ...o, [field]: value } : o)),
-    }));
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.itemId || !form.supplierId) {
       setError("Item aur supplier zaroori hain.");
       return;
     }
-    const outputsToSend = form.outputs
-      .filter((o) => o.partId && Number(o.quantity) >= 0)
-      .map((o) => ({ partId: o.partId, quantity: Number(o.quantity) }));
-    if (outputsToSend.length === 0) {
-      setError("Kam az kam ek output (part + quantity) add karein.");
-      return;
-    }
     setError("");
     try {
+      const kattay = Number(form.kattay) || 0;
+      const kgPerKata = Number(form.kgPerKata) || 0;
       const payload = {
         date: form.date,
         itemId: form.itemId,
         supplierId: form.supplierId,
-        kattay: Number(form.kattay) || 0,
-        kgPerKata: Number(form.kgPerKata) || 0,
+        kattay,
+        kgPerKata,
+        receivedWeight: kattay > 0 && kgPerKata > 0 ? kattay * kgPerKata : 0,
+        millWeight: Number(form.millWeight) || 0,
+        supplierWeight: Number(form.supplierWeight) || 0,
+        truckNumber: (form.truckNumber || "").trim(),
         amount: Number(form.amount) || 0,
         amountPaid: Number(form.amountPaid) || 0,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
-        outputs: outputsToSend,
       };
       if (editingId) await apiPut(`/stock-entries/${editingId}`, payload);
       else await apiPost("/stock-entries", payload);
@@ -159,21 +163,23 @@ export default function StockEntries() {
 
   const handleEdit = (row) => {
     const itemId = row.itemId?._id || row.itemId;
-    const outputs =
-      (row.outputs && row.outputs.length)
-        ? row.outputs.map((o) => ({ partId: o.partId?.toString?.() || o.partId, quantity: o.quantity }))
-        : [{ partId: "", quantity: "" }];
+    const kattay = row.kattay != null ? row.kattay : "";
+    const amount = row.amount != null ? row.amount : "";
+    const ratePerKata = kattay && amount && Number(kattay) > 0 ? String(Number(amount) / Number(kattay)) : "";
     setForm({
       date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
       itemId: itemId || "",
       supplierId: row.supplierId?._id || row.supplierId || "",
-      kattay: row.kattay ?? "",
-      kgPerKata: row.kgPerKata ?? "",
-      amount: row.amount ?? "",
+        kattay: kattay !== "" ? String(kattay) : "",
+      kgPerKata: row.kgPerKata != null ? String(row.kgPerKata) : "",
+      ratePerKata,
+      amount: amount !== "" ? String(amount) : "",
+      millWeight: row.millWeight != null ? String(row.millWeight) : "",
+      supplierWeight: row.supplierWeight != null ? String(row.supplierWeight) : "",
+      truckNumber: row.truckNumber || "",
       amountPaid: row.amountPaid ?? "",
       accountId: row.accountId?._id || row.accountId || "",
       notes: row.notes || "",
-      outputs: outputs.length ? outputs : [{ partId: "", quantity: "" }],
     });
     setEditingId(row._id);
     setModalOpen(true);
@@ -253,7 +259,7 @@ export default function StockEntries() {
             <FaBoxOpen className="w-7 h-7 text-amber-500" />
             Stock Entry
           </h1>
-          <p className="page-subtitle">Jab stock aaye: kattay, aik katta kitne kg, price/amount aap daalein. Phir hisson ki output quantity.</p>
+          <p className="page-subtitle">Jab stock aaye: item, supplier, quantity aur optional kattay/amount daalein.</p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
           <FaPlus className="w-4 h-4" /> Add stock entry
@@ -269,10 +275,10 @@ export default function StockEntries() {
             </div>
             <div>
               <label className="input-label">Item *</label>
-              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value, outputs: [{ partId: "", quantity: "" }] }))} className="input-field" required>
+              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required>
                 <option value="">Select item</option>
                 {items.map((i) => (
-                  <option key={i._id} value={i._id}>{i.name}</option>
+                  <option key={i._id} value={i._id}>{i.name}{i.categoryId?.name ? ` (${i.categoryId.name})` : ""}</option>
                 ))}
               </select>
             </div>
@@ -286,16 +292,34 @@ export default function StockEntries() {
               </select>
             </div>
             <div>
+              <label className="input-label">Truck number</label>
+              <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
+            </div>
+            <div>
               <label className="input-label">Kitne kattay aaye</label>
-              <input type="number" placeholder="0" value={form.kattay} onChange={(e) => setForm((f) => ({ ...f, kattay: e.target.value }))} className="input-field" min="0" step="1" />
+              <input type="number" placeholder="0" value={form.kattay} onChange={(e) => updateFormWithAutoCalc({ kattay: e.target.value })} className="input-field" min="0" step="1" />
             </div>
             <div>
               <label className="input-label">Aik katta kitne kg ka he</label>
               <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => setForm((f) => ({ ...f, kgPerKata: e.target.value }))} className="input-field" min="0" step="any" />
+              <p className="text-xs text-slate-500 mt-0.5">Stock weight auto: kattay × kg/katta</p>
             </div>
             <div>
-              <label className="input-label">Price / Amount</label>
-              <input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" min="0" step="1" />
+              <label className="input-label">Aik katta kitne ka he (Rs)</label>
+              <input type="number" placeholder="0" value={form.ratePerKata} onChange={(e) => updateFormWithAutoCalc({ ratePerKata: e.target.value })} className="input-field" min="0" step="1" />
+              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kattay × rate (e.g. 5 × 5 = 25)</p>
+            </div>
+            <div>
+              <label className="input-label">Total amount (Rs)</label>
+              <input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" min="0" step="1" title="Auto: kattay × rate (e.g. 5 × 5 = 25)" />
+            </div>
+            <div>
+              <label className="input-label">Mill weight (kg)</label>
+              <input type="number" placeholder="0" value={form.millWeight} onChange={(e) => setForm((f) => ({ ...f, millWeight: e.target.value }))} className="input-field" min="0" step="any" />
+            </div>
+            <div>
+              <label className="input-label">Supplier weight (kg)</label>
+              <input type="number" placeholder="0" value={form.supplierWeight} onChange={(e) => setForm((f) => ({ ...f, supplierWeight: e.target.value }))} className="input-field" min="0" step="any" />
             </div>
             <div>
               <label className="input-label">Amount paid (optional)</label>
@@ -309,42 +333,6 @@ export default function StockEntries() {
                   <option key={a._id} value={a._id}>{a.name}</option>
                 ))}
               </select>
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="input-label mb-0">Produced (output) * — hisse + quantity</label>
-              <button type="button" onClick={addOutputRow} className="btn-secondary text-sm py-2">
-                <FaPlus className="w-3.5 h-3.5 mr-1" /> Add row
-              </button>
-            </div>
-            <div className="space-y-2">
-              {form.outputs.map((o, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <select
-                    value={o.partId}
-                    onChange={(e) => updateOutput(index, "partId", e.target.value)}
-                    className="input-field flex-1"
-                  >
-                    <option value="">Select part</option>
-                    {itemParts.map((p) => (
-                      <option key={p._id} value={p._id}>{p.partName}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="Qty"
-                    value={o.quantity}
-                    onChange={(e) => updateOutput(index, "quantity", e.target.value)}
-                    className="input-field w-24"
-                    min="0"
-                    step="any"
-                  />
-                  <button type="button" onClick={() => removeOutputRow(index)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                    <FaTrash className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
             </div>
           </div>
           <div>
@@ -397,10 +385,13 @@ export default function StockEntries() {
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("supplier")} className="flex items-center hover:text-slate-800">Supplier<SortIcon columnKey="supplier" /></button>
                     </th>
+                    <th className="table-header px-5 py-3.5">Truck</th>
                     <th className="table-header px-5 py-3.5">Kattay</th>
                     <th className="table-header px-5 py-3.5">Kg/kata</th>
+                    <th className="table-header px-5 py-3.5">Weight</th>
+                    <th className="table-header px-5 py-3.5">Mill (kg)</th>
+                    <th className="table-header px-5 py-3.5">Supplier (kg)</th>
                     <th className="table-header px-5 py-3.5">Amount</th>
-                    <th className="table-header px-5 py-3.5">Output</th>
                     <th className="table-header px-5 py-3.5 w-28">Actions</th>
                   </tr>
                 </thead>
@@ -410,12 +401,13 @@ export default function StockEntries() {
                       <td className="table-cell">{formatDate(row.date)}</td>
                       <td className="table-cell font-medium">{row.itemId?.name || "—"}</td>
                       <td className="table-cell">{row.supplierId?.name || "—"}</td>
+                      <td className="table-cell">{row.truckNumber ? row.truckNumber : "—"}</td>
                       <td className="table-cell">{row.kattay != null && row.kattay > 0 ? row.kattay : "—"}</td>
                       <td className="table-cell">{row.kgPerKata != null && row.kgPerKata > 0 ? row.kgPerKata : "—"}</td>
+                      <td className="table-cell">{row.receivedWeight != null && row.receivedWeight > 0 ? row.receivedWeight : "—"}</td>
+                      <td className="table-cell">{row.millWeight != null && row.millWeight > 0 ? row.millWeight : "—"}</td>
+                      <td className="table-cell">{row.supplierWeight != null && row.supplierWeight > 0 ? row.supplierWeight : "—"}</td>
                       <td className="table-cell font-medium">{row.amount != null && row.amount > 0 ? Number(row.amount).toLocaleString("en-PK") : "—"}</td>
-                      <td className="table-cell text-slate-600 text-sm">
-                        {row.outputs?.length ? row.outputs.map((o) => `${o.quantity}`).join(", ") : "—"}
-                      </td>
                       <td className="table-cell">
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>

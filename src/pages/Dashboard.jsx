@@ -7,6 +7,7 @@ import {
   FaTruck,
   FaUser,
   FaWallet,
+  FaTags,
   FaBox,
   FaBoxOpen,
   FaBoxes,
@@ -19,6 +20,7 @@ const statCards = [
   { label: "Suppliers", icon: FaTruck, color: "bg-emerald-500/10 text-emerald-600", path: "/suppliers", key: "suppliers" },
   { label: "Mazdoor", icon: FaUser, color: "bg-violet-500/10 text-violet-600", path: "/mazdoor", key: "mazdoor" },
   { label: "Accounts", icon: FaWallet, color: "bg-amber-500/10 text-amber-600", path: "/accounts" },
+  { label: "Categories", icon: FaTags, color: "bg-teal-500/10 text-teal-600", path: "/categories" },
   { label: "Items", icon: FaBox, color: "bg-slate-500/10 text-slate-600", path: "/items" },
   { label: "Stock Entry", icon: FaBoxOpen, color: "bg-teal-500/10 text-teal-600", path: "/stock-entries" },
   { label: "Current Stock", icon: FaBoxes, color: "bg-indigo-500/10 text-indigo-600", path: "/current-stock" },
@@ -56,6 +58,7 @@ export default function Dashboard() {
   const counts = summary?.counts ?? {};
   const totalBalance = summary?.totalBalance ?? 0;
   const todaySales = summary?.todaySales ?? { count: 0, totalAmount: 0 };
+  const profitSummary = summary?.profitSummary ?? { totalPurchaseCost: 0, totalSalesRevenue: 0, overallProfit: 0 };
   const stockSummary = summary?.stockSummary ?? [];
   const lowStockCount = summary?.lowStockCount;
 
@@ -111,11 +114,41 @@ export default function Dashboard() {
         )}
       </section>
 
+      {/* Profit summary: purchase vs sales = profit */}
+      {!loading && (
+        <section className="card p-5 bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200">
+          <h2 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <FaChartLine className="w-5 h-5 text-emerald-600" />
+            Business profit (Purchase vs Sales)
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">Supplier se jo khareeda (stock entries) aur customers ko jo becha (sales) — inka farq profit.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total purchase (cost)</p>
+              <p className="text-xl font-bold text-slate-800 mt-1">{formatMoney(profitSummary.totalPurchaseCost)}</p>
+              <p className="text-xs text-slate-500 mt-0.5">Stock entries ka total amount</p>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total sales (revenue)</p>
+              <p className="text-xl font-bold text-slate-800 mt-1">{formatMoney(profitSummary.totalSalesRevenue)}</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sales ka total amount</p>
+            </div>
+            <div className="bg-white rounded-lg p-4 border-2 border-emerald-200 bg-emerald-50/50">
+              <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide">Profit</p>
+              <p className={`text-xl font-bold mt-1 ${profitSummary.overallProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                {formatMoney(profitSummary.overallProfit)}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Revenue − Cost</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Low stock alert */}
       {!loading && lowStockCount != null && lowStockCount > 0 && (
         <div className="card p-4 bg-amber-50 border border-amber-200 flex items-center justify-between flex-wrap gap-2">
           <p className="font-medium text-amber-800">
-            <span className="font-bold">{lowStockCount}</span> part(s) ka stock 50 se kam hai.
+            <span className="font-bold">{lowStockCount}</span> item(s) ka stock 50 se kam hai.
           </p>
           <Link to="/current-stock" className="btn-secondary text-sm">Current Stock dekhein</Link>
         </div>
@@ -155,20 +188,21 @@ export default function Dashboard() {
             <table className="w-full">
               <thead className="bg-slate-50 sticky top-0">
                 <tr>
-                  <th className="table-header px-4 py-2.5 text-left">Item / Part</th>
+                  <th className="table-header px-4 py-2.5 text-left">Item</th>
+                  <th className="table-header px-4 py-2.5 text-left">Category</th>
                   <th className="table-header px-4 py-2.5 text-right">Quantity</th>
                   <th className="table-header px-4 py-2.5 text-left w-20">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {stockSummary.slice(0, 15).map((row) => (
-                  <tr key={`${row.itemId}-${row.partId}`} className="table-row-hover border-b border-slate-100">
+                  <tr key={row.itemId?.toString?.() || row.itemName} className="table-row-hover border-b border-slate-100">
                     <td className="table-cell py-2.5">
                       <span className="font-medium">{row.itemName}</span>
-                      <span className="text-slate-500"> — {row.partName}</span>
                     </td>
+                    <td className="table-cell py-2.5 text-slate-600">{row.category || "—"}</td>
                     <td className="table-cell py-2.5 text-right font-medium">
-                      {row.quantity} {row.unit || "kg"}
+                      {row.quantity} {row.quality || ""}
                     </td>
                     <td className="table-cell py-2.5">
                       {row.lowStock ? (
@@ -185,7 +219,7 @@ export default function Dashboard() {
         </div>
         {!loading && stockSummary.length > 15 && (
           <div className="p-2 border-t border-slate-100 text-center text-sm text-slate-500">
-            {stockSummary.length - 15} aur part(s). <Link to="/current-stock" className="text-amber-600 hover:underline">Full list</Link>
+            {stockSummary.length - 15} aur item(s). <Link to="/current-stock" className="text-amber-600 hover:underline">Full list</Link>
           </div>
         )}
       </section>
@@ -195,7 +229,7 @@ export default function Dashboard() {
         <ul className="text-slate-600 space-y-1.5 text-sm">
           <li>• Pehle <strong>Accounts</strong> add karein (bank/cash).</li>
           <li>• Phir <strong>Suppliers</strong> aur <strong>Customers</strong> add karein.</li>
-          <li>• <strong>Items</strong> add karein — har item ke hisse (parts) define karein.</li>
+          <li>• <strong>Categories</strong> add karein — phir <strong>Items</strong> add karke category select karein aur quality daalein.</li>
           <li>• <strong>Stock Entry</strong> se raw material aur output record karein.</li>
           <li>• <strong>Sales</strong> se bechai record karein; <strong>Transactions</strong> se deposit/withdraw/transfer.</li>
         </ul>

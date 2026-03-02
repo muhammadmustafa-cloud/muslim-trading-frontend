@@ -77,7 +77,7 @@ export default function Accounts() {
       if (editingId) await apiPut(`/accounts/${editingId}`, payload);
       else await apiPost("/accounts", payload);
       resetForm();
-      fetchList();
+      await fetchList();
     } catch (e) { setError(e.message); }
   };
 
@@ -134,9 +134,12 @@ export default function Accounts() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2"><FaWallet className="w-7 h-7 text-amber-500" /> Accounts (Hisaab)</h1>
-          <p className="page-subtitle">Bank aur cash accounts manage karein.</p>
+          <p className="page-subtitle">Bank aur cash accounts — sab database mein save. Yahan jo add karein wo yahi dikhega; auto-created (e.g. Mill Khata) bhi.</p>
         </div>
-        <button type="button" onClick={openAddModal} className="btn-primary"><FaPlus className="w-4 h-4" /> Add account</button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => fetchList()} className="btn-secondary" title="Refresh list from database">Refresh</button>
+          <button type="button" onClick={openAddModal} className="btn-primary"><FaPlus className="w-4 h-4" /> Add account</button>
+        </div>
       </header>
 
       <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit account" : "Naya account add karein"}>
@@ -162,7 +165,7 @@ export default function Accounts() {
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input type="text" placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input pl-9" />
           </div>
-          <p className="text-sm text-slate-500">{list.length} account(s)</p>
+          <p className="text-sm text-slate-500">{list.length} account(s) — sab DB se</p>
           <button type="button" onClick={() => downloadAccountsPdf(sortedList)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
@@ -187,7 +190,11 @@ export default function Accounts() {
                 <tbody>
                   {paginatedList.map((row) => (
                     <tr key={row._id} className="table-row-hover">
-                      <td className="table-cell font-medium">{row.name}</td>
+                      <td className="table-cell font-medium">
+                        <span>{row.name}</span>
+                        {row.isDailyKhata && <span className="ml-2 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Daily Khata</span>}
+                        {row.isMillKhata && <span className="ml-2 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Mill Khata</span>}
+                      </td>
                       <td className="table-cell">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${row.type === "Bank" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"}`}>{row.type || "Cash"}</span>
                       </td>

@@ -10,13 +10,15 @@ import MazdoorHistory from "./pages/MazdoorHistory";
 import MazdoorManagement from "./pages/MazdoorManagement";
 import MazdoorExpenses from "./pages/MazdoorExpenses";
 import Accounts from "./pages/Accounts";
+import Categories from "./pages/Categories";
 import Items from "./pages/Items";
 import ItemKhata from "./pages/ItemKhata";
 import StockEntries from "./pages/StockEntries";
 import CurrentStock from "./pages/CurrentStock";
 import Sales from "./pages/Sales";
 import Transactions from "./pages/Transactions";
-import DailyCashMemo from "./pages/DailyCashMemo";
+import DailyKhata from "./pages/DailyKhata";
+import MillKhata from "./pages/MillKhata";
 
 function App() {
   return (
@@ -34,13 +36,16 @@ function App() {
           <Route path="mazdoor/expenses" element={<MazdoorExpenses />} />
           <Route path="mazdoor/:id/history" element={<MazdoorHistory />} />
           <Route path="accounts" element={<Accounts />} />
+          <Route path="categories" element={<Categories />} />
           <Route path="items" element={<Items />} />
           <Route path="items/:id/khata" element={<ItemKhata />} />
           <Route path="stock-entries" element={<StockEntries />} />
           <Route path="current-stock" element={<CurrentStock />} />
           <Route path="sales" element={<Sales />} />
           <Route path="transactions" element={<Transactions />} />
-          <Route path="daily-cash-memo" element={<DailyCashMemo />} />
+          <Route path="daily-khata" element={<DailyKhata />} />
+          <Route path="daily-cash-memo" element={<DailyKhata />} />
+          <Route path="mill-khata" element={<MillKhata />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

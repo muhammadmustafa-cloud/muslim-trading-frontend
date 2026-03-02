@@ -60,6 +60,7 @@ export default function Mazdoor() {
   const openAddModal = () => { resetForm(); setModalOpen(true); };
 
   const openPaymentModal = (row) => {
+    fetchAccounts();
     setPaymentModal({ open: true, mazdoor: row });
     setPaymentForm({ date: today, accountId: "", amount: "", category: "salary", note: "" });
     setError("");
@@ -91,6 +92,7 @@ export default function Mazdoor() {
   };
 
   const openReceiveModal = (row) => {
+    fetchAccounts();
     setReceiveModal({ open: true, mazdoor: row });
     setReceiveForm({ date: today, accountId: "", amount: "", note: "" });
     setError("");
@@ -203,11 +205,13 @@ export default function Mazdoor() {
       </Modal>
 
       <Modal open={paymentModal.open} onClose={closePaymentModal} title={`Salary / Udhaar do — ${paymentModal.mazdoor?.name || ""}`}>
+        <p className="text-sm text-slate-600 mb-3">Salary ya udhaar kis account se de rahe hain — ye Transaction mein save hoga aur Mazdoor History mein dikhega.</p>
         <form onSubmit={handlePaymentSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="input-label">Kis account se de rahe hain? *</label>
             <select value={paymentForm.accountId} onChange={(e) => setPaymentForm((f) => ({ ...f, accountId: e.target.value }))} className="input-field" required>
               <option value="">— Account select karein —</option>
+              {accounts.length === 0 && <option value="" disabled>Pehle Accounts page se account add karein</option>}
               {accounts.map((a) => (
                 <option key={a._id} value={a._id}>{a.name}</option>
               ))}
@@ -241,11 +245,13 @@ export default function Mazdoor() {
       </Modal>
 
       <Modal open={receiveModal.open} onClose={closeReceiveModal} title={`Udhaar wapas lo — ${receiveModal.mazdoor?.name || ""}`}>
+        <p className="text-sm text-slate-600 mb-3">Mazdoor se udhaar wapas mila — kis account mein receive kar rahe hain. Ye Transaction + Mazdoor History mein dikhega.</p>
         <form onSubmit={handleReceiveSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="input-label">Kis account mein receive kar rahe hain? *</label>
             <select value={receiveForm.accountId} onChange={(e) => setReceiveForm((f) => ({ ...f, accountId: e.target.value }))} className="input-field" required>
               <option value="">— Account select karein —</option>
+              {accounts.length === 0 && <option value="" disabled>Pehle Accounts page se account add karein</option>}
               {accounts.map((a) => (
                 <option key={a._id} value={a._id}>{a.name}</option>
               ))}
