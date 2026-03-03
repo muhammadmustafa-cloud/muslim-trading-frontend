@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { downloadAccountsPdf } from "../utils/exportPdf.js";
-import { FaWallet, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt, FaFilePdf } from "react-icons/fa";
+import { FaWallet, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt, FaFilePdf, FaMoneyBillWave } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -19,6 +19,7 @@ export default function Accounts() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "" });
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
+  const [depositModal, setDepositModal] = useState({ open: false, account: null, amount: "", note: "" });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -92,6 +93,33 @@ export default function Accounts() {
     setDeleteConfirm({ open: false, id: null });
   };
 
+  const openDepositModal = (row) => {
+    setDepositModal({ open: true, account: row, amount: "", note: "" });
+    setError("");
+  };
+  const closeDepositModal = () => setDepositModal({ open: false, account: null, amount: "", note: "" });
+
+  const handleDepositSubmit = async (e) => {
+    e.preventDefault();
+    if (!depositModal.account) return;
+    const amt = Number(depositModal.amount);
+    if (isNaN(amt) || amt <= 0) {
+      setError("Amount zaroori hai aur 0 se zyada hona chahiye");
+      return;
+    }
+    setError("");
+    try {
+      await apiPost("/transactions", {
+        type: "deposit",
+        toAccountId: depositModal.account._id,
+        amount: amt,
+        note: (depositModal.note || "").trim(),
+      });
+      closeDepositModal();
+      await fetchList();
+    } catch (e) { setError(e.message); }
+  };
+
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
@@ -159,6 +187,27 @@ export default function Accounts() {
 
       <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Account delete karein?" message="Is account ko delete karne se data hamesha ke liye chala jayega. Continue?" confirmLabel="Haan, delete karein" />
 
+      <Modal open={depositModal.open} onClose={closeDepositModal} title="Add money / Deposit">
+        {depositModal.account && (
+          <form onSubmit={handleDepositSubmit} className="space-y-4">
+            <p className="text-sm text-slate-600">Account: <strong>{depositModal.account.name}</strong></p>
+            <div>
+              <label className="input-label">Amount *</label>
+              <input type="number" placeholder="0" value={depositModal.amount} onChange={(e) => setDepositModal((d) => ({ ...d, amount: e.target.value }))} className="input-field" min="0.01" step="any" required />
+            </div>
+            <div>
+              <label className="input-label">Note (optional)</label>
+              <input type="text" placeholder="e.g. Cash in" value={depositModal.note} onChange={(e) => setDepositModal((d) => ({ ...d, note: e.target.value }))} className="input-field" />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="flex gap-2">
+              <button type="submit" className="btn-primary"><FaMoneyBillWave className="w-4 h-4" /> Deposit</button>
+              <button type="button" onClick={closeDepositModal} className="btn-secondary">Cancel</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[200px]">
@@ -202,6 +251,7 @@ export default function Accounts() {
                       <td className="table-cell text-right font-semibold text-slate-800">{formatMoney(row.currentBalance ?? row.openingBalance)}</td>
                       <td className="table-cell">
                         <div className="flex items-center gap-1 flex-wrap">
+                          <button type="button" onClick={() => openDepositModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Deposit</button>
                           <button type="button" onClick={() => navigate(`/transactions?accountId=${row._id}`)} className="btn-ghost-primary flex items-center gap-1"><FaExchangeAlt className="w-3.5 h-3.5" /> Transactions</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
                           <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
