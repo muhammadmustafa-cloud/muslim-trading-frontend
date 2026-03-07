@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { downloadAccountsPdf } from "../utils/exportPdf.js";
-import { FaWallet, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt, FaFilePdf, FaMoneyBillWave } from "react-icons/fa";
+import { FaWallet, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt, FaFilePdf, FaMoneyBillWave } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -18,7 +17,6 @@ export default function Accounts() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "" });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [depositModal, setDepositModal] = useState({ open: false, account: null, amount: "", note: "" });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
@@ -82,16 +80,6 @@ export default function Accounts() {
     } catch (e) { setError(e.message); }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/accounts/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) { setError(e.message); }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const openDepositModal = (row) => {
     setDepositModal({ open: true, account: row, amount: "", note: "" });
@@ -185,7 +173,6 @@ export default function Accounts() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Account delete karein?" message="Is account ko delete karne se data hamesha ke liye chala jayega. Continue?" confirmLabel="Haan, delete karein" />
 
       <Modal open={depositModal.open} onClose={closeDepositModal} title="Add money / Deposit">
         {depositModal.account && (
@@ -254,7 +241,6 @@ export default function Accounts() {
                           <button type="button" onClick={() => openDepositModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Deposit</button>
                           <button type="button" onClick={() => navigate(`/transactions?accountId=${row._id}`)} className="btn-ghost-primary flex items-center gap-1"><FaExchangeAlt className="w-3.5 h-3.5" /> Transactions</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
-                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
                       </td>
                     </tr>

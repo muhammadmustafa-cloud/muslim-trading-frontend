@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaTags, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaTags, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 export default function Categories() {
@@ -13,7 +12,6 @@ export default function Categories() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", order: "" });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -79,18 +77,6 @@ export default function Categories() {
     setModalOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/categories/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -181,14 +167,6 @@ export default function Categories() {
         </form>
       </Modal>
 
-      <ConfirmDialog
-        open={deleteConfirm.open}
-        onClose={() => setDeleteConfirm({ open: false, id: null })}
-        onConfirm={handleDeleteConfirm}
-        title="Category delete karein?"
-        message="Is category ko delete karne se items ki category link toot sakti hai. Continue?"
-        confirmLabel="Haan, delete karein"
-      />
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
@@ -237,9 +215,6 @@ export default function Categories() {
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1">
                             <FaEdit className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1">
-                            <FaTrash className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
                       </td>

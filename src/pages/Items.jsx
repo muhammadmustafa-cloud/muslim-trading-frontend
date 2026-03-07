@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaBox, FaSearch, FaEdit, FaTrash, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 export default function Items() {
@@ -17,7 +16,6 @@ export default function Items() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", categoryId: "", quality: "" });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -28,7 +26,7 @@ export default function Items() {
       const res = await fetch(`${API_BASE_URL}/categories`);
       const data = await res.json();
       if (res.ok) setCategories(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const fetchList = async () => {
@@ -97,18 +95,6 @@ export default function Items() {
     setModalOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/items/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -188,7 +174,7 @@ export default function Items() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Item delete karein?" message="Is item ko delete karne se data hamesha ke liye chala jayega. Continue?" confirmLabel="Haan, delete karein" />
+
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
@@ -244,9 +230,6 @@ export default function Items() {
                           </button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1">
                             <FaEdit className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1">
-                            <FaTrash className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
                       </td>

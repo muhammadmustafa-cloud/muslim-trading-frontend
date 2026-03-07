@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaTruck, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
+import { FaTruck, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 export default function Suppliers() {
@@ -16,7 +15,6 @@ export default function Suppliers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "", isAlsoCustomer: false, linkedCustomerId: "", createLinkedCustomer: false });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -44,7 +42,7 @@ export default function Suppliers() {
       const res = await fetch(`${API_BASE_URL}/customers`);
       const data = await res.json();
       if (res.ok) setCustomers(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   useEffect(() => { fetchList(); }, [search]);
@@ -88,16 +86,6 @@ export default function Suppliers() {
     } catch (e) { setError(e.message); }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/suppliers/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) { setError(e.message); }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -176,7 +164,6 @@ export default function Suppliers() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Supplier delete karein?" message="Is supplier ko delete karne se data hamesha ke liye chala jayega. Continue?" confirmLabel="Haan, delete karein" />
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
@@ -212,7 +199,6 @@ export default function Suppliers() {
                         <div className="flex items-center gap-1 flex-wrap">
                           <button type="button" onClick={() => navigate(`/suppliers/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
-                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
                       </td>
                     </tr>

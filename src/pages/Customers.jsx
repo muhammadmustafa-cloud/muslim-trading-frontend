@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaUsers, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
+import { FaUsers, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 export default function Customers() {
@@ -16,7 +15,6 @@ export default function Customers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "", isAlsoSupplier: false, linkedSupplierId: "", createLinkedSupplier: false });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -46,7 +44,7 @@ export default function Customers() {
       const res = await fetch(`${API_BASE_URL}/suppliers`);
       const data = await res.json();
       if (res.ok) setSuppliers(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   useEffect(() => {
@@ -110,22 +108,6 @@ export default function Customers() {
     }
   };
 
-  const handleDeleteClick = (id) => {
-    setDeleteConfirm({ open: true, id });
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/customers/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -224,14 +206,6 @@ export default function Customers() {
         </form>
       </Modal>
 
-      <ConfirmDialog
-        open={deleteConfirm.open}
-        onClose={() => setDeleteConfirm({ open: false, id: null })}
-        onConfirm={handleDeleteConfirm}
-        title="Customer delete karein?"
-        message="Is customer ko delete karne se data hamesha ke liye chala jayega. Continue?"
-        confirmLabel="Haan, delete karein"
-      />
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
@@ -250,13 +224,13 @@ export default function Customers() {
                 <thead>
                   <tr>
                     {["name", "phone", "address", "notes"].map((key) => (
-                  <th key={key} className="table-header px-5 py-3.5">
-                    <button type="button" onClick={() => toggleSort(key)} className="flex items-center hover:text-slate-800">
-                      {key === "name" ? "Naam" : key === "phone" ? "Phone" : key === "address" ? "Pata" : "Notes"}
-                      <SortIcon columnKey={key} />
-                    </button>
-                  </th>
-                ))}
+                      <th key={key} className="table-header px-5 py-3.5">
+                        <button type="button" onClick={() => toggleSort(key)} className="flex items-center hover:text-slate-800">
+                          {key === "name" ? "Naam" : key === "phone" ? "Phone" : key === "address" ? "Pata" : "Notes"}
+                          <SortIcon columnKey={key} />
+                        </button>
+                      </th>
+                    ))}
                     <th className="table-header px-5 py-3.5">Supplier?</th>
                     <th className="table-header px-5 py-3.5 w-40">Actions</th>
                   </tr>
@@ -273,7 +247,6 @@ export default function Customers() {
                         <div className="flex items-center gap-1 flex-wrap">
                           <button type="button" onClick={() => navigate(`/customers/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
-                          <button type="button" onClick={() => handleDeleteClick(row._id)} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
                       </td>
                     </tr>

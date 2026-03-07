@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadSalesPdf } from "../utils/exportPdf.js";
-import { FaShoppingCart, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd } from "react-icons/fa";
+import { FaShoppingCart, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
 
@@ -37,7 +36,6 @@ export default function Sales() {
     paymentTerms: "cash",
     dueDate: "",
   });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", customerId: "", itemId: "" });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
@@ -268,18 +266,6 @@ export default function Sales() {
     setModalOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/sales/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const handleCollectSuccess = () => {
     fetchList();
@@ -468,7 +454,6 @@ export default function Sales() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Sale delete karein?" message="Is sale ko delete karne se stock wapas add ho jayega. Continue?" confirmLabel="Haan, delete karein" />
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
@@ -559,7 +544,6 @@ export default function Sales() {
                             </button>
                           )}
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
-                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
                       </td>
                     </tr>

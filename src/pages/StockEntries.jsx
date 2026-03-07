@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { downloadStockEntriesPdf } from "../utils/exportPdf.js";
-import { FaBoxOpen, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
+import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import PayBillModal from "../components/PayBillModal.jsx";
 import { FaMoneyBillWave } from "react-icons/fa";
@@ -36,7 +35,6 @@ export default function StockEntries() {
     paymentTerms: "cash",
     dueDate: "",
   });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", supplierId: "" });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
@@ -215,18 +213,6 @@ export default function StockEntries() {
     setModalOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/stock-entries/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchList();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -403,7 +389,6 @@ export default function StockEntries() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDeleteConfirm} title="Stock entry delete karein?" message="Is entry ko delete karne se current stock change ho jayega. Continue?" confirmLabel="Haan, delete karein" />
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
@@ -497,7 +482,6 @@ export default function StockEntries() {
                             </button>
                           )}
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
-                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
                       </td>
                     </tr>

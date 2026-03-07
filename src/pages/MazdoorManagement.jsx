@@ -6,7 +6,6 @@ import {
   FaMoneyBillWave,
   FaBox,
   FaEdit,
-  FaTrash,
   FaPlus,
   FaSearch,
   FaSort,
@@ -14,7 +13,6 @@ import {
   FaSortDown,
 } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -27,7 +25,6 @@ export default function MazdoorManagement() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", rate: "" });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
@@ -95,18 +92,6 @@ export default function MazdoorManagement() {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/mazdoor-items/${deleteConfirm.id}`);
-      if (editingId === deleteConfirm.id) resetForm();
-      fetchItems();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -230,14 +215,6 @@ export default function MazdoorManagement() {
           </form>
         </Modal>
 
-        <ConfirmDialog
-          open={deleteConfirm.open}
-          onClose={() => setDeleteConfirm({ open: false, id: null })}
-          onConfirm={handleDeleteConfirm}
-          title="Item delete karein?"
-          message="Is item ko delete karne se data hamesha ke liye chala jayega. Continue?"
-          confirmLabel="Haan, delete karein"
-        />
 
         <div className="overflow-x-auto">
           {itemsLoading ? (
@@ -286,13 +263,6 @@ export default function MazdoorManagement() {
                             className="btn-ghost-primary flex items-center gap-1"
                           >
                             <FaEdit className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteConfirm({ open: true, id: row._id })}
-                            className="btn-ghost-danger flex items-center gap-1"
-                          >
-                            <FaTrash className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
                       </td>

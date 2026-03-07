@@ -4,13 +4,11 @@ import { API_BASE_URL, apiPost, apiDelete } from "../config/api.js";
 import {
   FaMoneyBillWave,
   FaPlus,
-  FaTrash,
   FaArrowLeft,
   FaSort,
   FaSortUp,
   FaSortDown,
 } from "react-icons/fa";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -40,7 +38,6 @@ export default function MazdoorExpenses() {
     bags: "",
     accountId: "",
   });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
@@ -76,21 +73,21 @@ export default function MazdoorExpenses() {
       const res = await fetch(`${API_BASE_URL}/mazdoor`);
       const data = await res.json();
       if (res.ok) setMazdoor(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchItems = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/mazdoor-items`);
       const data = await res.json();
       if (res.ok) setItems(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchAccounts = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/accounts`);
       const data = await res.json();
       if (res.ok) setAccounts(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   useEffect(() => {
@@ -149,17 +146,6 @@ export default function MazdoorExpenses() {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await apiDelete(`/mazdoor-expenses/${deleteConfirm.id}`);
-      fetchList();
-    } catch (e) {
-      setError(e.message);
-    }
-    setDeleteConfirm({ open: false, id: null });
-  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -309,14 +295,6 @@ export default function MazdoorExpenses() {
         </form>
       </section>
 
-      <ConfirmDialog
-        open={deleteConfirm.open}
-        onClose={() => setDeleteConfirm({ open: false, id: null })}
-        onConfirm={handleDeleteConfirm}
-        title="Expense delete karein?"
-        message="Is record ko delete karne se transaction bhi delete ho jayega aur account balance wapas add ho jayegi. Continue?"
-        confirmLabel="Haan, delete karein"
-      />
 
       {/* List */}
       <section className="card">
@@ -389,7 +367,6 @@ export default function MazdoorExpenses() {
                       </button>
                     </th>
                     <th className="table-header px-5 py-3.5">Account</th>
-                    <th className="table-header px-5 py-3.5 w-24">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -402,15 +379,6 @@ export default function MazdoorExpenses() {
                       <td className="table-cell">{formatMoney(row.mazdoorItemId?.rate)}</td>
                       <td className="table-cell font-semibold text-slate-800">{formatMoney(row.totalAmount)}</td>
                       <td className="table-cell">{row.accountId?.name ?? "—"}</td>
-                      <td className="table-cell">
-                        <button
-                          type="button"
-                          onClick={() => setDeleteConfirm({ open: true, id: row._id })}
-                          className="btn-ghost-danger flex items-center gap-1"
-                        >
-                          <FaTrash className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>

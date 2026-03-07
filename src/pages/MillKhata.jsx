@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { API_BASE_URL, apiPost } from "../config/api.js";
-import { FaIndustry, FaPlus, FaTrash, FaCalendarDay, FaFilePdf } from "react-icons/fa";
+import { FaIndustry, FaPlus, FaCalendarDay, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import { downloadMillKhataPdf } from "../utils/millKhataPdf.js";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -21,7 +20,6 @@ export default function MillKhata() {
   // Modals
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ date: today, amount: "", category: "", note: "" });
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
 
   const fetchDaybook = async (dateFrom, dateTo) => {
     setLoading(true);
@@ -75,17 +73,6 @@ export default function MillKhata() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteConfirm.id) return;
-    setError("");
-    try {
-      await fetch(`${API_BASE_URL}/mill-expenses/${deleteConfirm.id}`, { method: "DELETE" });
-      setDeleteConfirm({ open: false, id: null });
-      fetchDaybook(filters.dateFrom, filters.dateTo);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
 
   const handleDownloadPdf = () => {
     downloadMillKhataPdf(filters.dateFrom, filters.dateTo, list, summary);
@@ -224,7 +211,6 @@ export default function MillKhata() {
                           <th className="px-6 py-3 font-semibold w-1/4">Category</th>
                           <th className="px-6 py-3 font-semibold w-1/2">Note / Description</th>
                           <th className="px-6 py-3 font-semibold text-right w-1/6">Amount (Rs)</th>
-                          <th className="px-6 py-3 font-semibold text-right w-24">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -233,16 +219,6 @@ export default function MillKhata() {
                             <td className="py-3 px-6 text-slate-700 font-medium">{row.category || "—"}</td>
                             <td className="py-3 px-6 text-slate-500">{row.note || "—"}</td>
                             <td className="py-3 px-6 text-right font-bold text-slate-800">{formatMoney(row.amount)}</td>
-                            <td className="py-3 px-6 text-right">
-                              <button
-                                type="button"
-                                onClick={() => setDeleteConfirm({ open: true, id: row._id })}
-                                className="text-slate-300 hover:text-red-500 transition-colors p-2"
-                                title="Delete Entry"
-                              >
-                                <FaTrash />
-                              </button>
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -266,7 +242,6 @@ export default function MillKhata() {
         </form>
       </Modal>
 
-      <ConfirmDialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, id: null })} onConfirm={handleDelete} title="Delete Record?" message="Is expense ko delete karne se account mein wapas amount add ho jayega. Kia aap waqai delete karna chahte hain?" confirmLabel="Yes, Delete" />
     </div>
   );
 }
