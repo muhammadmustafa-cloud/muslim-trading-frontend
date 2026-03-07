@@ -1,78 +1,50 @@
-import { useState, useEffect } from "react";
-import { API_BASE_URL, apiGet, apiPost, apiPut } from "../config/api.js";
+import { useState, useEffect, useMemo } from "react";
+import { apiGet } from "../config/api.js";
 import {
   FaFileInvoiceDollar,
-  FaCalendarDay,
-  FaPlus,
   FaArrowDown,
   FaArrowUp,
-  FaWallet,
+  FaFilePdf,
 } from "react-icons/fa";
-import Modal from "../components/Modal.jsx";
+import { downloadDailyKhataPdf } from "../utils/dailyKhataPdf.js";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-const formatTime = (d) => (d ? new Date(d).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" }) : "—");
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 const TYPE_LABELS = {
   sale: "Sale",
-  stock_entry: "Purchase",
+  purchase: "Purchase",
   deposit: "Deposit",
   withdraw: "Withdraw",
   transfer: "Transfer",
+  mill_expense: "Mill Expense",
+  mazdoor_expense: "Mazdoor",
+};
+const TYPE_COLORS = {
+  sale: "bg-emerald-100 text-emerald-800",
+  purchase: "bg-orange-100 text-orange-800",
+  deposit: "bg-green-100 text-green-700",
+  withdraw: "bg-red-100 text-red-700",
+  transfer: "bg-blue-100 text-blue-700",
+  mill_expense: "bg-purple-100 text-purple-800",
+  mazdoor_expense: "bg-amber-100 text-amber-800",
 };
 
 export default function DailyKhata() {
   const today = getToday();
-  const [dailyKhataAccount, setDailyKhataAccount] = useState(null);
-  const [accounts, setAccounts] = useState([]);
   const [list, setList] = useState([]);
   const [summary, setSummary] = useState({ totalIn: 0, totalOut: 0, net: 0 });
-  const [customers, setCustomers] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ dateFrom: today, dateTo: today });
-  const [addModal, setAddModal] = useState(null);
-  const [form, setForm] = useState({});
-  const [submitError, setSubmitError] = useState("");
-
-  const fetchDailyKhataAccount = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/accounts/daily-khata`);
-      const data = await res.json();
-      if (data.success) setDailyKhataAccount(data.data);
-    } catch (_) {}
-  };
-
-  const fetchAccounts = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/accounts`);
-      const data = await res.json();
-      if (data.data) setAccounts(data.data);
-    } catch (_) {}
-  };
-
-  const setAsDailyKhata = async (accountId) => {
-    setError("");
-    try {
-      await apiPut("/accounts/daily-khata", { accountId });
-      await fetchDailyKhataAccount();
-    } catch (e) {
-      setError(e.message);
-    }
-  };
 
   const fetchList = async () => {
-    if (!dailyKhataAccount?._id) return setList([]);
     setLoading(true);
     setError("");
     try {
-      const params = { dateFrom: filters.dateFrom, dateTo: filters.dateTo, accountId: dailyKhataAccount._id };
-      const data = await apiGet("/daily-memo", params);
+      const data = await apiGet("/daily-memo", { dateFrom: filters.dateFrom, dateTo: filters.dateTo });
       setList(data.data || []);
       setSummary(data.summary || { totalIn: 0, totalOut: 0, net: 0 });
     } catch (e) {
@@ -83,105 +55,24 @@ export default function DailyKhata() {
     }
   };
 
-  const fetchOptions = async () => {
-    try {
-      const [cust, sup, it] = await Promise.all([
-        fetch(`${API_BASE_URL}/customers`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/suppliers`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/items`).then((r) => r.json()),
-      ]);
-      if (cust.data) setCustomers(cust.data);
-      if (sup.data) setSuppliers(sup.data);
-      if (it.data) setItems(it.data);
-    } catch (_) {}
-  };
-
-  useEffect(() => {
-    fetchDailyKhataAccount();
-    fetchAccounts();
-  }, []);
   useEffect(() => {
     fetchList();
-  }, [dailyKhataAccount?._id, filters.dateFrom, filters.dateTo]);
-  useEffect(() => {
-    fetchOptions();
-  }, []);
+  }, [filters.dateFrom, filters.dateTo]);
 
-  const creditRows = list.filter((r) => r.amountType === "in");
-  const debitRows = list.filter((r) => r.amountType === "out");
+  // Group rows by date for daily sub-headers
+  const groupedData = useMemo(() => {
+    const groups = {};
+    list.forEach((row) => {
+      const key = new Date(row.date).toISOString().slice(0, 10);
+      if (!groups[key]) groups[key] = { date: key, rows: [], dayIn: 0, dayOut: 0 };
+      groups[key].rows.push(row);
+      if (row.amountType === "in") groups[key].dayIn += Number(row.amount) || 0;
+      else groups[key].dayOut += Number(row.amount) || 0;
+    });
+    return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
+  }, [list]);
 
-  const openAdd = (type) => {
-    setSubmitError("");
-    setAddModal(type);
-    const d = filters.dateFrom || today;
-    if (type === "sale") setForm({ date: d, customerId: "", itemId: "", quantity: "", rate: "", totalAmount: "", amountReceived: "", notes: "" });
-    else if (type === "deposit") setForm({ date: d, amount: "", note: "" });
-    else if (type === "purchase") setForm({ date: d, itemId: "", supplierId: "", kattay: "", kgPerKata: "", ratePerKata: "", amount: "", amountPaid: "", notes: "" });
-    else if (type === "salary" || type === "expense" || type === "withdraw") setForm({ date: d, amount: "", category: type === "salary" ? "Salary" : type === "expense" ? "Expense" : "", note: "" });
-  };
-
-  const handleSubmitAdd = async (e) => {
-    e.preventDefault();
-    setSubmitError("");
-    const accId = dailyKhataAccount?._id;
-    if (!accId) return setSubmitError("Pehle Daily Khata account set karein.");
-    try {
-      if (addModal === "sale") {
-        const qty = Number(form.quantity) || 0;
-        const rate = Number(form.rate) || 0;
-        const total = qty && rate ? Math.round(qty * rate) : Number(form.totalAmount) || 0;
-        await apiPost("/sales", {
-          date: form.date,
-          customerId: form.customerId,
-          itemId: form.itemId,
-          quantity: qty,
-          rate,
-          totalAmount: total,
-          amountReceived: Number(form.amountReceived) || total,
-          accountId: accId,
-          notes: form.notes || "",
-        });
-      } else if (addModal === "deposit") {
-        await apiPost("/transactions", {
-          date: form.date,
-          type: "deposit",
-          toAccountId: accId,
-          amount: Number(form.amount) || 0,
-          note: form.note || "",
-        });
-      } else if (addModal === "purchase") {
-        const k = Number(form.kattay) || 0;
-        const kg = Number(form.kgPerKata) || 0;
-        const amt = Number(form.amount) || (k && Number(form.ratePerKata) ? Math.round(k * Number(form.ratePerKata)) : 0);
-        await apiPost("/stock-entries", {
-          date: form.date,
-          itemId: form.itemId,
-          supplierId: form.supplierId,
-          kattay: k,
-          kgPerKata: kg,
-          receivedWeight: k && kg ? k * kg : 0,
-          amount: amt,
-          amountPaid: Number(form.amountPaid) || amt,
-          accountId: accId,
-          notes: form.notes || "",
-        });
-      } else if (addModal === "salary" || addModal === "expense" || addModal === "withdraw") {
-        await apiPost("/transactions", {
-          date: form.date,
-          type: "withdraw",
-          fromAccountId: accId,
-          amount: Number(form.amount) || 0,
-          category: form.category || (addModal === "salary" ? "Salary" : addModal === "expense" ? "Expense" : ""),
-          note: form.note || "",
-        });
-      }
-      setAddModal(null);
-      fetchList();
-      fetchDailyKhataAccount();
-    } catch (err) {
-      setSubmitError(err.message);
-    }
-  };
+  const isRange = filters.dateFrom !== filters.dateTo;
 
   return (
     <div className="space-y-6">
@@ -192,173 +83,116 @@ export default function DailyKhata() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Daily Khata</h1>
-            <p className="text-slate-500 text-sm">Credit (add) aur Debit (cut) — sab isi account se. Payment aaya/ gaya, salary, expense sab yahan.</p>
+            <p className="text-slate-500 text-sm">Roz ka hisaab — sab credit/debit ek jagah dikhta hai.</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => downloadDailyKhataPdf(list, summary, filters)}
+          className="btn-primary flex items-center gap-1.5"
+          disabled={list.length === 0}
+        >
+          <FaFilePdf className="w-4 h-4" /> Export PDF
+        </button>
       </header>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">{error}</div>}
 
-      {/* Daily Khata Account */}
+      {/* Filters */}
       <section className="card p-4">
-        <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-          <FaWallet className="text-amber-500" />
-          Daily Khata Account
-        </h3>
-        {!dailyKhataAccount ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              className="input-field w-56"
-              value={form.selectedAccountId || ""}
-              onChange={(e) => setForm((f) => ({ ...f, selectedAccountId: e.target.value }))}
-            >
-              <option value="">Select account</option>
-              {accounts.map((a) => (
-                <option key={a._id} value={a._id}>{a.name}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => form.selectedAccountId && setAsDailyKhata(form.selectedAccountId)}
-              className="btn-primary"
-              disabled={!form.selectedAccountId}
-            >
-              Is account ko Daily Khata banaen
-            </button>
-            <p className="text-sm text-slate-500">Yahi account se sab add/debit hoga. Pehle Accounts se account banaen.</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div>
+            <label className="input-label text-xs">Start Date</label>
+            <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-44" />
+          </div>
+          <div>
+            <label className="input-label text-xs">End Date</label>
+            <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-44" />
+          </div>
+          <button type="button" onClick={() => setFilters({ dateFrom: today, dateTo: today })} className="btn-secondary text-sm mt-5">Aaj</button>
+          <p className="text-sm text-slate-500 mt-5">{list.length} record(s)</p>
+        </div>
+      </section>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card p-4 border-l-4 border-l-emerald-500">
+          <p className="text-sm text-slate-500">Total In (Credit)</p>
+          <p className="text-xl font-bold text-emerald-700">{formatMoney(summary.totalIn)}</p>
+        </div>
+        <div className="card p-4 border-l-4 border-l-rose-500">
+          <p className="text-sm text-slate-500">Total Out (Debit)</p>
+          <p className="text-xl font-bold text-rose-700">{formatMoney(summary.totalOut)}</p>
+        </div>
+        <div className="card p-4 border-l-4 border-l-amber-500">
+          <p className="text-sm text-slate-500">Net (In − Out)</p>
+          <p className={`text-xl font-bold ${summary.net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatMoney(summary.net)}</p>
+        </div>
+      </div>
+
+      {/* Unified Table with Daily Grouping */}
+      <section className="card overflow-hidden">
+        {loading ? (
+          <div className="p-10 text-center text-slate-500"><div className="loading-spinner mb-3" /><p>Loading...</p></div>
+        ) : list.length === 0 ? (
+          <div className="p-10 text-center text-slate-500">
+            <FaFileInvoiceDollar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="font-medium text-slate-700">Is date range mein koi record nahi.</p>
+            <p className="text-sm mt-1">Sales, Purchases, Transactions, Mill Expenses, ya Mazdoor expenses add karein — sab yahan dikhenge.</p>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-medium text-slate-800">{dailyKhataAccount.name}</p>
-              <p className="text-lg font-bold text-emerald-600">Balance: {formatMoney(dailyKhataAccount.currentBalance)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value, dateTo: e.target.value }))} className="input-field w-40" />
-              <button type="button" onClick={() => setFilters((f) => ({ ...f, dateFrom: today, dateTo: today }))} className="btn-secondary text-sm">Aaj</button>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Type</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Description</th>
+                  <th className="text-right py-3 px-4 font-semibold text-emerald-700">
+                    <span className="flex items-center justify-end gap-1"><FaArrowDown className="w-3 h-3" /> Credit (In)</span>
+                  </th>
+                  <th className="text-right py-3 px-4 font-semibold text-rose-700">
+                    <span className="flex items-center justify-end gap-1"><FaArrowUp className="w-3 h-3" /> Debit (Out)</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedData.map((group) => (
+                  <>
+                    {/* Day Header (only show if range spans multiple days) */}
+                    {isRange && (
+                      <tr key={`header-${group.date}`} className="bg-slate-100/80">
+                        <td colSpan="3" className="py-2.5 px-4 font-bold text-slate-700">
+                          📅 {formatDate(group.date)}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-bold text-emerald-700">{formatMoney(group.dayIn)}</td>
+                        <td className="py-2.5 px-4 text-right font-bold text-rose-700">{formatMoney(group.dayOut)}</td>
+                      </tr>
+                    )}
+                    {group.rows.map((row, i) => (
+                      <tr key={`${group.date}-${i}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="py-2.5 px-4 text-slate-600">{formatDate(row.date)}</td>
+                        <td className="py-2.5 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${TYPE_COLORS[row.type] || "bg-slate-100 text-slate-700"}`}>
+                            {TYPE_LABELS[row.type] || row.type}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-slate-700 max-w-[280px] truncate" title={row.description}>{row.description || "—"}</td>
+                        <td className="py-2.5 px-4 text-right font-medium text-emerald-700">
+                          {row.amountType === "in" ? formatMoney(row.amount) : ""}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-medium text-rose-700">
+                          {row.amountType === "out" ? formatMoney(row.amount) : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
-
-      {dailyKhataAccount && (
-        <>
-          {/* Quick Add */}
-          <section className="card p-4">
-            <h3 className="font-semibold text-slate-800 mb-3">Quick add</h3>
-            <div className="flex flex-wrap gap-2">
-              <span className="text-xs text-slate-500 mr-2">Credit (paise aaye):</span>
-              <button type="button" onClick={() => openAdd("sale")} className="btn-primary text-sm">Sale</button>
-              <button type="button" onClick={() => openAdd("deposit")} className="btn-primary text-sm">Deposit</button>
-              <span className="text-xs text-slate-500 mx-2">Debit (paise nikle):</span>
-              <button type="button" onClick={() => openAdd("purchase")} className="btn-secondary text-sm">Purchase</button>
-              <button type="button" onClick={() => openAdd("salary")} className="btn-secondary text-sm">Salary</button>
-              <button type="button" onClick={() => openAdd("expense")} className="btn-secondary text-sm">Expense</button>
-              <button type="button" onClick={() => openAdd("withdraw")} className="btn-secondary text-sm">Withdraw</button>
-            </div>
-          </section>
-
-          {/* Summary */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="card p-4 border-l-4 border-l-emerald-500">
-              <p className="text-sm text-slate-500">Total In (Credit)</p>
-              <p className="text-xl font-bold text-emerald-700">{formatMoney(summary.totalIn)}</p>
-            </div>
-            <div className="card p-4 border-l-4 border-l-rose-500">
-              <p className="text-sm text-slate-500">Total Out (Debit)</p>
-              <p className="text-xl font-bold text-rose-700">{formatMoney(summary.totalOut)}</p>
-            </div>
-            <div className="card p-4 border-l-4 border-l-amber-500">
-              <p className="text-sm text-slate-500">Net (In − Out)</p>
-              <p className={`text-xl font-bold ${summary.net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatMoney(summary.net)}</p>
-            </div>
-          </div>
-
-          {/* Credit (Add) */}
-          <section className="card overflow-hidden">
-            <div className="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
-              <FaArrowDown className="text-emerald-600" />
-              <h3 className="font-semibold text-emerald-800">Credit — paise aaye (Sale, Deposit, Transfer in)</h3>
-            </div>
-            {loading ? (
-              <div className="p-8 text-center text-slate-500">Loading...</div>
-            ) : creditRows.length === 0 ? (
-              <div className="p-6 text-center text-slate-500">Is date mein koi credit nahi.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="text-left py-2 px-4">Date</th><th className="text-left py-2 px-4">Type</th><th className="text-left py-2 px-4">Description</th><th className="text-right py-2 px-4">Amount</th></tr></thead>
-                  <tbody>
-                    {creditRows.map((row, i) => (
-                      <tr key={i} className="border-b border-slate-100"><td className="py-2 px-4">{formatDate(row.date)} {formatTime(row.date)}</td><td className="py-2 px-4"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs">{TYPE_LABELS[row.type] || row.type}</span></td><td className="py-2 px-4">{row.description || "—"}</td><td className="py-2 px-4 text-right font-medium text-emerald-700">{formatMoney(row.amount)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          {/* Debit (Cut) */}
-          <section className="card overflow-hidden">
-            <div className="p-4 bg-rose-50 border-b border-rose-100 flex items-center gap-2">
-              <FaArrowUp className="text-rose-600" />
-              <h3 className="font-semibold text-rose-800">Debit — paise nikle (Purchase, Salary, Expense, Withdraw)</h3>
-            </div>
-            {loading ? (
-              <div className="p-8 text-center text-slate-500">Loading...</div>
-            ) : debitRows.length === 0 ? (
-              <div className="p-6 text-center text-slate-500">Is date mein koi debit nahi.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="text-left py-2 px-4">Date</th><th className="text-left py-2 px-4">Type</th><th className="text-left py-2 px-4">Description</th><th className="text-right py-2 px-4">Amount</th></tr></thead>
-                  <tbody>
-                    {debitRows.map((row, i) => (
-                      <tr key={i} className="border-b border-slate-100"><td className="py-2 px-4">{formatDate(row.date)} {formatTime(row.date)}</td><td className="py-2 px-4"><span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-xs">{TYPE_LABELS[row.type] || row.type}</span></td><td className="py-2 px-4">{row.description || "—"}</td><td className="py-2 px-4 text-right font-medium text-rose-700">{formatMoney(row.amount)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        </>
-      )}
-
-      {/* Add Modal */}
-      <Modal open={!!addModal} onClose={() => setAddModal(null)} title={addModal === "sale" ? "Add Sale" : addModal === "deposit" ? "Add Deposit" : addModal === "purchase" ? "Add Purchase" : addModal === "salary" ? "Pay Salary" : addModal === "expense" ? "Add Expense" : "Withdraw"}>
-        <form onSubmit={handleSubmitAdd} className="space-y-4">
-          {addModal === "sale" && (
-            <>
-              <div><label className="input-label">Date</label><input type="date" value={form.date || ""} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required /></div>
-              <div><label className="input-label">Customer *</label><select value={form.customerId || ""} onChange={(e) => setForm((f) => ({ ...f, customerId: e.target.value }))} className="input-field" required><option value="">Select</option>{customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select></div>
-              <div><label className="input-label">Item *</label><select value={form.itemId || ""} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required><option value="">Select</option>{items.map((i) => <option key={i._id} value={i._id}>{i.name}</option>)}</select></div>
-              <div className="grid grid-cols-2 gap-2"><div><label className="input-label">Qty (kg) *</label><input type="number" value={form.quantity || ""} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} className="input-field" required min="0" step="any" /></div><div><label className="input-label">Rate (Rs/kg)</label><input type="number" value={form.rate || ""} onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))} className="input-field" min="0" step="any" /></div></div>
-              <div><label className="input-label">Amount received</label><input type="number" value={form.amountReceived || ""} className="input-field" min="0" onChange={(e) => setForm((f) => ({ ...f, amountReceived: e.target.value }))} /></div>
-              <div><label className="input-label">Notes</label><input type="text" value={form.notes || ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" /></div>
-            </>
-          )}
-          {(addModal === "deposit" || addModal === "salary" || addModal === "expense" || addModal === "withdraw") && (
-            <>
-              <div><label className="input-label">Date</label><input type="date" value={form.date || ""} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required /></div>
-              <div><label className="input-label">Amount *</label><input type="number" value={form.amount || ""} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" required min="0" step="1" /></div>
-              {(addModal === "salary" || addModal === "expense" || addModal === "withdraw") && <div><label className="input-label">Category</label><input type="text" value={form.category || ""} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="input-field" placeholder={addModal === "salary" ? "Salary" : addModal === "expense" ? "Expense" : "Optional"} /></div>}
-              <div><label className="input-label">Note</label><input type="text" value={form.note || ""} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field" /></div>
-            </>
-          )}
-          {addModal === "purchase" && (
-            <>
-              <div><label className="input-label">Date</label><input type="date" value={form.date || ""} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required /></div>
-              <div><label className="input-label">Item *</label><select value={form.itemId || ""} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required><option value="">Select</option>{items.map((i) => <option key={i._id} value={i._id}>{i.name}</option>)}</select></div>
-              <div><label className="input-label">Supplier *</label><select value={form.supplierId || ""} onChange={(e) => setForm((f) => ({ ...f, supplierId: e.target.value }))} className="input-field" required><option value="">Select</option>{suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}</select></div>
-              <div className="grid grid-cols-2 gap-2"><div><label className="input-label">Kattay</label><input type="number" value={form.kattay || ""} onChange={(e) => setForm((f) => ({ ...f, kattay: e.target.value }))} className="input-field" min="0" /></div><div><label className="input-label">Kg/katta</label><input type="number" value={form.kgPerKata || ""} onChange={(e) => setForm((f) => ({ ...f, kgPerKata: e.target.value }))} className="input-field" min="0" step="any" /></div></div>
-              <div className="grid grid-cols-2 gap-2"><div><label className="input-label">Rate/katta (Rs)</label><input type="number" value={form.ratePerKata || ""} onChange={(e) => setForm((f) => ({ ...f, ratePerKata: e.target.value }))} className="input-field" min="0" /></div><div><label className="input-label">Amount / Amount paid</label><input type="number" value={form.amount || form.amountPaid || ""} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value, amountPaid: e.target.value }))} className="input-field" min="0" /></div></div>
-              <div><label className="input-label">Notes</label><input type="text" value={form.notes || ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" /></div>
-            </>
-          )}
-          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-          <div className="flex gap-2"><button type="submit" className="btn-primary">Add</button><button type="button" onClick={() => setAddModal(null)} className="btn-secondary">Cancel</button></div>
-        </form>
-      </Modal>
     </div>
   );
 }
