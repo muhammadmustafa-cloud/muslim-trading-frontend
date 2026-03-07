@@ -14,6 +14,7 @@ import {
   FaExchangeAlt,
   FaFileInvoiceDollar,
   FaIndustry,
+  FaHandHoldingUsd,
 } from "react-icons/fa";
 
 const navItems = [
@@ -21,7 +22,9 @@ const navItems = [
   { to: "/daily-khata", icon: FaFileInvoiceDollar, label: "Daily Khata" },
   { to: "/mill-khata", icon: FaIndustry, label: "Mill Khata" },
   { to: "/customers", icon: FaUsers, label: "Customers" },
+  { to: "/customers/receivables", icon: FaHandHoldingUsd, label: "Customer Receivables" },
   { to: "/suppliers", icon: FaTruck, label: "Suppliers" },
+  { to: "/suppliers/payables", icon: FaHandHoldingUsd, label: "Supplier Payables" },
   { to: "/mazdoor", icon: FaUser, label: "Mazdoor" },
   { to: "/mazdoor/management", icon: FaClipboardList, label: "Mazdoor Management" },
   { to: "/accounts", icon: FaWallet, label: "Accounts" },
@@ -57,10 +60,9 @@ export default function AdminLayout() {
                   to={to}
                   end={end}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-amber-500/20 text-amber-300"
-                        : "text-slate-300 hover:bg-sidebar-hover hover:text-white"
+                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                      ? "bg-amber-500/20 text-amber-300"
+                      : "text-slate-300 hover:bg-sidebar-hover hover:text-white"
                     }`
                   }
                 >

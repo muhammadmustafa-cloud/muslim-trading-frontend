@@ -61,6 +61,7 @@ export default function Dashboard() {
   const profitSummary = summary?.profitSummary ?? { totalPurchaseCost: 0, totalSalesRevenue: 0, overallProfit: 0 };
   const stockSummary = summary?.stockSummary ?? [];
   const lowStockCount = summary?.lowStockCount;
+  const pendingPayments = summary?.pendingPayments ?? { count: 0, totalAmount: 0 };
 
   return (
     <div className="space-y-8">
@@ -151,6 +152,25 @@ export default function Dashboard() {
             <span className="font-bold">{lowStockCount}</span> item(s) ka stock 50 se kam hai.
           </p>
           <Link to="/current-stock" className="btn-secondary text-sm">Current Stock dekhein</Link>
+        </div>
+      )}
+
+      {/* Pending payments alert */}
+      {!loading && pendingPayments.count > 0 && (
+        <div className="card p-4 bg-red-50 border-2 border-red-200 flex items-center justify-between flex-wrap gap-2 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <FaWallet className="text-red-600" />
+            </div>
+            <div>
+              <p className="font-bold text-red-800">Pending Payments Alert!</p>
+              <p className="text-sm text-red-700">
+                Aapki <span className="font-bold">{pendingPayments.count}</span> purchases (Stock Entries) ki payment pending he.
+                Total baqaya: <span className="font-bold text-red-900">{formatMoney(pendingPayments.totalAmount)}</span>
+              </p>
+            </div>
+          </div>
+          <Link to="/stock-entries" className="btn-primary bg-red-600 hover:bg-red-700 text-sm">Bills dekhein</Link>
         </div>
       )}
 

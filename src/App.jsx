@@ -3,8 +3,10 @@ import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import CustomerHistory from "./pages/CustomerHistory";
+import CustomerReceivables from "./pages/CustomerReceivables";
 import Suppliers from "./pages/Suppliers";
 import SupplierHistory from "./pages/SupplierHistory";
+import SupplierPayables from "./pages/SupplierPayables";
 import Mazdoor from "./pages/Mazdoor";
 import MazdoorHistory from "./pages/MazdoorHistory";
 import MazdoorManagement from "./pages/MazdoorManagement";
@@ -28,8 +30,10 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="customers/receivables" element={<CustomerReceivables />} />
           <Route path="customers/:id/history" element={<CustomerHistory />} />
           <Route path="suppliers" element={<Suppliers />} />
+          <Route path="suppliers/payables" element={<SupplierPayables />} />
           <Route path="suppliers/:id/history" element={<SupplierHistory />} />
           <Route path="mazdoor" element={<Mazdoor />} />
           <Route path="mazdoor/management" element={<MazdoorManagement />} />

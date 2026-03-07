@@ -5,6 +5,8 @@ import { FaBoxOpen, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortD
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
+import PayBillModal from "../components/PayBillModal.jsx";
+import { FaMoneyBillWave } from "react-icons/fa";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -31,6 +33,8 @@ export default function StockEntries() {
     amountPaid: "",
     accountId: "",
     notes: "",
+    paymentTerms: "cash",
+    dueDate: "",
   });
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", supplierId: "" });
@@ -38,27 +42,29 @@ export default function StockEntries() {
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [payEntry, setPayEntry] = useState(null);
+  const [payModalOpen, setPayModalOpen] = useState(false);
 
   const fetchItems = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/items`);
       const data = await res.json();
       if (res.ok) setItems(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchSuppliers = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/suppliers`);
       const data = await res.json();
       if (res.ok) setSuppliers(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchAccounts = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/accounts`);
       const data = await res.json();
       if (res.ok) setAccounts(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const fetchList = async () => {
@@ -106,6 +112,8 @@ export default function StockEntries() {
       amountPaid: "",
       accountId: "",
       notes: "",
+      paymentTerms: "cash",
+      dueDate: "",
     });
     setEditingId(null);
     setModalOpen(false);
@@ -114,10 +122,29 @@ export default function StockEntries() {
   const updateFormWithAutoCalc = (updates) => {
     setForm((prev) => {
       const next = { ...prev, ...updates };
+
+      // Auto calc amount
       const kattay = Number(next.kattay) || 0;
       const ratePerKata = Number(next.ratePerKata) || 0;
       if (kattay > 0 && ratePerKata > 0) next.amount = String(Math.round(kattay * ratePerKata));
       else if ("kattay" in updates || "ratePerKata" in updates) next.amount = "";
+
+      // Auto calc dueDate if paymentTerms changed or date changed
+      if ("paymentTerms" in updates || "date" in updates) {
+        if (next.paymentTerms === "custom") {
+          // keep existing or manual
+        } else if (next.paymentTerms === "cash") {
+          next.dueDate = next.date;
+        } else {
+          const days = parseInt(next.paymentTerms);
+          if (!isNaN(days) && next.date) {
+            const d = new Date(next.date);
+            d.setDate(d.getDate() + days);
+            next.dueDate = d.toISOString().slice(0, 10);
+          }
+        }
+      }
+
       return next;
     });
   };
@@ -149,6 +176,7 @@ export default function StockEntries() {
         truckNumber: (form.truckNumber || "").trim(),
         amount: Number(form.amount) || 0,
         amountPaid: Number(form.amountPaid) || 0,
+        dueDate: form.dueDate || undefined,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
       };
@@ -170,7 +198,7 @@ export default function StockEntries() {
       date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
       itemId: itemId || "",
       supplierId: row.supplierId?._id || row.supplierId || "",
-        kattay: kattay !== "" ? String(kattay) : "",
+      kattay: kattay !== "" ? String(kattay) : "",
       kgPerKata: row.kgPerKata != null ? String(row.kgPerKata) : "",
       ratePerKata,
       amount: amount !== "" ? String(amount) : "",
@@ -180,6 +208,8 @@ export default function StockEntries() {
       amountPaid: row.amountPaid ?? "",
       accountId: row.accountId?._id || row.accountId || "",
       notes: row.notes || "",
+      paymentTerms: "custom",
+      dueDate: row.dueDate ? new Date(row.dueDate).toISOString().slice(0, 10) : "",
     });
     setEditingId(row._id);
     setModalOpen(true);
@@ -335,6 +365,32 @@ export default function StockEntries() {
               </select>
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+            <div>
+              <label className="input-label font-semibold text-amber-700">Payment Terms (Kab paise dene hain?)</label>
+              <select
+                value={form.paymentTerms}
+                onChange={(e) => updateFormWithAutoCalc({ paymentTerms: e.target.value })}
+                className="input-field border-amber-200 bg-amber-50/30"
+              >
+                <option value="cash">Full Cash (Aaj)</option>
+                <option value="10">10 Din baad (10 Days)</option>
+                <option value="15">15 Din baad (15 Days)</option>
+                <option value="30">30 Din baad (30 Days)</option>
+                <option value="custom">Custom Date</option>
+              </select>
+            </div>
+            <div>
+              <label className="input-label">Due Date (Bhugtan ki tareekh)</label>
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value, paymentTerms: 'custom' }))}
+                className="input-field"
+              />
+              <p className="text-xs text-slate-500 mt-1">Audit ke liye yeh tareekh zaroori he.</p>
+            </div>
+          </div>
           <div>
             <label className="input-label">Notes</label>
             <input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
@@ -392,6 +448,7 @@ export default function StockEntries() {
                     <th className="table-header px-5 py-3.5">Mill (kg)</th>
                     <th className="table-header px-5 py-3.5">Supplier (kg)</th>
                     <th className="table-header px-5 py-3.5">Amount</th>
+                    <th className="table-header px-5 py-3.5">Status</th>
                     <th className="table-header px-5 py-3.5 w-28">Actions</th>
                   </tr>
                 </thead>
@@ -409,7 +466,36 @@ export default function StockEntries() {
                       <td className="table-cell">{row.supplierWeight != null && row.supplierWeight > 0 ? row.supplierWeight : "—"}</td>
                       <td className="table-cell font-medium">{row.amount != null && row.amount > 0 ? Number(row.amount).toLocaleString("en-PK") : "—"}</td>
                       <td className="table-cell">
+                        {row.paymentStatus === 'paid' ? (
+                          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">Paid</span>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold w-fit ${row.paymentStatus === 'partial' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
+                              {row.paymentStatus === 'partial' ? 'Partial' : 'Pending'}
+                            </span>
+                            {row.dueDate && (
+                              <span className={`text-[10px] whitespace-nowrap ${new Date(row.dueDate) < new Date() ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                                Due: {formatDate(row.dueDate)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="table-cell">
                         <div className="flex items-center gap-1">
+                          {row.paymentStatus !== "paid" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPayEntry(row);
+                                setPayModalOpen(true);
+                              }}
+                              className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700 flex items-center gap-1"
+                              title="Bill Settle Karein"
+                            >
+                              <FaMoneyBillWave className="w-3 h-3" /> Pay
+                            </button>
+                          )}
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
                           <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
@@ -429,6 +515,13 @@ export default function StockEntries() {
           )}
         </div>
       </section>
+
+      <PayBillModal
+        open={payModalOpen}
+        onClose={() => setPayModalOpen(false)}
+        entry={payEntry}
+        onSuccess={() => fetchList()}
+      />
     </div>
   );
 }

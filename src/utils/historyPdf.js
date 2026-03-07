@@ -148,13 +148,16 @@ export function downloadSupplierHistoryPdf(name, stockEntries, sales, filters = 
     doc.setFont(undefined, "normal");
     autoTable(doc, {
       startY: y,
-      head: [["#", "Date", "Item", "Weight", "Paid"]],
+      head: [["#", "Date", "Item", "Weight", "Total", "Paid", "Balance", "Status"]],
       body: stockEntries.map((e, i) => [
         i + 1,
         formatDate(e.date),
-        (e.itemId && e.itemId.name) || "—",
+        (e.itemId && (e.itemId.name || e.itemId)) || "—",
         e.receivedWeight ?? "—",
+        formatMoney(e.amount),
         formatMoney(e.amountPaid),
+        formatMoney((e.amount || 0) - (e.amountPaid || 0)),
+        (e.paymentStatus || 'pending').toUpperCase() + (e.dueDate && e.paymentStatus !== 'paid' ? `\n(Due: ${formatDate(e.dueDate)})` : ""),
       ]),
       ...tableTheme,
     });
@@ -293,13 +296,15 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
     doc.setFont(undefined, "normal");
     autoTable(doc, {
       startY: y,
-      head: [["#", "Date", "Supplier", "Weight", "Paid"]],
+      head: [["#", "Date", "Supplier", "Weight", "Total", "Paid", "Balance"]],
       body: purchases.map((p, i) => [
         i + 1,
         formatDate(p.date),
-        (p.supplierId && p.supplierId.name) || "—",
+        (p.supplierId && (p.supplierId.name || p.supplierId)) || "—",
         p.receivedWeight ?? "—",
+        formatMoney(p.amount),
         formatMoney(p.amountPaid),
+        formatMoney((p.amount || 0) - (p.amountPaid || 0)),
       ]),
       ...tableTheme,
     });

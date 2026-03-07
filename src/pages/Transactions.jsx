@@ -52,21 +52,21 @@ export default function Transactions() {
       const res = await fetch(`${API_BASE_URL}/accounts`);
       const data = await res.json();
       if (res.ok) setAccounts(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchSuppliers = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/suppliers`);
       const data = await res.json();
       if (res.ok) setSuppliers(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchMazdoor = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/mazdoor`);
       const data = await res.json();
       if (res.ok) setMazdoor(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const fetchList = async () => {
@@ -216,6 +216,18 @@ export default function Transactions() {
     return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
   };
 
+  const getReference = (row) => {
+    if (row.stockEntryId) {
+      const entry = row.stockEntryId;
+      return `Bill: ${entry._id?.slice(-6).toUpperCase() || '—'} ${entry.truckNumber ? `(${entry.truckNumber})` : ''}`;
+    }
+    if (row.saleId) {
+      const sale = row.saleId;
+      return `Sale Ref: ${sale._id?.slice(-6).toUpperCase() || '—'} ${sale.truckNumber ? `(${sale.truckNumber})` : ''}`;
+    }
+    return row.note || "—";
+  };
+
   const typeLabel = (t) => (t === "deposit" ? "Deposit" : t === "withdraw" ? "Withdraw" : t === "transfer" ? "Transfer" : t === "sale" ? "Sale" : t === "purchase" ? "Purchase" : t);
 
   return (
@@ -350,7 +362,7 @@ export default function Transactions() {
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Amount<SortIcon columnKey="amount" /></button>
                     </th>
                     <th className="table-header px-5 py-3.5">Category</th>
-                    <th className="table-header px-5 py-3.5">Note</th>
+                    <th className="table-header px-5 py-3.5">Reference / Note</th>
                     <th className="table-header px-5 py-3.5 w-24">Actions</th>
                   </tr>
                 </thead>
@@ -359,15 +371,16 @@ export default function Transactions() {
                     <tr key={row._id} className="table-row-hover">
                       <td className="table-cell">{formatDate(row.date)}</td>
                       <td className="table-cell">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                          row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
-                        }`}>{typeLabel(row.type)}</span>
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                          }`}>{typeLabel(row.type)}</span>
                       </td>
                       <td className="table-cell">{row.fromAccountId?.name ?? "—"}</td>
                       <td className="table-cell">{row.toAccountId?.name ?? "—"}</td>
                       <td className="table-cell text-right font-medium">{formatMoney(row.amount)}</td>
                       <td className="table-cell">{row.category || "—"}</td>
-                      <td className="table-cell max-w-[180px] truncate" title={row.note}>{row.note || "—"}</td>
+                      <td className="table-cell max-w-[200px] truncate" title={row.note}>
+                        {getReference(row)}
+                      </td>
                       <td className="table-cell">
                         {row.source === "transaction" ? (
                           <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>

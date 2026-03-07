@@ -121,14 +121,40 @@ export default function SupplierHistory() {
                   <p className="p-6 text-slate-500">Koi stock entry nahi.</p>
                 ) : (
                   <table className="w-full">
-                    <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Item</th><th className="table-header px-4 py-2">Weight</th><th className="table-header px-4 py-2 text-right">Paid</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th className="table-header px-4 py-2 text-left">Date</th>
+                        <th className="table-header px-4 py-2 text-left">Item</th>
+                        <th className="table-header px-4 py-2">Weight</th>
+                        <th className="table-header px-4 py-2 text-right">Amount</th>
+                        <th className="table-header px-4 py-2 text-right">Paid</th>
+                        <th className="table-header px-4 py-2 text-right text-red-600">Baqaya</th>
+                        <th className="table-header px-4 py-2 text-left">Status</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {data.stockEntries?.map((e) => (
                         <tr key={e._id} className="table-row-hover border-b border-slate-100">
-                          <td className="table-cell py-2">{formatDate(e.date)}</td>
-                          <td className="table-cell">{e.itemId?.name || "—"}</td>
+                          <td className="table-cell py-2 text-xs">{formatDate(e.date)}</td>
+                          <td className="table-cell font-medium">{e.itemId?.name || "—"}</td>
                           <td className="table-cell">{e.receivedWeight}</td>
-                          <td className="table-cell text-right font-medium">{formatMoney(e.amountPaid)}</td>
+                          <td className="table-cell text-right">{formatMoney(e.amount)}</td>
+                          <td className="table-cell text-right font-medium text-emerald-600">{formatMoney(e.amountPaid)}</td>
+                          <td className="table-cell text-right font-bold text-red-600">
+                            {formatMoney((e.amount || 0) - (e.amountPaid || 0))}
+                          </td>
+                          <td className="table-cell text-xs">
+                            <div className="flex flex-col">
+                              <span className={`font-bold ${e.paymentStatus === 'paid' ? 'text-emerald-600' : e.paymentStatus === 'partial' ? 'text-amber-600' : 'text-red-600'}`}>
+                                {e.paymentStatus?.toUpperCase() || 'PENDING'}
+                              </span>
+                              {e.paymentStatus !== 'paid' && e.dueDate && (
+                                <span className={`text-[10px] ${new Date(e.dueDate) < new Date() ? 'text-red-500 font-bold' : 'text-slate-500'}`}>
+                                  Due: {formatDate(e.dueDate)}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

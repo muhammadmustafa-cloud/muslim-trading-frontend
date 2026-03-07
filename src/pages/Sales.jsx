@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadSalesPdf } from "../utils/exportPdf.js";
-import { FaShoppingCart, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
+import { FaShoppingCart, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import TablePagination from "../components/TablePagination.jsx";
+import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -14,6 +15,7 @@ export default function Sales() {
   const [customers, setCustomers] = useState([]);
   const [items, setItems] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -22,6 +24,9 @@ export default function Sales() {
     date: today,
     customerId: "",
     itemId: "",
+    kattay: "",
+    kgPerKata: "",
+    ratePerKata: "",
     quantity: "",
     rate: "",
     totalAmount: "",
@@ -29,6 +34,8 @@ export default function Sales() {
     amountReceived: "",
     accountId: "",
     notes: "",
+    paymentTerms: "cash",
+    dueDate: "",
   });
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", customerId: "", itemId: "" });
@@ -37,27 +44,36 @@ export default function Sales() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [availableStock, setAvailableStock] = useState(null);
+  const [collectModalOpen, setCollectModalOpen] = useState(false);
+  const [selectedCollectEntry, setSelectedCollectEntry] = useState(null);
 
   const fetchCustomers = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/customers`);
       const data = await res.json();
       if (res.ok) setCustomers(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchItems = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/items`);
       const data = await res.json();
       if (res.ok) setItems(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
   const fetchAccounts = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/accounts`);
       const data = await res.json();
       if (res.ok) setAccounts(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
+  };
+  const fetchStockData = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/stock/current`);
+      const data = await res.json();
+      if (res.ok) setStockData(data.data || []);
+    } catch (_) { }
   };
 
   const fetchList = async () => {
@@ -85,6 +101,7 @@ export default function Sales() {
     fetchCustomers();
     fetchItems();
     fetchAccounts();
+    fetchStockData();
   }, []);
   useEffect(() => {
     fetchList();
@@ -113,6 +130,9 @@ export default function Sales() {
       date: today,
       customerId: "",
       itemId: "",
+      kattay: "",
+      kgPerKata: "",
+      ratePerKata: "",
       quantity: "",
       rate: "",
       totalAmount: "",
@@ -120,18 +140,58 @@ export default function Sales() {
       amountReceived: "",
       accountId: "",
       notes: "",
+      paymentTerms: "cash",
+      dueDate: "",
     });
     setEditingId(null);
     setModalOpen(false);
   };
 
-  const updateSaleAutoAmount = (updates) => {
+  const updateFormWithAutoCalc = (updates) => {
     setForm((prev) => {
       const next = { ...prev, ...updates };
-      const qty = Number(next.quantity) || 0;
-      const rate = Number(next.rate) || 0;
-      if (qty > 0 && rate > 0) next.totalAmount = String(Math.round(qty * rate));
-      else if ("quantity" in updates || "rate" in updates) next.totalAmount = "";
+
+      const kattay = Number(next.kattay) || 0;
+      const kgPerKata = Number(next.kgPerKata) || 0;
+      const ratePerKata = Number(next.ratePerKata) || 0;
+
+      // Auto-calc quantity (total weight) = kattay × kgPerKata
+      if (kattay > 0 && kgPerKata > 0) {
+        next.quantity = String(kattay * kgPerKata);
+      } else if ("kattay" in updates || "kgPerKata" in updates) {
+        next.quantity = "";
+      }
+
+      // Auto-calc totalAmount = kattay × ratePerKata
+      if (kattay > 0 && ratePerKata > 0) {
+        next.totalAmount = String(Math.round(kattay * ratePerKata));
+      } else if ("kattay" in updates || "ratePerKata" in updates) {
+        next.totalAmount = "";
+      }
+
+      // Fallback: quantity × rate if no kattay
+      if (!next.totalAmount) {
+        const qty = Number(next.quantity) || 0;
+        const rate = Number(next.rate) || 0;
+        if (qty > 0 && rate > 0) next.totalAmount = String(Math.round(qty * rate));
+      }
+
+      // Auto calc dueDate if paymentTerms changed or date changed
+      if ("paymentTerms" in updates || "date" in updates) {
+        if (next.paymentTerms === "custom") {
+          // keep existing or manual
+        } else if (next.paymentTerms === "cash") {
+          next.dueDate = next.date;
+        } else {
+          const days = parseInt(next.paymentTerms);
+          if (!isNaN(days) && next.date) {
+            const d = new Date(next.date);
+            d.setDate(d.getDate() + days);
+            next.dueDate = d.toISOString().slice(0, 10);
+          }
+        }
+      }
+
       return next;
     });
   };
@@ -159,6 +219,9 @@ export default function Sales() {
         date: form.date,
         customerId: form.customerId,
         itemId: form.itemId,
+        kattay: Number(form.kattay) || 0,
+        kgPerKata: Number(form.kgPerKata) || 0,
+        ratePerKata: Number(form.ratePerKata) || 0,
         quantity: qty,
         rate: Number(form.rate) || 0,
         totalAmount: Number(form.totalAmount) || 0,
@@ -166,6 +229,7 @@ export default function Sales() {
         amountReceived: Number(form.amountReceived) || 0,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
+        dueDate: form.dueDate || undefined,
       };
       if (editingId) await apiPut(`/sales/${editingId}`, payload);
       else await apiPost("/sales", payload);
@@ -177,6 +241,9 @@ export default function Sales() {
   };
 
   const handleEdit = (row) => {
+    const kattay = row.kattay != null ? row.kattay : "";
+    const kgPerKata = row.kgPerKata != null ? row.kgPerKata : "";
+    const ratePerKata = row.ratePerKata != null ? row.ratePerKata : "";
     const qty = row.quantity != null ? row.quantity : "";
     const total = row.totalAmount != null ? row.totalAmount : "";
     const rate = qty && total && Number(qty) > 0 ? String(Number(total) / Number(qty)) : (row.rate ?? "");
@@ -184,6 +251,9 @@ export default function Sales() {
       date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
       customerId: row.customerId?._id || row.customerId || "",
       itemId: row.itemId?._id || row.itemId || "",
+      kattay: kattay !== "" ? String(kattay) : "",
+      kgPerKata: kgPerKata !== "" ? String(kgPerKata) : "",
+      ratePerKata: ratePerKata !== "" ? String(ratePerKata) : "",
       quantity: qty !== "" ? String(qty) : "",
       rate: rate !== "" ? String(rate) : "",
       totalAmount: total !== "" ? String(total) : "",
@@ -191,6 +261,8 @@ export default function Sales() {
       amountReceived: row.amountReceived ?? "",
       accountId: row.accountId?._id || row.accountId || "",
       notes: row.notes || "",
+      paymentTerms: "custom",
+      dueDate: row.dueDate ? new Date(row.dueDate).toISOString().slice(0, 10) : "",
     });
     setEditingId(row._id);
     setModalOpen(true);
@@ -207,6 +279,10 @@ export default function Sales() {
       setError(e.message);
     }
     setDeleteConfirm({ open: false, id: null });
+  };
+
+  const handleCollectSuccess = () => {
+    fetchList();
   };
 
   const toggleSort = (key) => {
@@ -241,8 +317,8 @@ export default function Sales() {
         return sortDir === "asc" ? va - vb : vb - va;
       }
       if (sortKey === "amount") {
-        const va = Number(a.amountReceived) || 0;
-        const vb = Number(b.amountReceived) || 0;
+        const va = Number(a.totalAmount) || 0;
+        const vb = Number(b.totalAmount) || 0;
         return sortDir === "asc" ? va - vb : vb - va;
       }
       return 0;
@@ -271,7 +347,7 @@ export default function Sales() {
             <FaShoppingCart className="w-7 h-7 text-amber-500" />
             Sales (Bechai)
           </h1>
-          <p className="page-subtitle">Jis item ki bechai kar rahe ho, customer select karo, kitni quantity bechi aur kitne ka becha — total auto niklega. Jo quantity yahan daalogi wo us item ki stock se cut ho jayegi.</p>
+          <p className="page-subtitle">Jis item ki bechai kar rahe ho, customer select karo, kitne katte beche, aik katta kitne kg ka tha aur kitne ka — total auto niklega.</p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
           <FaPlus className="w-4 h-4" /> Add sale
@@ -283,7 +359,7 @@ export default function Sales() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="input-label">Tarikh *</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required />
+              <input type="date" value={form.date} onChange={(e) => updateFormWithAutoCalc({ date: e.target.value })} className="input-field" required />
             </div>
             <div>
               <label className="input-label">Customer *</label>
@@ -295,42 +371,56 @@ export default function Sales() {
               </select>
             </div>
             <div>
-              <label className="input-label">Item *</label>
+              <label className="input-label">Item * <span className="text-[10px] text-slate-400">(sirf stock wale items)</span></label>
               <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required>
                 <option value="">Select item</option>
-                {items.map((i) => (
-                  <option key={i._id} value={i._id}>{i.name}{i.categoryId?.name ? ` (${i.categoryId.name})` : ""}</option>
-                ))}
+                {items.map((i) => {
+                  const stock = stockData.find(s => s.itemId?.toString() === i._id?.toString());
+                  const availQty = stock?.kattay || 0;
+                  if (availQty <= 0 && form.itemId !== i._id) return null;
+                  return (
+                    <option key={i._id} value={i._id}>
+                      {i.name}{i.categoryId?.name ? ` (${i.categoryId.name})` : ""} — {availQty} kattay
+                    </option>
+                  );
+                })}
               </select>
-            </div>
-            <div>
-              <label className="input-label">Kitne kg beche / cut ki *</label>
-              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateSaleAutoAmount({ quantity: e.target.value })} className="input-field" min="0" step="any" required />
-              <p className="text-xs text-slate-500 mt-0.5">Weight in kg — same unit as stock (kattay × kg/katta).</p>
-              {availableStock != null && (
-                <p className="text-xs text-slate-600 mt-0.5">Is item ki available stock: <strong>{availableStock} kg</strong> — jo yahan daalogi wo yahi se cut ho jayegi.</p>
-              )}
-              {form.itemId && availableStock == null && <p className="text-xs text-slate-500 mt-0.5">Yahi quantity (kg) is item ki stock se minus ho jayegi.</p>}
-            </div>
-            <div>
-              <label className="input-label">Aik kg kitne ka becha (Rs)</label>
-              <input type="number" placeholder="0" value={form.rate} onChange={(e) => updateSaleAutoAmount({ rate: e.target.value })} className="input-field" min="0" step="any" />
-              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kg × rate per kg</p>
-            </div>
-            <div>
-              <label className="input-label">Total amount (Rs)</label>
-              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field" min="0" step="1" title="Auto: quantity × rate" />
-              <p className="text-xs text-slate-500 mt-0.5">Auto nikalta he: bechi hui quantity × rate</p>
             </div>
             <div>
               <label className="input-label">Truck number</label>
               <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
             </div>
             <div>
+              <label className="input-label">Kitne katte beche</label>
+              <input type="number" placeholder="0" value={form.kattay} onChange={(e) => updateFormWithAutoCalc({ kattay: e.target.value })} className="input-field" min="0" step="1" />
+            </div>
+            <div>
+              <label className="input-label">Aik katta kitne kg ka tha</label>
+              <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => updateFormWithAutoCalc({ kgPerKata: e.target.value })} className="input-field" min="0" step="any" />
+              <p className="text-xs text-slate-500 mt-0.5">Total weight auto: kattay × kg/katta</p>
+            </div>
+            <div>
+              <label className="input-label">Aik katta kitne ka becha (Rs)</label>
+              <input type="number" placeholder="0" value={form.ratePerKata} onChange={(e) => updateFormWithAutoCalc({ ratePerKata: e.target.value })} className="input-field" min="0" step="1" />
+              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kattay × rate</p>
+            </div>
+            <div>
+              <label className="input-label">Total weight / Quantity (kg)</label>
+              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field" min="0" step="any" />
+              {availableStock != null && (
+                <p className="text-xs text-slate-600 mt-0.5">Available stock: <strong>{availableStock} kg</strong> — jo yahan daalogi wo yahi se cut ho jayegi.</p>
+              )}
+              {form.itemId && availableStock == null && <p className="text-xs text-slate-500 mt-0.5">Yahi quantity (kg) is item ki stock se minus ho jayegi.</p>}
+            </div>
+            <div>
+              <label className="input-label">Total amount (Rs)</label>
+              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field" min="0" step="1" title="Auto: kattay × rate" />
+            </div>
+            <div>
               <label className="input-label">Amount received</label>
               <input type="number" placeholder="0" value={form.amountReceived} onChange={(e) => setForm((f) => ({ ...f, amountReceived: e.target.value }))} className="input-field" min="0" step="1" />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <label className="input-label">Account (jahan paisa aaya)</label>
               <select value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))} className="input-field">
                 <option value="">—</option>
@@ -339,10 +429,36 @@ export default function Sales() {
                 ))}
               </select>
             </div>
-            <div className="sm:col-span-2">
-              <label className="input-label">Notes</label>
-              <input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+            <div>
+              <label className="input-label font-semibold text-amber-700">Payment Terms (Kab paise dene hain?)</label>
+              <select
+                value={form.paymentTerms}
+                onChange={(e) => updateFormWithAutoCalc({ paymentTerms: e.target.value })}
+                className="input-field border-amber-200 bg-amber-50/30"
+              >
+                <option value="cash">Full Cash (Aaj)</option>
+                <option value="10">10 Din baad (10 Days)</option>
+                <option value="15">15 Din baad (15 Days)</option>
+                <option value="30">30 Din baad (30 Days)</option>
+                <option value="custom">Custom Date</option>
+              </select>
             </div>
+            <div>
+              <label className="input-label">Due Date (Bhugtan ki tareekh)</label>
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value, paymentTerms: 'custom' }))}
+                className="input-field"
+              />
+              <p className="text-xs text-slate-500 mt-1">Audit ke liye yeh tareekh zaroori he.</p>
+            </div>
+          </div>
+          <div>
+            <label className="input-label">Notes</label>
+            <input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
@@ -372,7 +488,7 @@ export default function Sales() {
           </select>
           <p className="text-sm text-slate-500">{list.length} sale(s)</p>
           <button type="button" onClick={() => downloadSalesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
-          <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemName", label: "Item" }, { key: "category", label: "Category" }, { key: "quantity", label: "Quantity (kg)" }, { key: "rate", label: "Rate (Rs/kg)" }, { key: "totalAmount", label: "Total Amount" }, { key: "amountReceived", label: "Amount Received" }, { key: "truckNumber", label: "Truck" }, { key: "accountId.name", label: "Account" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
+          <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemName", label: "Item" }, { key: "category", label: "Category" }, { key: "kattay", label: "Kattay" }, { key: "kgPerKata", label: "Kg/Katta" }, { key: "ratePerKata", label: "Rate/Katta" }, { key: "quantity", label: "Quantity (kg)" }, { key: "totalAmount", label: "Total Amount" }, { key: "amountReceived", label: "Amount Received" }, { key: "truckNumber", label: "Truck" }, { key: "accountId.name", label: "Account" }, { key: "paymentStatus", label: "Status" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
@@ -391,16 +507,18 @@ export default function Sales() {
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("item")} className="flex items-center hover:text-slate-800">Item<SortIcon columnKey="item" /></button>
                     </th>
-                    <th className="table-header px-5 py-3.5">Category</th>
+                    <th className="table-header px-5 py-3.5">Kattay</th>
+                    <th className="table-header px-5 py-3.5">Kg/Katta</th>
                     <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">Kg beche (stock se cut)<SortIcon columnKey="quantity" /></button>
+                      <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">Weight (kg)<SortIcon columnKey="quantity" /></button>
                     </th>
-                    <th className="table-header px-5 py-3.5">Rate (Rs/kg)</th>
-                    <th className="table-header px-5 py-3.5">Total amount</th>
+                    <th className="table-header px-5 py-3.5">Rate/Katta</th>
                     <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center hover:text-slate-800">Received<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center hover:text-slate-800">Total<SortIcon columnKey="amount" /></button>
                     </th>
+                    <th className="table-header px-5 py-3.5">Received</th>
                     <th className="table-header px-5 py-3.5">Truck</th>
+                    <th className="table-header px-5 py-3.5">Status</th>
                     <th className="table-header px-5 py-3.5 w-28">Actions</th>
                   </tr>
                 </thead>
@@ -410,14 +528,36 @@ export default function Sales() {
                       <td className="table-cell">{formatDate(row.date)}</td>
                       <td className="table-cell font-medium">{row.customerId?.name || "—"}</td>
                       <td className="table-cell">{row.itemName || row.itemId?.name || "—"}</td>
-                      <td className="table-cell">{row.category || "—"}</td>
-                      <td className="table-cell">{row.quantity != null ? `${row.quantity} ${row.quality || ""}`.trim() : "—"}</td>
-                      <td className="table-cell">{row.rate != null ? formatMoney(row.rate) : "—"}</td>
+                      <td className="table-cell">{row.kattay != null && row.kattay > 0 ? row.kattay : "—"}</td>
+                      <td className="table-cell">{row.kgPerKata != null && row.kgPerKata > 0 ? row.kgPerKata : "—"}</td>
+                      <td className="table-cell">{row.quantity != null ? row.quantity : "—"}</td>
+                      <td className="table-cell">{row.ratePerKata != null && row.ratePerKata > 0 ? formatMoney(row.ratePerKata) : "—"}</td>
                       <td className="table-cell font-medium">{formatMoney(row.totalAmount)}</td>
                       <td className="table-cell font-medium">{formatMoney(row.amountReceived)}</td>
                       <td className="table-cell">{row.truckNumber ? row.truckNumber : "—"}</td>
                       <td className="table-cell">
+                        {row.paymentStatus === 'paid' ? (
+                          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">Paid</span>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold w-fit ${row.paymentStatus === 'partial' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
+                              {row.paymentStatus === 'partial' ? 'Partial' : 'Pending'}
+                            </span>
+                            {row.dueDate && (
+                              <span className={`text-[10px] whitespace-nowrap ${new Date(row.dueDate) < new Date() ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                                Due: {formatDate(row.dueDate)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="table-cell">
                         <div className="flex items-center gap-1">
+                          {row.paymentStatus !== 'paid' && (
+                            <button type="button" onClick={() => { setSelectedCollectEntry(row); setCollectModalOpen(true); }} className="btn-ghost-primary flex items-center gap-1">
+                              <FaHandHoldingUsd className="w-3.5 h-3.5" /> Collect
+                            </button>
+                          )}
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
                           <button type="button" onClick={() => setDeleteConfirm({ open: true, id: row._id })} className="btn-ghost-danger flex items-center gap-1"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
@@ -437,6 +577,13 @@ export default function Sales() {
           )}
         </div>
       </section>
+
+      <CollectPaymentModal
+        open={collectModalOpen}
+        onClose={() => setCollectModalOpen(false)}
+        entry={selectedCollectEntry}
+        onSuccess={handleCollectSuccess}
+      />
     </div>
   );
 }

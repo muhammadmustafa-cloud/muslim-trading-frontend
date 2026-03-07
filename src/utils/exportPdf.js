@@ -47,7 +47,7 @@ const tableTheme = {
   rowStartY: undefined,
   margin: { left: MARGIN, right: MARGIN },
   styles: { fontSize: 8, cellPadding: 3 },
-  didDrawPage: (data) => {},
+  didDrawPage: (data) => { },
 };
 
 /**
@@ -131,22 +131,17 @@ export function downloadStockEntriesPdf(entries, filters = {}) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Item", "Supplier", "Truck", "Kattay", "Kg/Kata", "Weight", "Mill (kg)", "Supplier (kg)", "Amount", "Paid", "Account", "Notes"]],
+    head: [["#", "Date", "Item", "Supplier", "Weight", "Total", "Paid", "Balance", "Status"]],
     body: entries.map((row, i) => [
       i + 1,
       formatDate(row.date),
       (row.itemId && row.itemId.name) || "—",
       (row.supplierId && row.supplierId.name) || "—",
-      (row.truckNumber || "—").slice(0, 12),
-      row.kattay != null && row.kattay > 0 ? row.kattay : "—",
-      row.kgPerKata != null && row.kgPerKata > 0 ? row.kgPerKata : "—",
       row.receivedWeight != null ? row.receivedWeight : "—",
-      row.millWeight != null && row.millWeight > 0 ? row.millWeight : "—",
-      row.supplierWeight != null && row.supplierWeight > 0 ? row.supplierWeight : "—",
       formatMoney(row.amount),
       formatMoney(row.amountPaid),
-      (row.accountId && row.accountId.name) || "—",
-      (row.notes || "—").slice(0, 20),
+      formatMoney((row.amount || 0) - (row.amountPaid || 0)),
+      (row.paymentStatus || 'pending').toUpperCase() + (row.dueDate && row.paymentStatus !== 'paid' ? `\n(${formatDate(row.dueDate)})` : ""),
     ]),
     ...tableTheme,
     columnStyles: {
@@ -155,15 +150,10 @@ export function downloadStockEntriesPdf(entries, filters = {}) {
       2: { cellWidth: 24 },
       3: { cellWidth: 24 },
       4: { cellWidth: 18 },
-      5: { cellWidth: 12 },
-      6: { cellWidth: 14 },
-      7: { cellWidth: 14 },
-      8: { cellWidth: 12 },
-      9: { cellWidth: 12 },
-      10: { cellWidth: 18 },
-      11: { cellWidth: 18 },
-      12: { cellWidth: 18 },
-      13: { cellWidth: 24 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 20 },
+      7: { cellWidth: 20 },
+      8: { cellWidth: 25 },
     },
   });
 
