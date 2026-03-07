@@ -109,9 +109,9 @@ export function downloadSalesPdf(sales, filters = {}) {
 }
 
 /**
- * Stock Entries report PDF.
+ * Purchases report PDF.
  */
-export function downloadStockEntriesPdf(entries, filters = {}) {
+export function downloadPurchasesPdf(entries, filters = {}) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo)
@@ -120,12 +120,12 @@ export function downloadStockEntriesPdf(entries, filters = {}) {
   if (filters.supplierId) subtitleLines.push("Filter: Supplier selected");
   subtitleLines.push(`Total records: ${entries.length}`);
 
-  let startY = addReportHeader(doc, "Stock Entries Report", subtitleLines);
+  let startY = addReportHeader(doc, "Purchase Report", subtitleLines);
 
   if (!entries.length) {
     doc.setFontSize(10);
-    doc.text("No stock entries in this period.", MARGIN, startY);
-    doc.save("stock-entries-report.pdf");
+    doc.text("No purchases in this period.", MARGIN, startY);
+    doc.save("purchases-report.pdf");
     return;
   }
 
@@ -158,7 +158,7 @@ export function downloadStockEntriesPdf(entries, filters = {}) {
   });
 
   addPageNumbers(doc);
-  doc.save("stock-entries-report.pdf");
+  doc.save("purchases-report.pdf");
 }
 
 /**
@@ -234,21 +234,27 @@ export function downloadCurrentStockPdf(stockList) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Item", "Category", "Quantity (kg)", "Quality"]],
+    head: [["#", "Item", "Category", "Bags", "Qty (kg)", "Rem. Mill", "Rem. Sup", "Quality"]],
     body: stockList.map((row, i) => [
       i + 1,
       row.itemName || "—",
       row.category || "—",
+      row.kattay != null ? row.kattay : "—",
       row.quantity != null ? row.quantity : "—",
+      row.millWeight != null ? Number(row.millWeight).toFixed(2) : "—",
+      row.supplierWeight != null ? Number(row.supplierWeight).toFixed(2) : "—",
       row.quality || "—",
     ]),
     ...tableTheme,
     columnStyles: {
-      0: { cellWidth: 12 },
-      1: { cellWidth: 55 },
-      2: { cellWidth: 55 },
-      3: { cellWidth: 35 },
+      0: { cellWidth: 10 },
+      1: { cellWidth: 40 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 20 },
       4: { cellWidth: 25 },
+      5: { cellWidth: 25 },
+      6: { cellWidth: 25 },
+      7: { cellWidth: 30 },
     },
   });
 

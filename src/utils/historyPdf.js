@@ -43,7 +43,7 @@ function addGeneratedLine(doc, y) {
 }
 
 /**
- * Generate PDF for customer history (sales + stock entries).
+ * Generate PDF for customer history (sales + purchases).
  */
 export function downloadCustomerHistoryPdf(name, sales, stockEntries, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -93,7 +93,7 @@ export function downloadCustomerHistoryPdf(name, sales, stockEntries, filters = 
   if (stockEntries && stockEntries.length > 0) {
     doc.setFontSize(11);
     doc.setFont(undefined, "bold");
-    doc.text("Stock Entry (Jab humne inse khareeda)", MARGIN, y);
+    doc.text("Purchase (Jab humne inse khareeda)", MARGIN, y);
     y += 6;
     doc.setFont(undefined, "normal");
     autoTable(doc, {
@@ -115,7 +115,7 @@ export function downloadCustomerHistoryPdf(name, sales, stockEntries, filters = 
 }
 
 /**
- * Generate PDF for supplier history (stock entries + sales).
+ * Generate PDF for supplier history (purchases + sales).
  */
 export function downloadSupplierHistoryPdf(name, stockEntries, sales, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -143,7 +143,7 @@ export function downloadSupplierHistoryPdf(name, stockEntries, sales, filters = 
   if (stockEntries && stockEntries.length > 0) {
     doc.setFontSize(11);
     doc.setFont(undefined, "bold");
-    doc.text("Stock Entry (Jab humne inse khareeda)", MARGIN, y);
+    doc.text("Purchase (Jab humne inse khareeda)", MARGIN, y);
     y += 6;
     doc.setFont(undefined, "normal");
     autoTable(doc, {

@@ -22,7 +22,7 @@ const statCards = [
   { label: "Accounts", icon: FaWallet, color: "bg-amber-500/10 text-amber-600", path: "/accounts" },
   { label: "Categories", icon: FaTags, color: "bg-teal-500/10 text-teal-600", path: "/categories" },
   { label: "Items", icon: FaBox, color: "bg-slate-500/10 text-slate-600", path: "/items" },
-  { label: "Stock Entry", icon: FaBoxOpen, color: "bg-teal-500/10 text-teal-600", path: "/stock-entries" },
+  { label: "Purchases", icon: FaBoxOpen, color: "bg-teal-500/10 text-teal-600", path: "/purchases" },
   { label: "Current Stock", icon: FaBoxes, color: "bg-indigo-500/10 text-indigo-600", path: "/current-stock" },
   { label: "Sales", icon: FaShoppingCart, color: "bg-rose-500/10 text-rose-600", path: "/sales" },
   { label: "Transactions", icon: FaExchangeAlt, color: "bg-cyan-500/10 text-cyan-600", path: "/transactions" },
@@ -122,12 +122,12 @@ export default function Dashboard() {
             <FaChartLine className="w-5 h-5 text-emerald-600" />
             Business profit (Purchase vs Sales)
           </h2>
-          <p className="text-sm text-slate-500 mb-4">Supplier se jo khareeda (stock entries) aur customers ko jo becha (sales) — inka farq profit.</p>
+          <p className="text-sm text-slate-500 mb-4">Supplier se jo khareeda (purchases) aur customers ko jo becha (sales) — inka farq profit.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-lg p-4 border border-slate-200">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total purchase (cost)</p>
               <p className="text-xl font-bold text-slate-800 mt-1">{formatMoney(profitSummary.totalPurchaseCost)}</p>
-              <p className="text-xs text-slate-500 mt-0.5">Stock entries ka total amount</p>
+              <p className="text-xs text-slate-500 mt-0.5">Purchases ka total amount</p>
             </div>
             <div className="bg-white rounded-lg p-4 border border-slate-200">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total sales (revenue)</p>
@@ -165,12 +165,12 @@ export default function Dashboard() {
             <div>
               <p className="font-bold text-red-800">Pending Payments Alert!</p>
               <p className="text-sm text-red-700">
-                Aapki <span className="font-bold">{pendingPayments.count}</span> purchases (Stock Entries) ki payment pending he.
+                Aapki <span className="font-bold">{pendingPayments.count}</span> purchases ki payment pending he.
                 Total baqaya: <span className="font-bold text-red-900">{formatMoney(pendingPayments.totalAmount)}</span>
               </p>
             </div>
           </div>
-          <Link to="/stock-entries" className="btn-primary bg-red-600 hover:bg-red-700 text-sm">Bills dekhein</Link>
+          <Link to="/purchases" className="btn-primary bg-red-600 hover:bg-red-700 text-sm">Bills dekhein</Link>
         </div>
       )}
 
@@ -203,7 +203,7 @@ export default function Dashboard() {
           {loading ? (
             <div className="p-8 flex justify-center"><div className="loading-spinner" /></div>
           ) : stockSummary.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">Abhi koi stock entry nahi. Stock Entry se add karein.</div>
+            <div className="p-8 text-center text-slate-500">Abhi koi stock nahi. Purchase se add karein.</div>
           ) : (
             <table className="w-full">
               <thead className="bg-slate-50 sticky top-0">
@@ -250,7 +250,7 @@ export default function Dashboard() {
           <li>• Pehle <strong>Accounts</strong> add karein (bank/cash).</li>
           <li>• Phir <strong>Suppliers</strong> aur <strong>Customers</strong> add karein.</li>
           <li>• <strong>Categories</strong> add karein — phir <strong>Items</strong> add karke category select karein aur quality daalein.</li>
-          <li>• <strong>Stock Entry</strong> se raw material aur output record karein.</li>
+          <li>• <strong>Purchases</strong> se raw material aur output record karein.</li>
           <li>• <strong>Sales</strong> se bechai record karein; <strong>Transactions</strong> se deposit/withdraw/transfer.</li>
         </ul>
       </section>

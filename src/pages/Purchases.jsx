@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { downloadStockEntriesPdf } from "../utils/exportPdf.js";
+import { downloadPurchasesPdf } from "../utils/exportPdf.js";
 import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -9,7 +9,7 @@ import { FaMoneyBillWave } from "react-icons/fa";
 
 const today = new Date().toISOString().slice(0, 10);
 
-export default function StockEntries() {
+export default function Purchases() {
   const [list, setList] = useState([]);
   const [items, setItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -273,16 +273,16 @@ export default function StockEntries() {
         <div>
           <h1 className="page-title flex items-center gap-2">
             <FaBoxOpen className="w-7 h-7 text-amber-500" />
-            Stock Entry
+            Purchase
           </h1>
-          <p className="page-subtitle">Jab stock aaye: item, supplier, quantity aur optional kattay/amount daalein.</p>
+          <p className="page-subtitle">Naya maal jo suppliers se aata hai.</p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
-          <FaPlus className="w-4 h-4" /> Add stock entry
+          <FaPlus className="w-4 h-4" /> Add Purchase
         </button>
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit stock entry" : "Nayi stock entry add karein"}>
+      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit Purchase" : "New Purchase"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -407,7 +407,7 @@ export default function StockEntries() {
             ))}
           </select>
           <p className="text-sm text-slate-500">{list.length} entry(ies)</p>
-          <button type="button" onClick={() => downloadStockEntriesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
+          <button type="button" onClick={() => downloadPurchasesPdf(sortedList, { dateFrom: filters.dateFrom, dateTo: filters.dateTo, itemId: filters.itemId, supplierId: filters.supplierId })} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
@@ -494,7 +494,7 @@ export default function StockEntries() {
           {!loading && list.length === 0 && (
             <div className="empty-state">
               <FaBoxOpen className="w-12 h-12 text-slate-300 mb-2" />
-              <p>Abhi koi stock entry nahi. Add stock entry button se add karein.</p>
+              <p>Abhi koi purchases nahi.</p>
             </div>
           )}
         </div>

@@ -74,7 +74,7 @@ export default function CurrentStock() {
             <FaBoxes className="w-7 h-7 text-amber-500" />
             Current Stock
           </h1>
-          <p className="page-subtitle">Har item ki current quantity (kg) — stock entries minus sales.</p>
+          <p className="page-subtitle">Har item ki current quantity (kg) — purchases minus sales.</p>
         </div>
       </header>
 
@@ -107,8 +107,23 @@ export default function CurrentStock() {
                       </button>
                     </th>
                     <th className="table-header px-5 py-3.5">
+                      <button type="button" onClick={() => toggleSort("kattay")} className="flex items-center hover:text-slate-800">
+                        Remaining Bags<SortIcon columnKey="kattay" />
+                      </button>
+                    </th>
+                    <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">
                         Quantity (kg)<SortIcon columnKey="quantity" />
+                      </button>
+                    </th>
+                    <th className="table-header px-5 py-3.5">
+                      <button type="button" onClick={() => toggleSort("millWeight")} className="flex items-center hover:text-slate-800">
+                        Rem. Mill Weight<SortIcon columnKey="millWeight" />
+                      </button>
+                    </th>
+                    <th className="table-header px-5 py-3.5">
+                      <button type="button" onClick={() => toggleSort("supplierWeight")} className="flex items-center hover:text-slate-800">
+                        Rem. Supplier Weight<SortIcon columnKey="supplierWeight" />
                       </button>
                     </th>
                     <th className="table-header px-5 py-3.5">Quality</th>
@@ -119,7 +134,10 @@ export default function CurrentStock() {
                     <tr key={row.itemId?.toString?.() || idx} className="table-row-hover">
                       <td className="table-cell font-medium">{row.itemName || "—"}</td>
                       <td className="table-cell">{row.category || "—"}</td>
+                      <td className="table-cell">{row.kattay != null ? Number(row.kattay) : "—"}</td>
                       <td className="table-cell font-semibold text-slate-800">{row.quantity != null ? Number(row.quantity) : "—"}</td>
+                      <td className="table-cell">{row.millWeight != null ? Number(row.millWeight).toFixed(2) : "—"}</td>
+                      <td className="table-cell">{row.supplierWeight != null ? Number(row.supplierWeight).toFixed(2) : "—"}</td>
                       <td className="table-cell">{row.quality || "—"}</td>
                     </tr>
                   ))}
@@ -131,7 +149,7 @@ export default function CurrentStock() {
           {!loading && list.length === 0 && (
             <div className="empty-state">
               <FaBoxes className="w-12 h-12 text-slate-300 mb-2" />
-              <p>Abhi koi stock nahi. Pehle Stock Entry se entries add karein.</p>
+              <p>Abhi koi stock nahi. Pehle Purchase se entries add karein.</p>
             </div>
           )}
         </div>

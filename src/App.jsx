@@ -15,7 +15,7 @@ import Accounts from "./pages/Accounts";
 import Categories from "./pages/Categories";
 import Items from "./pages/Items";
 import ItemKhata from "./pages/ItemKhata";
-import StockEntries from "./pages/StockEntries";
+import Purchases from "./pages/Purchases.jsx";
 import CurrentStock from "./pages/CurrentStock";
 import Sales from "./pages/Sales";
 import Transactions from "./pages/Transactions";
@@ -43,7 +43,7 @@ function App() {
           <Route path="categories" element={<Categories />} />
           <Route path="items" element={<Items />} />
           <Route path="items/:id/khata" element={<ItemKhata />} />
-          <Route path="stock-entries" element={<StockEntries />} />
+          <Route path="purchases" element={<Purchases />} />
           <Route path="current-stock" element={<CurrentStock />} />
           <Route path="sales" element={<Sales />} />
           <Route path="transactions" element={<Transactions />} />

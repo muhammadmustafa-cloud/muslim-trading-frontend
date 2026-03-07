@@ -225,7 +225,7 @@ export default function Transactions() {
             <FaExchangeAlt className="w-7 h-7 text-amber-500" />
             Transactions (Lena-dena)
           </h1>
-          <p className="page-subtitle">Saari account movement: manual deposit/withdraw/transfer plus Sales aur Stock entries jahan account select kiya ho.</p>
+          <p className="page-subtitle">Saari account movement: manual deposit/withdraw/transfer plus Sales aur Purchases jahan account select kiya ho.</p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
           <FaPlus className="w-4 h-4" /> Add transaction
@@ -382,7 +382,7 @@ export default function Transactions() {
               <FaExchangeAlt className="w-12 h-12 text-slate-300 mb-2" />
               <p className="font-medium text-slate-700">Abhi koi transaction nahi.</p>
               <p className="text-sm text-slate-500 mt-1 max-w-md">
-                Yahan manual transactions (deposit/withdraw/transfer) plus <strong>Sales</strong> aur <strong>Stock entries</strong> jahan aap ne account select kiya ho — sab ek saath dikhti hain. Manual entry ke liye pehle Accounts banaen, phir Add transaction use karein.
+                Yahan manual transactions (deposit/withdraw/transfer) plus <strong>Sales</strong> aur <strong>Purchases</strong> jahan aap ne account select kiya ho — sab ek saath dikhti hain. Manual entry ke liye pehle Accounts banaen, phir Add transaction use karein.
               </p>
               <button type="button" onClick={openAddModal} className="btn-primary mt-4">
                 <FaPlus className="w-4 h-4 inline mr-1.5" /> Add first transaction

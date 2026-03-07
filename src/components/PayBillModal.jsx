@@ -4,8 +4,8 @@ import Modal from './Modal';
 import { FaMoneyBillWave, FaExclamationCircle } from 'react-icons/fa';
 
 /**
- * PayBillModal - A professional modal to record payments against a specific Stock Entry.
- * @param {Object} entry - The StockEntry object to pay for.
+ * PayBillModal - A professional modal to record payments against a specific Purchase.
+ * @param {Object} entry - The Purchase object to pay for.
  * @param {boolean} open - Modal open state.
  * @param {Function} onClose - Close callback.
  * @param {Function} onSuccess - Success callback after payment.

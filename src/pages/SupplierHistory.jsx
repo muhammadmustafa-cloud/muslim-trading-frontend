@@ -76,7 +76,7 @@ export default function SupplierHistory() {
               <FaTruck className="w-7 h-7 text-amber-500" />
               History — {data.name || "Supplier"}
             </h1>
-            <p className="page-subtitle">Stock entry aur sales history (filter karke PDF download karein).</p>
+            <p className="page-subtitle">Purchase aur sales history (filter karke PDF download karein).</p>
           </div>
         </div>
         <button type="button" onClick={handlePdf} className="btn-primary flex items-center gap-2" disabled={loading}>
@@ -100,8 +100,8 @@ export default function SupplierHistory() {
           <div>
             <label className="input-label text-xs">Type</label>
             <select value={type} onChange={(e) => setFilters({ type: e.target.value })} className="input-field w-44">
-              <option value="all">All (Stock + Sales)</option>
-              <option value="stock">Stock entry only</option>
+              <option value="all">All (Purchases + Sales)</option>
+              <option value="stock">Purchase only</option>
               <option value="sales">Sales only</option>
             </select>
           </div>
@@ -115,10 +115,10 @@ export default function SupplierHistory() {
         <div className="space-y-6">
           {showStock && (
             <section className="card overflow-hidden">
-              <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jab humne inse khareeda (Stock Entry)</h2>
+              <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jab humne inse khareeda (Purchase)</h2>
               <div className="overflow-x-auto">
                 {data.stockEntries?.length === 0 ? (
-                  <p className="p-6 text-slate-500">Koi stock entry nahi.</p>
+                  <p className="p-6 text-slate-500">Koi purchase nahi.</p>
                 ) : (
                   <table className="w-full">
                     <thead>

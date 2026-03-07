@@ -76,7 +76,7 @@ export default function CustomerHistory() {
               <FaUsers className="w-7 h-7 text-amber-500" />
               History — {data.name || "Customer"}
             </h1>
-            <p className="page-subtitle">Sales aur stock entry history (filter karke PDF download karein).</p>
+            <p className="page-subtitle">Sales aur purchase history (filter karke PDF download karein).</p>
           </div>
         </div>
         <button type="button" onClick={handlePdf} className="btn-primary flex items-center gap-2" disabled={loading}>
@@ -100,9 +100,9 @@ export default function CustomerHistory() {
           <div>
             <label className="input-label text-xs">Type</label>
             <select value={type} onChange={(e) => setFilters({ type: e.target.value })} className="input-field w-44">
-              <option value="all">All (Sales + Stock)</option>
+              <option value="all">All (Sales + Purchases)</option>
               <option value="sales">Sales only</option>
-              <option value="stock">Stock entry only</option>
+              <option value="stock">Purchase only</option>
             </select>
           </div>
           <button type="button" onClick={() => setSearchParams({})} className="btn-secondary mt-6">Clear filters</button>
@@ -142,10 +142,10 @@ export default function CustomerHistory() {
 
           {showStock && (
             <section className="card overflow-hidden">
-              <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jab humne inse khareeda (Stock Entry)</h2>
+              <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jab humne inse khareeda (Purchase)</h2>
               <div className="overflow-x-auto">
                 {!data.stockEntries?.length ? (
-                  <p className="p-6 text-slate-500">Link kiya hua supplier nahi, ya koi stock entry nahi.</p>
+                  <p className="p-6 text-slate-500">Link kiya hua supplier nahi, ya koi purchase nahi.</p>
                 ) : (
                   <table className="w-full">
                     <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Item</th><th className="table-header px-4 py-2">Weight</th><th className="table-header px-4 py-2 text-right">Paid</th></tr></thead>

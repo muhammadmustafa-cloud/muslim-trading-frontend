@@ -30,7 +30,7 @@ const navItems = [
   { to: "/accounts", icon: FaWallet, label: "Accounts" },
   { to: "/categories", icon: FaTags, label: "Categories" },
   { to: "/items", icon: FaBox, label: "Items" },
-  { to: "/stock-entries", icon: FaBoxOpen, label: "Stock Entry" },
+  { to: "/purchases", icon: FaBoxOpen, label: "Purchase" },
   { to: "/current-stock", icon: FaBoxes, label: "Current Stock" },
   { to: "/sales", icon: FaShoppingCart, label: "Sales" },
   { to: "/transactions", icon: FaExchangeAlt, label: "Transactions" },
