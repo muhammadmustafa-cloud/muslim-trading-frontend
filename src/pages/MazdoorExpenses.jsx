@@ -10,6 +10,7 @@ import {
   FaSortDown,
 } from "react-icons/fa";
 import TablePagination from "../components/TablePagination.jsx";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
 const formatDate = (d) =>
@@ -228,31 +229,21 @@ export default function MazdoorExpenses() {
           </div>
           <div>
             <label className="input-label">Mazdoor *</label>
-            <select
+            <SearchableSelect
+              options={mazdoor}
               value={form.mazdoorId}
-              onChange={(e) => setForm((f) => ({ ...f, mazdoorId: e.target.value }))}
-              className="input-field"
-              required
-            >
-              <option value="">Select mazdoor</option>
-              {mazdoor.map((m) => (
-                <option key={m._id} value={m._id}>{m.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, mazdoorId: val }))}
+              placeholder="Select mazdoor"
+            />
           </div>
           <div>
             <label className="input-label">Item *</label>
-            <select
+            <SearchableSelect
+              options={items.map(i => ({ _id: i._id, name: `${i.name} (rate: ${formatMoney(i.rate)})` }))}
               value={form.mazdoorItemId}
-              onChange={(e) => setForm((f) => ({ ...f, mazdoorItemId: e.target.value }))}
-              className="input-field"
-              required
-            >
-              <option value="">Select item</option>
-              {items.map((i) => (
-                <option key={i._id} value={i._id}>{i.name} (rate: {formatMoney(i.rate)})</option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, mazdoorItemId: val }))}
+              placeholder="Select item"
+            />
           </div>
           <div>
             <label className="input-label">Bags *</label>
@@ -275,17 +266,12 @@ export default function MazdoorExpenses() {
           </div>
           <div>
             <label className="input-label">Account (jahan se deduct) *</label>
-            <select
+            <SearchableSelect
+              options={accounts}
               value={form.accountId}
-              onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))}
-              className="input-field"
-              required
-            >
-              <option value="">Select account</option>
-              {accounts.map((a) => (
-                <option key={a._id} value={a._id}>{a.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, accountId: val }))}
+              placeholder="Select account"
+            />
           </div>
           <div className="sm:col-span-2 lg:col-span-6">
             <button type="submit" className="btn-primary" disabled={submitting}>
@@ -320,16 +306,13 @@ export default function MazdoorExpenses() {
             </div>
             <div>
               <label className="input-label text-xs">Mazdoor</label>
-              <select
+              <SearchableSelect
+                options={mazdoor}
                 value={filters.mazdoorId}
-                onChange={(e) => setFilters((f) => ({ ...f, mazdoorId: e.target.value }))}
-                className="input-field w-44"
-              >
-                <option value="">All mazdoor</option>
-                {mazdoor.map((m) => (
-                  <option key={m._id} value={m._id}>{m.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFilters((f) => ({ ...f, mazdoorId: val }))}
+                placeholder="All mazdoor"
+                className="w-56"
+              />
             </div>
             <button type="button" onClick={setFilterToday} className="btn-secondary self-end">
               Aaj (Today)

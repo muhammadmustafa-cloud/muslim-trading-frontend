@@ -6,6 +6,7 @@ import { downloadTransactionsPdf } from "../utils/exportPdf.js";
 import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -255,23 +256,23 @@ export default function Transactions() {
             {(form.type === "withdraw" || form.type === "transfer") && (
               <div>
                 <label className="input-label">From account *</label>
-                <select value={form.fromAccountId} onChange={(e) => setForm((f) => ({ ...f, fromAccountId: e.target.value }))} className="input-field" required={form.type !== "deposit"}>
-                  <option value="">Select account</option>
-                  {accounts.map((a) => (
-                    <option key={a._id} value={a._id}>{a.name}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={accounts}
+                  value={form.fromAccountId}
+                  onChange={(val) => setForm((f) => ({ ...f, fromAccountId: val }))}
+                  placeholder="Select account"
+                />
               </div>
             )}
             {(form.type === "deposit" || form.type === "transfer") && (
               <div>
                 <label className="input-label">To account *</label>
-                <select value={form.toAccountId} onChange={(e) => setForm((f) => ({ ...f, toAccountId: e.target.value }))} className="input-field" required={form.type !== "withdraw"}>
-                  <option value="">Select account</option>
-                  {accounts.map((a) => (
-                    <option key={a._id} value={a._id}>{a.name}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={accounts}
+                  value={form.toAccountId}
+                  onChange={(val) => setForm((f) => ({ ...f, toAccountId: val }))}
+                  placeholder="Select account"
+                />
               </div>
             )}
             <div>
@@ -284,21 +285,21 @@ export default function Transactions() {
             </div>
             <div>
               <label className="input-label">Supplier (optional)</label>
-              <select value={form.supplierId} onChange={(e) => setForm((f) => ({ ...f, supplierId: e.target.value }))} className="input-field">
-                <option value="">—</option>
-                {suppliers.map((s) => (
-                  <option key={s._id} value={s._id}>{s.name}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={suppliers}
+                value={form.supplierId}
+                onChange={(val) => setForm((f) => ({ ...f, supplierId: val }))}
+                placeholder="Select supplier"
+              />
             </div>
             <div>
               <label className="input-label">Mazdoor (optional)</label>
-              <select value={form.mazdoorId} onChange={(e) => setForm((f) => ({ ...f, mazdoorId: e.target.value }))} className="input-field">
-                <option value="">—</option>
-                {mazdoor.map((m) => (
-                  <option key={m._id} value={m._id}>{m.name}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={mazdoor}
+                value={form.mazdoorId}
+                onChange={(val) => setForm((f) => ({ ...f, mazdoorId: val }))}
+                placeholder="Select mazdoor"
+              />
             </div>
             <div className="sm:col-span-2">
               <label className="input-label">Note</label>
@@ -316,12 +317,13 @@ export default function Transactions() {
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
-          <select value={filters.accountId} onChange={(e) => setFilters((f) => ({ ...f, accountId: e.target.value }))} className="input-field w-48">
-            <option value="">All accounts</option>
-            {accounts.map((a) => (
-              <option key={a._id} value={a._id}>{a.name}</option>
-            ))}
-          </select>
+          <SearchableSelect
+            options={accounts}
+            value={filters.accountId}
+            onChange={(val) => setFilters((f) => ({ ...f, accountId: val }))}
+            placeholder="All accounts"
+            className="w-56"
+          />
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
           <p className="text-sm text-slate-500">{list.length} transaction(s)</p>

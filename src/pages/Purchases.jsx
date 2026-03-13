@@ -6,6 +6,7 @@ import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import PayBillModal from "../components/PayBillModal.jsx";
 import { FaMoneyBillWave } from "react-icons/fa";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -17,7 +18,6 @@ export default function Purchases() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     date: today,
     itemId: "",
@@ -26,6 +26,7 @@ export default function Purchases() {
     kgPerKata: "",
     ratePerKata: "",
     amount: "",
+    bardanaAmount: "",
     millWeight: "",
     supplierWeight: "",
     truckNumber: "",
@@ -104,6 +105,7 @@ export default function Purchases() {
       kgPerKata: "",
       ratePerKata: "",
       amount: "",
+      bardanaAmount: "",
       millWeight: "",
       supplierWeight: "",
       truckNumber: "",
@@ -113,7 +115,6 @@ export default function Purchases() {
       paymentTerms: "cash",
       dueDate: "",
     });
-    setEditingId(null);
     setModalOpen(false);
   };
 
@@ -121,11 +122,20 @@ export default function Purchases() {
     setForm((prev) => {
       const next = { ...prev, ...updates };
 
-      // Auto calc amount
       const kattay = Number(next.kattay) || 0;
+      const kgPerKata = Number(next.kgPerKata) || 0;
       const ratePerKata = Number(next.ratePerKata) || 0;
-      if (kattay > 0 && ratePerKata > 0) next.amount = String(Math.round(kattay * ratePerKata));
-      else if ("kattay" in updates || "ratePerKata" in updates) next.amount = "";
+      const bardanaAmount = Number(next.bardanaAmount) || 0;
+
+      // Auto calc receivedWeight
+      next.receivedWeight = (kattay > 0 && kgPerKata > 0) ? kattay * kgPerKata : "";
+
+      // Auto calc amount
+      if (kattay > 0 && ratePerKata > 0) {
+        next.amount = String(Math.round(kattay * ratePerKata + bardanaAmount));
+      } else if ("kattay" in updates || "ratePerKata" in updates || "bardanaAmount" in updates) {
+        next.amount = "";
+      }
 
       // Auto calc dueDate if paymentTerms changed or date changed
       if ("paymentTerms" in updates || "date" in updates) {
@@ -173,13 +183,13 @@ export default function Purchases() {
         supplierWeight: Number(form.supplierWeight) || 0,
         truckNumber: (form.truckNumber || "").trim(),
         amount: Number(form.amount) || 0,
+        bardanaAmount: Number(form.bardanaAmount) || 0,
         amountPaid: Number(form.amountPaid) || 0,
         dueDate: form.dueDate || undefined,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
       };
-      if (editingId) await apiPut(`/stock-entries/${editingId}`, payload);
-      else await apiPost("/stock-entries", payload);
+      await apiPost("/stock-entries", payload);
       resetForm();
       fetchList();
     } catch (e) {
@@ -187,31 +197,6 @@ export default function Purchases() {
     }
   };
 
-  const handleEdit = (row) => {
-    const itemId = row.itemId?._id || row.itemId;
-    const kattay = row.kattay != null ? row.kattay : "";
-    const amount = row.amount != null ? row.amount : "";
-    const ratePerKata = kattay && amount && Number(kattay) > 0 ? String(Number(amount) / Number(kattay)) : "";
-    setForm({
-      date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
-      itemId: itemId || "",
-      supplierId: row.supplierId?._id || row.supplierId || "",
-      kattay: kattay !== "" ? String(kattay) : "",
-      kgPerKata: row.kgPerKata != null ? String(row.kgPerKata) : "",
-      ratePerKata,
-      amount: amount !== "" ? String(amount) : "",
-      millWeight: row.millWeight != null ? String(row.millWeight) : "",
-      supplierWeight: row.supplierWeight != null ? String(row.supplierWeight) : "",
-      truckNumber: row.truckNumber || "",
-      amountPaid: row.amountPaid ?? "",
-      accountId: row.accountId?._id || row.accountId || "",
-      notes: row.notes || "",
-      paymentTerms: "custom",
-      dueDate: row.dueDate ? new Date(row.dueDate).toISOString().slice(0, 10) : "",
-    });
-    setEditingId(row._id);
-    setModalOpen(true);
-  };
 
 
   const toggleSort = (key) => {
@@ -282,30 +267,30 @@ export default function Purchases() {
         </button>
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit Purchase" : "New Purchase"}>
+      <Modal open={modalOpen} onClose={resetForm} title="New Purchase">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="input-label">Tarikh *</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required />
+              <input type="date" value={form.date} onChange={(e) => updateFormWithAutoCalc({ date: e.target.value })} className="input-field" required />
             </div>
             <div>
               <label className="input-label">Item *</label>
-              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required>
-                <option value="">Select item</option>
-                {items.map((i) => (
-                  <option key={i._id} value={i._id}>{i.name}{i.categoryId?.name ? ` (${i.categoryId.name})` : ""}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={items}
+                value={form.itemId}
+                onChange={(val) => setForm((f) => ({ ...f, itemId: val }))}
+                placeholder="Select item"
+              />
             </div>
             <div>
               <label className="input-label">Supplier *</label>
-              <select value={form.supplierId} onChange={(e) => setForm((f) => ({ ...f, supplierId: e.target.value }))} className="input-field" required>
-                <option value="">Select supplier</option>
-                {suppliers.map((s) => (
-                  <option key={s._id} value={s._id}>{s.name}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={suppliers}
+                value={form.supplierId}
+                onChange={(val) => setForm((f) => ({ ...f, supplierId: val }))}
+                placeholder="Select supplier"
+              />
             </div>
             <div>
               <label className="input-label">Truck number</label>
@@ -317,17 +302,13 @@ export default function Purchases() {
             </div>
             <div>
               <label className="input-label">Aik katta kitne kg ka he</label>
-              <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => setForm((f) => ({ ...f, kgPerKata: e.target.value }))} className="input-field" min="0" step="any" />
+              <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => updateFormWithAutoCalc({ kgPerKata: e.target.value })} className="input-field" min="0" step="any" />
               <p className="text-xs text-slate-500 mt-0.5">Stock weight auto: kattay × kg/katta</p>
             </div>
             <div>
               <label className="input-label">Aik katta kitne ka he (Rs)</label>
               <input type="number" placeholder="0" value={form.ratePerKata} onChange={(e) => updateFormWithAutoCalc({ ratePerKata: e.target.value })} className="input-field" min="0" step="1" />
-              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kattay × rate (e.g. 5 × 5 = 25)</p>
-            </div>
-            <div>
-              <label className="input-label">Total amount (Rs)</label>
-              <input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" min="0" step="1" title="Auto: kattay × rate (e.g. 5 × 5 = 25)" />
+              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kattay × rate + bardana</p>
             </div>
             <div>
               <label className="input-label">Mill weight (kg)</label>
@@ -336,6 +317,15 @@ export default function Purchases() {
             <div>
               <label className="input-label">Supplier weight (kg)</label>
               <input type="number" placeholder="0" value={form.supplierWeight} onChange={(e) => setForm((f) => ({ ...f, supplierWeight: e.target.value }))} className="input-field" min="0" step="any" />
+            </div>
+            <div>
+              <label className="input-label">Bardana Amount</label>
+              <input type="number" placeholder="0" value={form.bardanaAmount} onChange={(e) => updateFormWithAutoCalc({ bardanaAmount: e.target.value })} className="input-field" min="0" />
+            </div>
+
+            <div>
+              <label className="input-label font-bold text-amber-700">Total Bill Amount</label>
+              <input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field font-bold text-amber-900 bg-amber-50" min="0" />
             </div>
             <div>
               <label className="input-label">Amount paid (optional)</label>
@@ -383,7 +373,7 @@ export default function Purchases() {
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
-            <button type="submit" className="btn-primary">{editingId ? "Update" : "Add entry"}</button>
+             <button type="submit" className="btn-primary">Add entry</button>
             <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
           </div>
         </form>
@@ -394,18 +384,23 @@ export default function Purchases() {
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" placeholder="From" />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" placeholder="To" />
-          <select value={filters.itemId} onChange={(e) => setFilters((f) => ({ ...f, itemId: e.target.value }))} className="input-field w-48">
-            <option value="">All items</option>
-            {items.map((i) => (
-              <option key={i._id} value={i._id}>{i.name}</option>
-            ))}
-          </select>
-          <select value={filters.supplierId} onChange={(e) => setFilters((f) => ({ ...f, supplierId: e.target.value }))} className="input-field w-48">
-            <option value="">All suppliers</option>
-            {suppliers.map((s) => (
-              <option key={s._id} value={s._id}>{s.name}</option>
-            ))}
-          </select>
+          
+          <SearchableSelect
+            options={items}
+            value={filters.itemId}
+            onChange={(val) => setFilters((f) => ({ ...f, itemId: val }))}
+            placeholder="All items"
+            className="w-56"
+          />
+
+          <SearchableSelect
+            options={suppliers}
+            value={filters.supplierId}
+            onChange={(val) => setFilters((f) => ({ ...f, supplierId: val }))}
+            placeholder="All suppliers"
+            className="w-56"
+          />
+
           <p className="text-sm text-slate-500">{list.length} entry(ies)</p>
           <button type="button" onClick={() => downloadPurchasesPdf(sortedList, { dateFrom: filters.dateFrom, dateTo: filters.dateTo, itemId: filters.itemId, supplierId: filters.supplierId })} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
@@ -481,7 +476,7 @@ export default function Purchases() {
                               <FaMoneyBillWave className="w-3 h-3" /> Pay
                             </button>
                           )}
-                          <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
+                          {/* Edit removed for data integrity */}
                         </div>
                       </td>
                     </tr>

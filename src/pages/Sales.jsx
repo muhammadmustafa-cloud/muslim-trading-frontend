@@ -6,6 +6,7 @@ import { FaShoppingCart, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExp
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -18,7 +19,6 @@ export default function Sales() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     date: today,
     customerId: "",
@@ -28,6 +28,7 @@ export default function Sales() {
     ratePerKata: "",
     quantity: "",
     rate: "",
+    bardanaAmount: "",
     totalAmount: "",
     truckNumber: "",
     amountReceived: "",
@@ -73,7 +74,6 @@ export default function Sales() {
       if (res.ok) setStockData(data.data || []);
     } catch (_) { }
   };
-
   const fetchList = async () => {
     setLoading(true);
     setError("");
@@ -112,16 +112,20 @@ export default function Sales() {
     }
     let cancelled = false;
     const params = new URLSearchParams({ itemId: form.itemId });
-    if (editingId) params.set('excludeSaleId', editingId);
     fetch(`${API_BASE_URL}/sales/available?${params}`)
       .then((res) => res.json())
       .then((data) => {
-        if (!cancelled && data.success && data.data) setAvailableStock(data.data.available);
+        if (!cancelled && data.success && data.data) {
+          setAvailableStock({
+            weight: data.data.availableWeight ?? data.data.available,
+            kattay: data.data.availableKattay ?? 0
+          });
+        }
         else setAvailableStock(null);
       })
       .catch(() => { if (!cancelled) setAvailableStock(null); });
     return () => { cancelled = true; };
-  }, [form.itemId, editingId]);
+  }, [form.itemId]);
 
   const resetForm = () => {
     setForm({
@@ -133,6 +137,7 @@ export default function Sales() {
       ratePerKata: "",
       quantity: "",
       rate: "",
+      bardanaAmount: "",
       totalAmount: "",
       truckNumber: "",
       amountReceived: "",
@@ -141,7 +146,6 @@ export default function Sales() {
       paymentTerms: "cash",
       dueDate: "",
     });
-    setEditingId(null);
     setModalOpen(false);
   };
 
@@ -152,6 +156,8 @@ export default function Sales() {
       const kattay = Number(next.kattay) || 0;
       const kgPerKata = Number(next.kgPerKata) || 0;
       const ratePerKata = Number(next.ratePerKata) || 0;
+      const rate = Number(next.rate) || 0;
+      const bardanaAmount = Number(next.bardanaAmount) || 0;
 
       // Auto-calc quantity (total weight) = kattay × kgPerKata
       if (kattay > 0 && kgPerKata > 0) {
@@ -160,19 +166,18 @@ export default function Sales() {
         next.quantity = "";
       }
 
-      // Auto-calc totalAmount = kattay × ratePerKata
+      // Auto-calc totalAmount = kattay × ratePerKata + bardanaAmount
+      let calculatedTotalAmount = 0;
       if (kattay > 0 && ratePerKata > 0) {
-        next.totalAmount = String(Math.round(kattay * ratePerKata));
-      } else if ("kattay" in updates || "ratePerKata" in updates) {
-        next.totalAmount = "";
-      }
-
-      // Fallback: quantity × rate if no kattay
-      if (!next.totalAmount) {
+        calculatedTotalAmount = Math.round(kattay * ratePerKata) + bardanaAmount;
+      } else {
+        // Fallback: quantity × rate + bardanaAmount if no kattay/ratePerKata
         const qty = Number(next.quantity) || 0;
-        const rate = Number(next.rate) || 0;
-        if (qty > 0 && rate > 0) next.totalAmount = String(Math.round(qty * rate));
+        if (qty > 0 && rate > 0) {
+          calculatedTotalAmount = Math.round(qty * rate) + bardanaAmount;
+        }
       }
+      next.totalAmount = calculatedTotalAmount > 0 ? String(calculatedTotalAmount) : "";
 
       // Auto calc dueDate if paymentTerms changed or date changed
       if ("paymentTerms" in updates || "date" in updates) {
@@ -222,6 +227,7 @@ export default function Sales() {
         ratePerKata: Number(form.ratePerKata) || 0,
         quantity: qty,
         rate: Number(form.rate) || 0,
+        bardanaAmount: Number(form.bardanaAmount) || 0,
         totalAmount: Number(form.totalAmount) || 0,
         truckNumber: (form.truckNumber || "").trim(),
         amountReceived: Number(form.amountReceived) || 0,
@@ -229,46 +235,20 @@ export default function Sales() {
         notes: form.notes || "",
         dueDate: form.dueDate || undefined,
       };
-      if (editingId) await apiPut(`/sales/${editingId}`, payload);
-      else await apiPost("/sales", payload);
+      await apiPost("/sales", payload);
       resetForm();
       fetchList();
+      fetchStockData(); // Refresh dropdown labels
     } catch (e) {
       setError(e.message);
     }
   };
 
-  const handleEdit = (row) => {
-    const kattay = row.kattay != null ? row.kattay : "";
-    const kgPerKata = row.kgPerKata != null ? row.kgPerKata : "";
-    const ratePerKata = row.ratePerKata != null ? row.ratePerKata : "";
-    const qty = row.quantity != null ? row.quantity : "";
-    const total = row.totalAmount != null ? row.totalAmount : "";
-    const rate = qty && total && Number(qty) > 0 ? String(Number(total) / Number(qty)) : (row.rate ?? "");
-    setForm({
-      date: row.date ? new Date(row.date).toISOString().slice(0, 10) : today,
-      customerId: row.customerId?._id || row.customerId || "",
-      itemId: row.itemId?._id || row.itemId || "",
-      kattay: kattay !== "" ? String(kattay) : "",
-      kgPerKata: kgPerKata !== "" ? String(kgPerKata) : "",
-      ratePerKata: ratePerKata !== "" ? String(ratePerKata) : "",
-      quantity: qty !== "" ? String(qty) : "",
-      rate: rate !== "" ? String(rate) : "",
-      totalAmount: total !== "" ? String(total) : "",
-      truckNumber: row.truckNumber || "",
-      amountReceived: row.amountReceived ?? "",
-      accountId: row.accountId?._id || row.accountId || "",
-      notes: row.notes || "",
-      paymentTerms: "custom",
-      dueDate: row.dueDate ? new Date(row.dueDate).toISOString().slice(0, 10) : "",
-    });
-    setEditingId(row._id);
-    setModalOpen(true);
-  };
 
 
   const handleCollectSuccess = () => {
     fetchList();
+    fetchStockData();
   };
 
   const toggleSort = (key) => {
@@ -340,7 +320,7 @@ export default function Sales() {
         </button>
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit sale" : "Nayi sale add karein"}>
+      <Modal open={modalOpen} onClose={resetForm} title="Nayi sale add karein">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -349,28 +329,33 @@ export default function Sales() {
             </div>
             <div>
               <label className="input-label">Customer *</label>
-              <select value={form.customerId} onChange={(e) => setForm((f) => ({ ...f, customerId: e.target.value }))} className="input-field" required>
-                <option value="">Select customer</option>
-                {customers.map((c) => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={customers}
+                value={form.customerId}
+                onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
+                placeholder="Select customer"
+              />
             </div>
             <div>
               <label className="input-label">Item * <span className="text-[10px] text-slate-400">(sirf stock wale items)</span></label>
-              <select value={form.itemId} onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))} className="input-field" required>
-                <option value="">Select item</option>
-                {items.map((i) => {
-                  const stock = stockData.find(s => s.itemId?.toString() === i._id?.toString());
-                  const availQty = stock?.kattay || 0;
-                  if (availQty <= 0 && form.itemId !== i._id) return null;
-                  return (
-                    <option key={i._id} value={i._id}>
-                      {i.name}{i.categoryId?.name ? ` (${i.categoryId.name})` : ""} — {availQty} kattay
-                    </option>
-                  );
-                })}
-              </select>
+              <SearchableSelect
+                options={items
+                  .map((i) => {
+                    const stock = stockData.find(s => s.itemId?.toString() === i._id?.toString());
+                    const availQty = stock?.kattay || 0;
+                    return {
+                      ...i,
+                      displayName: `${i.name}${i.categoryId?.name ? ` (${i.categoryId.name})` : ""} — ${availQty} kattay`,
+                      availQty
+                    };
+                  })
+                  .filter(i => i.availQty > 0 || form.itemId === i._id)
+                  .map(i => ({ _id: i._id, name: i.displayName }))
+                }
+                value={form.itemId}
+                onChange={(val) => setForm((f) => ({ ...f, itemId: val }))}
+                placeholder="Select item"
+              />
             </div>
             <div>
               <label className="input-label">Truck number</label>
@@ -394,13 +379,17 @@ export default function Sales() {
               <label className="input-label">Total weight / Quantity (kg)</label>
               <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field" min="0" step="any" />
               {availableStock != null && (
-                <p className="text-xs text-slate-600 mt-0.5">Available stock: <strong>{availableStock} kg</strong> — jo yahan daalogi wo yahi se cut ho jayegi.</p>
+                <p className="text-xs text-slate-600 mt-0.5">Available stock: <strong>{availableStock.weight} kg</strong> & <strong>{availableStock.kattay} bags</strong> — jo yahan daalogi wo yahi se cut ho jayegi.</p>
               )}
               {form.itemId && availableStock == null && <p className="text-xs text-slate-500 mt-0.5">Yahi quantity (kg) is item ki stock se minus ho jayegi.</p>}
             </div>
             <div>
-              <label className="input-label">Total amount (Rs)</label>
-              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field" min="0" step="1" title="Auto: kattay × rate" />
+              <label className="input-label">Bardana Amount</label>
+              <input type="number" placeholder="0" value={form.bardanaAmount} onChange={(e) => updateFormWithAutoCalc({ bardanaAmount: e.target.value })} className="input-field" min="0" />
+            </div>
+            <div>
+              <label className="input-label font-bold text-amber-700">Total Amount</label>
+              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field font-bold text-amber-900 bg-amber-50" min="0" />
             </div>
             <div>
               <label className="input-label">Amount received</label>
@@ -448,7 +437,7 @@ export default function Sales() {
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
-            <button type="submit" className="btn-primary">{editingId ? "Update" : "Add sale"}</button>
+            <button type="submit" className="btn-primary">Add sale</button>
             <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
           </div>
         </form>
@@ -459,18 +448,23 @@ export default function Sales() {
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
-          <select value={filters.customerId} onChange={(e) => setFilters((f) => ({ ...f, customerId: e.target.value }))} className="input-field w-48">
-            <option value="">All customers</option>
-            {customers.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
-          <select value={filters.itemId} onChange={(e) => setFilters((f) => ({ ...f, itemId: e.target.value }))} className="input-field w-48">
-            <option value="">All items</option>
-            {items.map((i) => (
-              <option key={i._id} value={i._id}>{i.name}</option>
-            ))}
-          </select>
+          
+          <SearchableSelect
+            options={customers}
+            value={filters.customerId}
+            onChange={(val) => setFilters((f) => ({ ...f, customerId: val }))}
+            placeholder="All customers"
+            className="w-56"
+          />
+
+          <SearchableSelect
+            options={items}
+            value={filters.itemId}
+            onChange={(val) => setFilters((f) => ({ ...f, itemId: val }))}
+            placeholder="All items"
+            className="w-56"
+          />
+
           <p className="text-sm text-slate-500">{list.length} sale(s)</p>
           <button type="button" onClick={() => downloadSalesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
           <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemName", label: "Item" }, { key: "category", label: "Category" }, { key: "kattay", label: "Kattay" }, { key: "kgPerKata", label: "Kg/Katta" }, { key: "ratePerKata", label: "Rate/Katta" }, { key: "quantity", label: "Quantity (kg)" }, { key: "totalAmount", label: "Total Amount" }, { key: "amountReceived", label: "Amount Received" }, { key: "truckNumber", label: "Truck" }, { key: "accountId.name", label: "Account" }, { key: "paymentStatus", label: "Status" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
@@ -543,7 +537,7 @@ export default function Sales() {
                               <FaHandHoldingUsd className="w-3.5 h-3.5" /> Collect
                             </button>
                           )}
-                          <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
+                          {/* Edit removed for data integrity */}
                         </div>
                       </td>
                     </tr>
