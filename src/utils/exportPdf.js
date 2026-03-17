@@ -94,9 +94,9 @@ export function downloadSalesPdf(sales, filters = {}) {
       2: { cellWidth: 26 },
       3: { cellWidth: 22 },
       4: { cellWidth: 20 },
-      5: { cellWidth: 12 },
+      5: { cellWidth: 20 },
       6: { cellWidth: 16 },
-      7: { cellWidth: 18 },
+      7: { cellWidth: 30 },
       8: { cellWidth: 18 },
       9: { cellWidth: 18 },
       10: { cellWidth: 20 },
@@ -524,4 +524,182 @@ export function downloadSaleInvoicePdf(sale) {
   doc.text("Signature", 158, yPos + 40);
 
   doc.save(`invoice-${invoiceNo.replace(/\//g, "-")}.pdf`);
+}
+
+/**
+ * Professional Single Purchase Invoice PDF
+ * Mimics the style of the sales invoice but for supplier purchases.
+ */
+export function downloadPurchaseInvoicePdf(entry) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  
+  // --- HEADER SECTION ---
+  doc.setFontSize(28);
+  doc.setFont("helvetica", "bold");
+  doc.text("MUSLIM", 15, 25);
+  
+  doc.setFontSize(16);
+  doc.text("TRADING COMPANY", 75, 20);
+  doc.setFontSize(14);
+  doc.text("DALL MILL", 75, 26);
+  
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text("Opposite Begam Saeeda House Near", 15, 32);
+  doc.text("Shell Pump Quetta Road Jaccobabad", 15, 36);
+  doc.text("Haji Saleh M : 03023392243", 15, 40);
+  doc.text("Haji Saleh M : 03362320267", 15, 44);
+
+  doc.text("Channa Dall Jawar Taramera Till ETC", 75, 32);
+
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("PURCHASE INVOICE", 75, 42);
+
+  doc.setFontSize(10);
+  doc.text("Purchase No.", 130, 42);
+  const entryNo = `PI${new Date(entry.date).toISOString().slice(5,7)}${new Date(entry.date).toISOString().slice(2,4)}/${entry._id.slice(-6).toUpperCase()}`;
+  doc.text(entryNo, 155, 42);
+
+  // Line under header
+  doc.setLineWidth(0.5);
+  doc.line(15, 48, 195, 48);
+
+  // --- SUPPLIER & DETAILS SECTION ---
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Supplier", 15, 56);
+  doc.text("Detail", 150, 56);
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  
+  // Left Column (Supplier)
+  doc.text("Name:", 15, 64);
+  doc.text((entry.supplierId?.name || ""), 35, 64);
+  doc.line(35, 65, 120, 65);
+
+  doc.text("Address:", 15, 72);
+  doc.line(35, 73, 120, 73); 
+
+  doc.text("Phone:", 15, 80);
+  doc.line(35, 81, 120, 81);
+
+  // Right Column (Details)
+  doc.text("Date:", 135, 64);
+  doc.text(formatDate(entry.date), 155, 64);
+  doc.line(155, 65, 195, 65);
+
+  doc.text("Truck No:", 135, 72);
+  doc.text(entry.truckNumber || "—", 155, 72);
+  doc.line(155, 73, 195, 73);
+
+  doc.text("Account:", 135, 80);
+  doc.text(entry.accountId?.name || "—", 155, 80);
+  doc.line(155, 81, 195, 81);
+
+  // --- ITEM TABLE ---
+  let yPos = 95;
+  
+  doc.setFillColor(235, 235, 235);
+  doc.rect(15, yPos, 180, 8, "F");
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.2);
+  doc.line(15, yPos, 195, yPos);
+  doc.line(15, yPos+8, 195, yPos+8);
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text("NAME OF PRODUCT", 18, yPos + 5.5);
+  doc.text("BAGS", 95, yPos + 5.5);
+  doc.text("MUN", 120, yPos + 5.5);
+  doc.text("K.G", 140, yPos + 5.5);
+  doc.text("RATE (MUN)", 155, yPos + 5.5);
+  doc.text("NET AMOUNT", 175, yPos + 5.5);
+
+  yPos += 14;
+  doc.setFont("helvetica", "normal");
+  
+  const itemName = entry.itemId?.name || "—";
+  doc.text(itemName, 18, yPos);
+  
+  const bags = entry.kattay ? String(entry.kattay) : "—";
+  doc.text(bags, 95, yPos);
+  
+  const netKg = entry.receivedWeight ? Number(entry.receivedWeight) : 0;
+  const mun = netKg > 0 ? (netKg / 40).toFixed(3) : "—";
+  doc.text(String(mun), 120, yPos);
+  
+  doc.text("40", 140, yPos);
+  
+  const rateStr = entry.rate ? formatMoney(entry.rate) : "—";
+  doc.text(rateStr, 155, yPos);
+
+  const baseTotal = netKg > 0 && entry.rate ? Math.round((netKg / 40) * entry.rate) : 0;
+  doc.text(formatMoney(baseTotal), 175, yPos);
+
+  yPos = 175;
+  doc.line(15, yPos, 195, yPos);
+
+  // --- SUMMARY SECTION ---
+  yPos += 8;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  
+  doc.text("Total Weight (Gross)", 15, yPos);
+  const grossWeight = netKg + (entry.shCut || 0);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatMoney(grossWeight), 50, yPos);
+
+  yPos += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("S.H Cut (250g/Mun)", 15, yPos);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(entry.shCut || 0), 50, yPos);
+
+  yPos += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("Net Weight", 15, yPos);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatMoney(netKg), 50, yPos);
+
+  // Right calculations
+  let rightY = 175 + 8;
+  doc.setFont("helvetica", "bold");
+  doc.text("GROSS AMOUNT:", 130, rightY);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatMoney(baseTotal), 195, rightY, { align: "right" });
+
+  rightY += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("BARDANA TOTAL:", 130, rightY);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatMoney(entry.bardanaAmount || 0), 195, rightY, { align: "right" });
+
+  doc.setLineWidth(0.1);
+  doc.line(130, rightY + 2, 195, rightY + 2);
+
+  rightY += 9;
+  doc.setFont("helvetica", "bold");
+  doc.text("NET AMOUNT:", 130, rightY);
+  doc.setFontSize(11);
+  doc.text(formatMoney(entry.amount), 195, rightY, { align: "right" });
+  doc.setFontSize(9);
+
+  // --- MEMO SECTION ---
+  yPos += 15;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Memo:", 15, yPos);
+  
+  yPos += 6;
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text(entry.notes || "—", 15, yPos);
+
+  doc.line(140, yPos + 35, 195, yPos + 35);
+  doc.setFont("helvetica", "bold");
+  doc.text("Verified By", 158, yPos + 40);
+
+  doc.save(`purchase-invoice-${entryNo.replace(/\//g, "-")}.pdf`);
 }

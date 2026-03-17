@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { downloadPurchasesPdf } from "../utils/exportPdf.js";
+import { downloadPurchasesPdf, downloadPurchaseInvoicePdf } from "../utils/exportPdf.js";
 import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -24,11 +24,12 @@ export default function Purchases() {
     supplierId: "",
     kattay: "",
     kgPerKata: "",
-    ratePerKata: "",
-    amount: "",
-    bardanaAmount: "",
     millWeight: "",
     supplierWeight: "",
+    shCut: "",
+    rate: "",
+    amount: "",
+    bardanaAmount: "",
     truckNumber: "",
     amountPaid: "",
     accountId: "",
@@ -103,11 +104,12 @@ export default function Purchases() {
       supplierId: "",
       kattay: "",
       kgPerKata: "",
-      ratePerKata: "",
-      amount: "",
-      bardanaAmount: "",
       millWeight: "",
       supplierWeight: "",
+      shCut: "",
+      rate: "",
+      amount: "",
+      bardanaAmount: "",
       truckNumber: "",
       amountPaid: "",
       accountId: "",
@@ -124,16 +126,27 @@ export default function Purchases() {
 
       const kattay = Number(next.kattay) || 0;
       const kgPerKata = Number(next.kgPerKata) || 0;
-      const ratePerKata = Number(next.ratePerKata) || 0;
+      const rate = Number(next.rate) || 0;
       const bardanaAmount = Number(next.bardanaAmount) || 0;
 
-      // Auto calc receivedWeight
-      next.receivedWeight = (kattay > 0 && kgPerKata > 0) ? kattay * kgPerKata : "";
+      // 1. Calculate Gross Weight
+      const grossWeight = kattay > 0 && kgPerKata > 0 ? kattay * kgPerKata : 0;
 
-      // Auto calc amount
-      if (kattay > 0 && ratePerKata > 0) {
-        next.amount = String(Math.round(kattay * ratePerKata + bardanaAmount));
-      } else if ("kattay" in updates || "ratePerKata" in updates || "bardanaAmount" in updates) {
+      // 2. Standard Rule for Purchase: 250g (0.25kg) cut per 40kg (1 MUN)
+      let shCut = 0;
+      if (grossWeight > 0) {
+        shCut = Number(((grossWeight / 40) * 0.25).toFixed(2));
+      }
+      next.shCut = shCut > 0 ? String(shCut) : "";
+
+      // 3. Calculate Net Weight (receivedWeight)
+      const netWeight = Math.max(0, grossWeight - shCut);
+      next.receivedWeight = netWeight > 0 ? String(netWeight) : "";
+
+      // 4. Auto calc amount: (NetWeight / 40) * Rate + Bardana
+      if (netWeight > 0 && rate > 0) {
+        next.amount = String(Math.round((netWeight / 40) * rate + bardanaAmount));
+      } else if ("kattay" in updates || "rate" in updates || "bardanaAmount" in updates || "kgPerKata" in updates) {
         next.amount = "";
       }
 
@@ -170,20 +183,20 @@ export default function Purchases() {
     }
     setError("");
     try {
-      const kattay = Number(form.kattay) || 0;
-      const kgPerKata = Number(form.kgPerKata) || 0;
       const payload = {
         date: form.date,
         itemId: form.itemId,
         supplierId: form.supplierId,
-        kattay,
-        kgPerKata,
-        receivedWeight: kattay > 0 && kgPerKata > 0 ? kattay * kgPerKata : 0,
+        kattay: Number(form.kattay) || 0,
+        kgPerKata: Number(form.kgPerKata) || 0,
+        shCut: Number(form.shCut) || 0,
+        receivedWeight: Number(form.receivedWeight) || 0,
         millWeight: Number(form.millWeight) || 0,
         supplierWeight: Number(form.supplierWeight) || 0,
-        truckNumber: (form.truckNumber || "").trim(),
+        rate: Number(form.rate) || 0,
         amount: Number(form.amount) || 0,
         bardanaAmount: Number(form.bardanaAmount) || 0,
+        truckNumber: (form.truckNumber || "").trim(),
         amountPaid: Number(form.amountPaid) || 0,
         dueDate: form.dueDate || undefined,
         accountId: form.accountId || undefined,
@@ -303,12 +316,19 @@ export default function Purchases() {
             <div>
               <label className="input-label">Aik katta kitne kg ka he</label>
               <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => updateFormWithAutoCalc({ kgPerKata: e.target.value })} className="input-field" min="0" step="any" />
-              <p className="text-xs text-slate-500 mt-0.5">Stock weight auto: kattay × kg/katta</p>
             </div>
             <div>
-              <label className="input-label">Aik katta kitne ka he (Rs)</label>
-              <input type="number" placeholder="0" value={form.ratePerKata} onChange={(e) => updateFormWithAutoCalc({ ratePerKata: e.target.value })} className="input-field" min="0" step="1" />
-              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kattay × rate + bardana</p>
+              <label className="input-label">Total S.H Cut (kg)</label>
+              <input type="number" placeholder="0" value={form.shCut} onChange={(e) => updateFormWithAutoCalc({ shCut: e.target.value })} className="input-field bg-slate-50" min="0" step="any" readOnly />
+              <p className="text-[10px] text-slate-500 mt-0.5">Auto: 250g per 40kg</p>
+            </div>
+            <div>
+              <label className="input-label">Stock Weight (Net kg)</label>
+              <input type="number" placeholder="0" value={form.receivedWeight} onChange={(e) => updateFormWithAutoCalc({ receivedWeight: e.target.value })} className="input-field bg-slate-50 font-semibold" min="0" step="any" readOnly />
+            </div>
+            <div>
+              <label className="input-label font-bold text-amber-700">Rate (Per MUN / 40Kg)</label>
+              <input type="number" placeholder="0" value={form.rate} onChange={(e) => updateFormWithAutoCalc({ rate: e.target.value })} className="input-field" min="0" step="any" />
             </div>
             <div>
               <label className="input-label">Mill weight (kg)</label>
@@ -476,7 +496,9 @@ export default function Purchases() {
                               <FaMoneyBillWave className="w-3 h-3" /> Pay
                             </button>
                           )}
-                          {/* Edit removed for data integrity */}
+                          <button type="button" onClick={() => downloadPurchaseInvoicePdf(row)} className="btn-ghost-secondary flex items-center gap-1">
+                            <FaFilePdf className="w-3.5 h-3.5" /> Invoice
+                          </button>
                         </div>
                       </td>
                     </tr>
