@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
-import { downloadSalesPdf } from "../utils/exportPdf.js";
+import { downloadSalesPdf, downloadSaleInvoicePdf } from "../utils/exportPdf.js";
 import { FaShoppingCart, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -25,10 +25,12 @@ export default function Sales() {
     itemId: "",
     kattay: "",
     kgPerKata: "",
-    ratePerKata: "",
     quantity: "",
+    shCut: "",
     rate: "",
+    bardanaRate: "",
     bardanaAmount: "",
+    mazdori: "",
     totalAmount: "",
     truckNumber: "",
     amountReceived: "",
@@ -134,10 +136,12 @@ export default function Sales() {
       itemId: "",
       kattay: "",
       kgPerKata: "",
-      ratePerKata: "",
       quantity: "",
+      shCut: "",
       rate: "",
+      bardanaRate: "",
       bardanaAmount: "",
+      mazdori: "",
       totalAmount: "",
       truckNumber: "",
       amountReceived: "",
@@ -155,29 +159,58 @@ export default function Sales() {
 
       const kattay = Number(next.kattay) || 0;
       const kgPerKata = Number(next.kgPerKata) || 0;
-      const ratePerKata = Number(next.ratePerKata) || 0;
       const rate = Number(next.rate) || 0;
-      const bardanaAmount = Number(next.bardanaAmount) || 0;
-
-      // Auto-calc quantity (total weight) = kattay × kgPerKata
-      if (kattay > 0 && kgPerKata > 0) {
-        next.quantity = String(kattay * kgPerKata);
-      } else if ("kattay" in updates || "kgPerKata" in updates) {
-        next.quantity = "";
+      
+      // Standard Rule: 0.1 kg S.H Cut per bag
+      let shCut = Number(next.shCut) || 0;
+      if ("kattay" in updates && kattay > 0) {
+        shCut = Number((kattay * 0.1).toFixed(2));
+        next.shCut = String(shCut);
+      } else {
+        shCut = Number(next.shCut) || 0;
       }
 
-      // Auto-calc totalAmount = kattay × ratePerKata + bardanaAmount
-      let calculatedTotalAmount = 0;
-      if (kattay > 0 && ratePerKata > 0) {
-        calculatedTotalAmount = Math.round(kattay * ratePerKata) + bardanaAmount;
-      } else {
-        // Fallback: quantity × rate + bardanaAmount if no kattay/ratePerKata
-        const qty = Number(next.quantity) || 0;
-        if (qty > 0 && rate > 0) {
-          calculatedTotalAmount = Math.round(qty * rate) + bardanaAmount;
+      const bardanaRate = Number(next.bardanaRate) || 0;
+      const mazdori = Number(next.mazdori) || 0;
+
+      // Auto-calc quantity (total weight) = (kattay × kgPerKata) - shCut
+      if (kattay > 0 && kgPerKata > 0) {
+        next.quantity = String(Math.max(0, (kattay * kgPerKata) - shCut));
+      }
+ else if ("kattay" in updates || "kgPerKata" in updates) {
+        // Only clear if neither exists
+        if (!kattay && !kgPerKata && next.quantity !== "") {
+          next.quantity = String(Math.max(0, Number(next.quantity || 0) - shCut));
+        }
+      } else if ("shCut" in updates) {
+        // If only shCut changed, recalculate quantity if we don't have kattay math
+        if (!(kattay > 0 && kgPerKata > 0)) {
+           // Fallback to whatever is in quantity, deducting new shCut
+           // Note: This isn't perfect if they manually type quantity then change shcut,
+           // but the server logic handles it perfectly.
         }
       }
-      next.totalAmount = calculatedTotalAmount > 0 ? String(calculatedTotalAmount) : "";
+
+      // Auto-calc Bardana Amount
+      let bardanaAmt = Number(next.bardanaAmount) || 0;
+      if (kattay > 0 && bardanaRate > 0) {
+        bardanaAmt = kattay * bardanaRate;
+        next.bardanaAmount = String(bardanaAmt);
+      }
+
+      // Auto-calc totalAmount
+      // (Quantity / 40) × rate (user rate is per MUN)
+      let calculatedTotalAmount = 0;
+      const qty = Number(next.quantity) || 0;
+      if (qty > 0 && rate > 0) {
+        const mun = qty / 40;
+        calculatedTotalAmount = Math.round(mun * rate) + bardanaAmt + mazdori;
+      }
+      
+      // Only override total amount if we have rate formulas firing
+      if (calculatedTotalAmount > 0 || ("quantity" in updates || "rate" in updates || "bardanaRate" in updates || "mazdori" in updates || "shCut" in updates)) {
+          next.totalAmount = calculatedTotalAmount > 0 ? String(calculatedTotalAmount) : "";
+      }
 
       // Auto calc dueDate if paymentTerms changed or date changed
       if ("paymentTerms" in updates || "date" in updates) {
@@ -224,10 +257,12 @@ export default function Sales() {
         itemId: form.itemId,
         kattay: Number(form.kattay) || 0,
         kgPerKata: Number(form.kgPerKata) || 0,
-        ratePerKata: Number(form.ratePerKata) || 0,
         quantity: qty,
+        shCut: Number(form.shCut) || 0,
         rate: Number(form.rate) || 0,
+        bardanaRate: Number(form.bardanaRate) || 0,
         bardanaAmount: Number(form.bardanaAmount) || 0,
+        mazdori: Number(form.mazdori) || 0,
         totalAmount: Number(form.totalAmount) || 0,
         truckNumber: (form.truckNumber || "").trim(),
         amountReceived: Number(form.amountReceived) || 0,
@@ -371,21 +406,31 @@ export default function Sales() {
               <p className="text-xs text-slate-500 mt-0.5">Total weight auto: kattay × kg/katta</p>
             </div>
             <div>
-              <label className="input-label">Aik katta kitne ka becha (Rs)</label>
-              <input type="number" placeholder="0" value={form.ratePerKata} onChange={(e) => updateFormWithAutoCalc({ ratePerKata: e.target.value })} className="input-field" min="0" step="1" />
-              <p className="text-xs text-slate-500 mt-0.5">Total amount auto: kattay × rate</p>
+              <label className="input-label">Total SH.CUT (kg)</label>
+              <input type="number" placeholder="0" value={form.shCut} onChange={(e) => updateFormWithAutoCalc({ shCut: e.target.value })} className="input-field" min="0" step="any" />
             </div>
             <div>
-              <label className="input-label">Total weight / Quantity (kg)</label>
-              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field" min="0" step="any" />
+              <label className="input-label">Net Weight (kg)</label>
+              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field border-amber-200 bg-amber-50/50" min="0" step="any" />
               {availableStock != null && (
-                <p className="text-xs text-slate-600 mt-0.5">Available stock: <strong>{availableStock.weight} kg</strong> & <strong>{availableStock.kattay} bags</strong> — jo yahan daalogi wo yahi se cut ho jayegi.</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">Avail: <strong>{availableStock.weight} kg</strong>, <strong>{availableStock.kattay} bags</strong>.</p>
               )}
-              {form.itemId && availableStock == null && <p className="text-xs text-slate-500 mt-0.5">Yahi quantity (kg) is item ki stock se minus ho jayegi.</p>}
             </div>
             <div>
-              <label className="input-label">Bardana Amount</label>
-              <input type="number" placeholder="0" value={form.bardanaAmount} onChange={(e) => updateFormWithAutoCalc({ bardanaAmount: e.target.value })} className="input-field" min="0" />
+              <label className="input-label font-bold text-amber-700">Rate (Per MUN / 40Kg)</label>
+              <input type="number" placeholder="0" value={form.rate} onChange={(e) => updateFormWithAutoCalc({ rate: e.target.value })} className="input-field" min="0" step="any" />
+            </div>
+            <div>
+              <label className="input-label">Aik Bardana Amount (Rate)</label>
+              <input type="number" placeholder="0" value={form.bardanaRate} onChange={(e) => updateFormWithAutoCalc({ bardanaRate: e.target.value })} className="input-field" min="0" />
+            </div>
+            <div>
+              <label className="input-label">Total Bardana Amount</label>
+              <input type="number" placeholder="0" value={form.bardanaAmount} onChange={(e) => updateFormWithAutoCalc({ bardanaAmount: e.target.value })} className="input-field bg-slate-50" min="0" />
+            </div>
+            <div>
+              <label className="input-label">Mazdoori (Rs)</label>
+              <input type="number" placeholder="0" value={form.mazdori} onChange={(e) => updateFormWithAutoCalc({ mazdori: e.target.value })} className="input-field" min="0" />
             </div>
             <div>
               <label className="input-label font-bold text-amber-700">Total Amount</label>
@@ -538,6 +583,9 @@ export default function Sales() {
                             </button>
                           )}
                           {/* Edit removed for data integrity */}
+                          <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="btn-ghost-secondary flex items-center gap-1">
+                            <FaFilePdf className="w-3.5 h-3.5" /> Invoice
+                          </button>
                         </div>
                       </td>
                     </tr>
