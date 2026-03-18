@@ -317,17 +317,17 @@ export function downloadAccountsPdf(accounts) {
 export function downloadSaleInvoicePdf(sale) {
   // A5 format often works best for half-page invoices, but we can do A4 portrait and scale it.
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  
+
   // --- HEADER SECTION ---
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
   doc.text("MUSLIM", 15, 25);
-  
+
   doc.setFontSize(16);
   doc.text("TRADING COMPANY", 75, 20);
   doc.setFontSize(14);
   doc.text("DALL MILL", 75, 26);
-  
+
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.text("Opposite Begam Saeeda House Near", 15, 32);
@@ -339,12 +339,12 @@ export function downloadSaleInvoicePdf(sale) {
 
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("INVOICE", 75, 42);
+  doc.text("SALE INVOICE", 75, 42);
 
   doc.setFontSize(10);
-  doc.text("Invoice No.", 130, 42);
-  const invoiceNo = `SI${new Date(sale.date).toISOString().slice(5,7)}${new Date(sale.date).toISOString().slice(2,4)}/${sale._id.slice(-6).toUpperCase()}`;
-  doc.text(invoiceNo, 155, 42);
+  doc.text("Invoice No.", 145, 42);
+  const invoiceNo = `SI${new Date(sale.date).toISOString().slice(5, 7)}${new Date(sale.date).toISOString().slice(2, 4)}/${sale._id.slice(-6).toUpperCase()}`;
+  doc.text(invoiceNo, 168, 42);
 
   // Line under header
   doc.setLineWidth(0.5);
@@ -355,10 +355,10 @@ export function downloadSaleInvoicePdf(sale) {
   doc.setFont("helvetica", "bold");
   doc.text("Customer", 15, 56);
   doc.text("Detail", 150, 56);
-  
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  
+
   // Left Column (Customer)
   doc.text("Name:", 15, 64);
   doc.text((sale.customerId?.name || ""), 35, 64);
@@ -366,7 +366,7 @@ export function downloadSaleInvoicePdf(sale) {
 
   doc.text("Address:", 15, 72);
   doc.text((sale.customerId?.address || ""), 35, 72);
-  doc.line(35, 73, 120, 73); 
+  doc.line(35, 73, 120, 73);
 
   doc.text("Phone:", 15, 80);
   doc.text((sale.customerId?.phone || ""), 35, 80);
@@ -385,15 +385,19 @@ export function downloadSaleInvoicePdf(sale) {
   doc.text(sale.accountId?.name || "—", 155, 80);
   doc.line(155, 81, 195, 81);
 
+  doc.text("Due Date:", 135, 88);
+  doc.text(formatDate(sale.dueDate), 155, 88);
+  doc.line(155, 89, 195, 89);
+
   // --- ITEM TABLE ---
   let yPos = 95;
-  
+
   doc.setFillColor(235, 235, 235);
   doc.rect(15, yPos, 180, 8, "F");
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.2);
   doc.line(15, yPos, 195, yPos);
-  doc.line(15, yPos+8, 195, yPos+8);
+  doc.line(15, yPos + 8, 195, yPos + 8);
 
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
@@ -406,20 +410,20 @@ export function downloadSaleInvoicePdf(sale) {
 
   yPos += 14;
   doc.setFont("helvetica", "normal");
-  
+
   const itemName = sale.itemName || sale.itemId?.name || "—";
   doc.text(itemName, 18, yPos);
-  
+
   const bags = sale.kattay ? String(sale.kattay) : "—";
   doc.text(bags, 95, yPos);
-  
+
   const totalKg = sale.quantity ? Number(sale.quantity) : 0;
   const mun = totalKg > 0 ? (totalKg / 40).toFixed(3) : "—";
   doc.text(String(mun), 120, yPos);
-  
+
   const kgPerMun = "40"; // standard
   doc.text(kgPerMun, 140, yPos);
-  
+
   const rateStr = sale.rate ? formatMoney(sale.rate) : "—";
   doc.text(rateStr, 155, yPos);
 
@@ -435,14 +439,14 @@ export function downloadSaleInvoicePdf(sale) {
   doc.text(formatMoney(baseTotal), 175, yPos);
 
   // Bottom line for table box
-  yPos = 175; // jumping down as per invoice layout
+  yPos = 200; // increased from 175 to give more professional space
   doc.line(15, yPos, 195, yPos);
 
   // --- SUMMARY SECTION ---
   yPos += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  
+
   // Left calculations
   doc.text("Total Weight", 15, yPos);
   const grossWeight = totalKg + (sale.shCut || 0);
@@ -462,7 +466,7 @@ export function downloadSaleInvoicePdf(sale) {
   doc.text(formatMoney(totalKg), 45, yPos);
 
   // Right calculations
-  let rightY = 175 + 8;
+  let rightY = 200 + 8;
   doc.setFont("helvetica", "bold");
   doc.text("GROSS AMOUNT:", 130, rightY);
   doc.setFont("helvetica", "normal");
@@ -496,18 +500,18 @@ export function downloadSaleInvoicePdf(sale) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("Memo:", 15, yPos);
-  
+
   yPos += 6;
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  
+
   let memoText = "";
   if (sale.kattay > 0 && sale.bardanaRate > 0) {
     memoText += `${sale.kattay} * ${sale.bardanaRate} Bardana `;
   } else if (sale.bardanaAmount > 0) {
     memoText += `${sale.bardanaAmount} Bardana `;
   }
-  
+
   if (sale.mazdori > 0) {
     memoText += `${sale.mazdori} Mazdori `;
   }
@@ -532,17 +536,17 @@ export function downloadSaleInvoicePdf(sale) {
  */
 export function downloadPurchaseInvoicePdf(entry) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  
+
   // --- HEADER SECTION ---
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
   doc.text("MUSLIM", 15, 25);
-  
+
   doc.setFontSize(16);
   doc.text("TRADING COMPANY", 75, 20);
   doc.setFontSize(14);
   doc.text("DALL MILL", 75, 26);
-  
+
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.text("Opposite Begam Saeeda House Near", 15, 32);
@@ -557,9 +561,9 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.text("PURCHASE INVOICE", 75, 42);
 
   doc.setFontSize(10);
-  doc.text("Purchase No.", 130, 42);
-  const entryNo = `PI${new Date(entry.date).toISOString().slice(5,7)}${new Date(entry.date).toISOString().slice(2,4)}/${entry._id.slice(-6).toUpperCase()}`;
-  doc.text(entryNo, 155, 42);
+  doc.text("Purchase No.", 145, 42);
+  const entryNo = `PI${new Date(entry.date).toISOString().slice(5, 7)}${new Date(entry.date).toISOString().slice(2, 4)}/${entry._id.slice(-6).toUpperCase()}`;
+  doc.text(entryNo, 170, 42);
 
   // Line under header
   doc.setLineWidth(0.5);
@@ -570,17 +574,17 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFont("helvetica", "bold");
   doc.text("Supplier", 15, 56);
   doc.text("Detail", 150, 56);
-  
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  
+
   // Left Column (Supplier)
   doc.text("Name:", 15, 64);
   doc.text((entry.supplierId?.name || ""), 35, 64);
   doc.line(35, 65, 120, 65);
 
   doc.text("Address:", 15, 72);
-  doc.line(35, 73, 120, 73); 
+  doc.line(35, 73, 120, 73);
 
   doc.text("Phone:", 15, 80);
   doc.line(35, 81, 120, 81);
@@ -598,15 +602,19 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.text(entry.accountId?.name || "—", 155, 80);
   doc.line(155, 81, 195, 81);
 
+  doc.text("Due Date:", 135, 88);
+  doc.text(entry.dueDate ? formatDate(entry.dueDate) : "—", 155, 88);
+  doc.line(155, 89, 195, 89);
+
   // --- ITEM TABLE ---
   let yPos = 95;
-  
+
   doc.setFillColor(235, 235, 235);
   doc.rect(15, yPos, 180, 8, "F");
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.2);
   doc.line(15, yPos, 195, yPos);
-  doc.line(15, yPos+8, 195, yPos+8);
+  doc.line(15, yPos + 8, 195, yPos + 8);
 
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
@@ -619,33 +627,33 @@ export function downloadPurchaseInvoicePdf(entry) {
 
   yPos += 14;
   doc.setFont("helvetica", "normal");
-  
+
   const itemName = entry.itemId?.name || "—";
   doc.text(itemName, 18, yPos);
-  
+
   const bags = entry.kattay ? String(entry.kattay) : "—";
   doc.text(bags, 95, yPos);
-  
+
   const netKg = entry.receivedWeight ? Number(entry.receivedWeight) : 0;
   const mun = netKg > 0 ? (netKg / 40).toFixed(3) : "—";
   doc.text(String(mun), 120, yPos);
-  
+
   doc.text("40", 140, yPos);
-  
+
   const rateStr = entry.rate ? formatMoney(entry.rate) : "—";
   doc.text(rateStr, 155, yPos);
 
   const baseTotal = netKg > 0 && entry.rate ? Math.round((netKg / 40) * entry.rate) : 0;
   doc.text(formatMoney(baseTotal), 175, yPos);
 
-  yPos = 175;
+  yPos = 200; // increased from 175 to give more professional space
   doc.line(15, yPos, 195, yPos);
 
   // --- SUMMARY SECTION ---
   yPos += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  
+
   doc.text("Total Weight (Gross)", 15, yPos);
   const grossWeight = netKg + (entry.shCut || 0);
   doc.setFont("helvetica", "normal");
@@ -664,7 +672,7 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.text(formatMoney(netKg), 50, yPos);
 
   // Right calculations
-  let rightY = 175 + 8;
+  let rightY = 200 + 8;
   doc.setFont("helvetica", "bold");
   doc.text("GROSS AMOUNT:", 130, rightY);
   doc.setFont("helvetica", "normal");
@@ -691,7 +699,7 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("Memo:", 15, yPos);
-  
+
   yPos += 6;
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
