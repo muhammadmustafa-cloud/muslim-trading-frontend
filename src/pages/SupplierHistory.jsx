@@ -11,18 +11,17 @@ export default function SupplierHistory() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState({ name: "", sales: [], stockEntries: [] });
+  const [data, setData] = useState({ name: "", ledger: [], summary: { totalDebit: 0, totalCredit: 0, finalBalance: 0 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const dateFrom = searchParams.get("dateFrom") || "";
   const dateTo = searchParams.get("dateTo") || "";
-  const type = searchParams.get("type") || "all";
 
   const setFilters = (updates) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([k, v]) => {
-      if (v == null || v === "" || v === "all") next.delete(k);
+      if (v == null || v === "") next.delete(k);
       else next.set(k, v);
     });
     setSearchParams(next);
@@ -37,11 +36,10 @@ export default function SupplierHistory() {
         const params = new URLSearchParams();
         if (dateFrom) params.set("dateFrom", dateFrom);
         if (dateTo) params.set("dateTo", dateTo);
-        if (type && type !== "all") params.set("type", type);
         const res = await fetch(`${API_BASE_URL}/suppliers/${id}/history?${params}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.message || "Failed to load history");
-        if (!cancelled) setData(json.data || { name: "", sales: [], stockEntries: [] });
+        if (!cancelled) setData(json.data || { name: "", ledger: [], summary: {} });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {
@@ -50,19 +48,16 @@ export default function SupplierHistory() {
     }
     fetchHistory();
     return () => { cancelled = true; };
-  }, [id, dateFrom, dateTo, type]);
+  }, [id, dateFrom, dateTo]);
 
   const handlePdf = () => {
     downloadSupplierHistoryPdf(
       data.name,
-      data.stockEntries,
-      data.sales,
-      { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, type: type !== "all" ? type : undefined }
+      data.ledger,
+      data.summary,
+      { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }
     );
   };
-
-  const showStock = !type || type === "all" || type === "stock";
-  const showSales = !type || type === "all" || type === "sales";
 
   return (
     <div className="space-y-6">
@@ -74,123 +69,107 @@ export default function SupplierHistory() {
           <div>
             <h1 className="page-title flex items-center gap-2">
               <FaTruck className="w-7 h-7 text-amber-500" />
-              History — {data.name || "Supplier"}
+              Khatta (History) — {data.name || "Supplier"}
             </h1>
-            <p className="page-subtitle">Purchase aur sales history (filter karke PDF download karein).</p>
+            <p className="page-subtitle">Unified Debit/Credit ledger with running balance.</p>
           </div>
         </div>
         <button type="button" onClick={handlePdf} className="btn-primary flex items-center gap-2" disabled={loading}>
-          <FaFilePdf className="w-5 h-5" /> Download PDF
+          <FaFilePdf className="w-5 h-5" /> Download Ledger PDF
         </button>
       </header>
 
       {error && <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">{error}</div>}
 
       <section className="card p-4">
-        <h3 className="font-semibold text-slate-800 mb-3">Filter</h3>
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <label className="input-label text-xs">Date from</label>
-            <input type="date" value={dateFrom} onChange={(e) => setFilters({ dateFrom: e.target.value })} className="input-field w-40" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-3">
+            <h3 className="font-semibold text-slate-800 mb-3">Filter by Date</h3>
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <label className="input-label text-xs">Date from</label>
+                <input type="date" value={dateFrom} onChange={(e) => setFilters({ dateFrom: e.target.value })} className="input-field w-40" />
+              </div>
+              <div>
+                <label className="input-label text-xs">Date to</label>
+                <input type="date" value={dateTo} onChange={(e) => setFilters({ dateTo: e.target.value })} className="input-field w-40" />
+              </div>
+              <button type="button" onClick={() => setSearchParams({})} className="btn-secondary mt-6">Clear filters</button>
+            </div>
           </div>
-          <div>
-            <label className="input-label text-xs">Date to</label>
-            <input type="date" value={dateTo} onChange={(e) => setFilters({ dateTo: e.target.value })} className="input-field w-40" />
+          
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Current Balance</h3>
+            <div className={`text-2xl font-black ${data.summary?.finalBalance >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+              Rs. {formatMoney(Math.abs(data.summary?.finalBalance || 0))}
+              <span className="text-xs ml-1 font-bold">
+                {data.summary?.finalBalance > 0 ? '(Payable)' : data.summary?.finalBalance < 0 ? '(Receivable)' : ''}
+              </span>
+            </div>
           </div>
-          <div>
-            <label className="input-label text-xs">Type</label>
-            <select value={type} onChange={(e) => setFilters({ type: e.target.value })} className="input-field w-44">
-              <option value="all">All (Purchases + Sales)</option>
-              <option value="stock">Purchase only</option>
-              <option value="sales">Sales only</option>
-            </select>
-          </div>
-          <button type="button" onClick={() => setSearchParams({})} className="btn-secondary mt-6">Clear filters</button>
         </div>
       </section>
 
       {loading ? (
         <div className="card p-12 flex justify-center"><div className="loading-spinner" /></div>
       ) : (
-        <div className="space-y-6">
-          {showStock && (
-            <section className="card overflow-hidden">
-              <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jab humne inse khareeda (Purchase)</h2>
-              <div className="overflow-x-auto">
-                {data.stockEntries?.length === 0 ? (
-                  <p className="p-6 text-slate-500">Koi purchase nahi.</p>
-                ) : (
-                  <table className="w-full">
-                    <thead>
-                      <tr>
-                        <th className="table-header px-4 py-2 text-left">Date</th>
-                        <th className="table-header px-4 py-2 text-left">Item</th>
-                        <th className="table-header px-4 py-2">Weight</th>
-                        <th className="table-header px-4 py-2 text-right">Amount</th>
-                        <th className="table-header px-4 py-2 text-right">Paid</th>
-                        <th className="table-header px-4 py-2 text-right text-red-600">Baqaya</th>
-                        <th className="table-header px-4 py-2 text-left">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.stockEntries?.map((e) => (
-                        <tr key={e._id} className="table-row-hover border-b border-slate-100">
-                          <td className="table-cell py-2 text-xs">{formatDate(e.date)}</td>
-                          <td className="table-cell font-medium">{e.itemId?.name || "—"}</td>
-                          <td className="table-cell">{e.receivedWeight}</td>
-                          <td className="table-cell text-right">{formatMoney(e.amount)}</td>
-                          <td className="table-cell text-right font-medium text-emerald-600">{formatMoney(e.amountPaid)}</td>
-                          <td className="table-cell text-right font-bold text-red-600">
-                            {formatMoney((e.amount || 0) - (e.amountPaid || 0))}
-                          </td>
-                          <td className="table-cell text-xs">
-                            <div className="flex flex-col">
-                              <span className={`font-bold ${e.paymentStatus === 'paid' ? 'text-emerald-600' : e.paymentStatus === 'partial' ? 'text-amber-600' : 'text-red-600'}`}>
-                                {e.paymentStatus?.toUpperCase() || 'PENDING'}
-                              </span>
-                              {e.paymentStatus !== 'paid' && e.dueDate && (
-                                <span className={`text-[10px] ${new Date(e.dueDate) < new Date() ? 'text-red-500 font-bold' : 'text-slate-500'}`}>
-                                  Due: {formatDate(e.dueDate)}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </section>
-          )}
-
-          {showSales && (
-            <section className="card overflow-hidden">
-              <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jab inko becha (Sales — linked customer)</h2>
-              <div className="overflow-x-auto">
-                {!data.sales?.length ? (
-                  <p className="p-6 text-slate-500">Link kiya hua customer nahi, ya koi sale nahi.</p>
-                ) : (
-                  <table className="w-full">
-                    <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Item</th><th className="table-header px-4 py-2 text-left">Category</th><th className="table-header px-4 py-2">Qty</th><th className="table-header px-4 py-2 text-right">Received</th></tr></thead>
-                    <tbody>
-                      {data.sales?.map((s) => (
-                        <tr key={s._id} className="table-row-hover border-b border-slate-100">
-                          <td className="table-cell py-2">{formatDate(s.date)}</td>
-                          <td className="table-cell">{s.itemId?.name || "—"}</td>
-                          <td className="table-cell">{s.itemName || "—"}</td>
-                          <td className="table-cell">{s.category || "—"}</td>
-                          <td className="table-cell">{s.quantity} {s.quality || ""}</td>
-                          <td className="table-cell text-right font-medium">{formatMoney(s.amountReceived)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </section>
-          )}
-        </div>
+        <section className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            {!data.ledger?.length ? (
+              <p className="p-12 text-center text-slate-500">Koi transaction nahi mili.</p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="table-header px-4 py-3 text-left">Date</th>
+                    <th className="table-header px-4 py-3 text-left">Description</th>
+                    <th className="table-header px-4 py-3 text-center">Bags</th>
+                    <th className="table-header px-4 py-3 text-right">Debit (Dr)</th>
+                    <th className="table-header px-4 py-3 text-right">Credit (Cr)</th>
+                    <th className="table-header px-4 py-3 text-right bg-amber-50">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.ledger.map((item, idx) => (
+                    <tr key={idx} className="table-row-hover border-b border-slate-100">
+                      <td className="table-cell py-3 whitespace-nowrap text-xs">{formatDate(item.date)}</td>
+                      <td className="table-cell text-sm font-medium">
+                        <div className="flex flex-col">
+                          <span>{item.description}</span>
+                          {item.type === 'payment' && <span className="text-[10px] text-slate-500 uppercase">{item.type}</span>}
+                        </div>
+                      </td>
+                      <td className="table-cell text-center font-bold text-slate-600">
+                        {item.bags > 0 ? item.bags : '—'}
+                      </td>
+                      <td className="table-cell text-right font-semibold text-blue-700">
+                        {item.debit > 0 ? formatMoney(item.debit) : '—'}
+                      </td>
+                      <td className="table-cell text-right font-semibold text-emerald-700">
+                        {item.credit > 0 ? formatMoney(item.credit) : '—'}
+                      </td>
+                      <td className={`table-cell text-right font-bold bg-slate-50/50 ${item.balance >= 0 ? 'text-red-800' : 'text-blue-800'}`}>
+                        {formatMoney(Math.abs(item.balance))}
+                        <span className="text-[9px] ml-1">{item.balance >= 0 ? 'Dr' : 'Cr'}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-100 font-bold">
+                  <tr>
+                    <td colSpan="3" className="px-4 py-3 text-right text-slate-700">TOTALS:</td>
+                    <td className="px-4 py-3 text-right text-blue-700 border-t-2 border-slate-300">{formatMoney(data.summary?.totalDebit)}</td>
+                    <td className="px-4 py-3 text-right text-emerald-700 border-t-2 border-slate-300">{formatMoney(data.summary?.totalCredit)}</td>
+                    <td className="px-4 py-3 text-right bg-amber-100 text-amber-900 border-t-2 border-amber-300">
+                      {formatMoney(Math.abs(data.summary?.finalBalance || 0))} 
+                      <span className="text-[10px] ml-1">{data.summary?.finalBalance >= 0 ? 'Dr' : 'Cr'}</span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -43,24 +43,23 @@ function addGeneratedLine(doc, y) {
 }
 
 /**
- * Generate PDF for customer history (sales + purchases).
+ * Generate PDF for customer history (Unified Ledger).
  */
-export function downloadCustomerHistoryPdf(name, sales, stockEntries, filters = {}) {
+export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let y = 15;
 
   doc.setFontSize(18);
   doc.setFont(undefined, "bold");
-  doc.text(`Customer History — ${name}`, MARGIN, y);
+  doc.text(`Customer Ledger (Khatta) — ${name}`, MARGIN, y);
   y += 8;
   doc.setFont(undefined, "normal");
   y = addGeneratedLine(doc, y);
-  if (filters.dateFrom || filters.dateTo || filters.type) {
+  if (filters.dateFrom || filters.dateTo) {
     doc.setFontSize(9);
     const filterStr = [
       filters.dateFrom && `From: ${filters.dateFrom}`,
       filters.dateTo && `To: ${filters.dateTo}`,
-      filters.type && filters.type !== "all" && `Type: ${filters.type}`,
     ]
       .filter(Boolean)
       .join(" | ");
@@ -68,71 +67,61 @@ export function downloadCustomerHistoryPdf(name, sales, stockEntries, filters = 
     y += 8;
   }
 
-  if (sales && sales.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Sales (Jab isne khareeda)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
-    autoTable(doc, {
-      startY: y,
-      head: [["#", "Date", "Item", "Category", "Qty", "Received"]],
-      body: sales.map((s, i) => [
-        i + 1,
-        formatDate(s.date),
-        s.itemName || (s.itemId && s.itemId.name) || "—",
-        s.category || "—",
-        `${s.quantity || ""} ${s.quality || ""}`.trim(),
-        formatMoney(s.amountReceived),
-      ]),
-      ...tableTheme,
-    });
-    y = doc.lastAutoTable.finalY + 10;
-  }
-
-  if (stockEntries && stockEntries.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Purchase (Jab humne inse khareeda)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
-    autoTable(doc, {
-      startY: y,
-      head: [["#", "Date", "Item", "Weight", "Paid"]],
-      body: stockEntries.map((e, i) => [
-        i + 1,
-        formatDate(e.date),
-        (e.itemId && e.itemId.name) || "—",
-        e.receivedWeight ?? "—",
-        formatMoney(e.amountPaid),
-      ]),
-      ...tableTheme,
-    });
-  }
+  autoTable(doc, {
+    startY: y,
+    head: [["Date", "Description", "Bags", "Debit (Dr)", "Credit (Cr)", "Balance"]],
+    body: ledger.map((item) => [
+      formatDate(item.date),
+      item.description,
+      item.bags > 0 ? item.bags : "—",
+      item.debit > 0 ? formatMoney(item.debit) : "—",
+      item.credit > 0 ? formatMoney(item.credit) : "—",
+      formatMoney(Math.abs(item.balance)) + (item.balance >= 0 ? " Dr" : " Cr"),
+    ]),
+    foot: [
+      [
+        "",
+        "TOTALS",
+        "",
+        formatMoney(summary.totalDebit),
+        formatMoney(summary.totalCredit),
+        formatMoney(Math.abs(summary.finalBalance)) + (summary.finalBalance >= 0 ? " Dr" : " Cr"),
+      ],
+    ],
+    footStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: "auto" },
+      2: { halign: "center", cellWidth: 15 },
+      3: { halign: "right", cellWidth: 25 },
+      4: { halign: "right", cellWidth: 25 },
+      5: { halign: "right", cellWidth: 25 },
+    },
+    ...tableTheme,
+  });
 
   addPageNumbers(doc);
-  doc.save(`customer-history-${(name || "customer").replace(/\s+/g, "-")}.pdf`);
+  doc.save(`customer-ledger-${(name || "customer").replace(/\s+/g, "-")}.pdf`);
 }
 
 /**
- * Generate PDF for supplier history (purchases + sales).
+ * Generate PDF for supplier history (Unified Ledger).
  */
-export function downloadSupplierHistoryPdf(name, stockEntries, sales, filters = {}) {
+export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let y = 15;
 
   doc.setFontSize(18);
   doc.setFont(undefined, "bold");
-  doc.text(`Supplier History — ${name}`, MARGIN, y);
+  doc.text(`Supplier Ledger (Khatta) — ${name}`, MARGIN, y);
   y += 8;
   doc.setFont(undefined, "normal");
   y = addGeneratedLine(doc, y);
-  if (filters.dateFrom || filters.dateTo || filters.type) {
+  if (filters.dateFrom || filters.dateTo) {
     doc.setFontSize(9);
     const filterStr = [
       filters.dateFrom && `From: ${filters.dateFrom}`,
       filters.dateTo && `To: ${filters.dateTo}`,
-      filters.type && filters.type !== "all" && `Type: ${filters.type}`,
     ]
       .filter(Boolean)
       .join(" | ");
@@ -140,53 +129,41 @@ export function downloadSupplierHistoryPdf(name, stockEntries, sales, filters = 
     y += 8;
   }
 
-  if (stockEntries && stockEntries.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Purchase (Jab humne inse khareeda)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
-    autoTable(doc, {
-      startY: y,
-      head: [["#", "Date", "Item", "Weight", "Total", "Paid", "Balance", "Status"]],
-      body: stockEntries.map((e, i) => [
-        i + 1,
-        formatDate(e.date),
-        (e.itemId && (e.itemId.name || e.itemId)) || "—",
-        e.receivedWeight ?? "—",
-        formatMoney(e.amount),
-        formatMoney(e.amountPaid),
-        formatMoney((e.amount || 0) - (e.amountPaid || 0)),
-        (e.paymentStatus || 'pending').toUpperCase() + (e.dueDate && e.paymentStatus !== 'paid' ? `\n(Due: ${formatDate(e.dueDate)})` : ""),
-      ]),
-      ...tableTheme,
-    });
-    y = doc.lastAutoTable.finalY + 10;
-  }
-
-  if (sales && sales.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Sales (Jab inko becha)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
-    autoTable(doc, {
-      startY: y,
-      head: [["#", "Date", "Item", "Category", "Qty", "Received"]],
-      body: sales.map((s, i) => [
-        i + 1,
-        formatDate(s.date),
-        s.itemName || (s.itemId && s.itemId.name) || "—",
-        s.category || "—",
-        `${s.quantity || ""} ${s.quality || ""}`.trim(),
-        formatMoney(s.amountReceived),
-      ]),
-      ...tableTheme,
-    });
-  }
+  autoTable(doc, {
+    startY: y,
+    head: [["Date", "Description", "Bags", "Debit (Dr)", "Credit (Cr)", "Balance"]],
+    body: ledger.map((item) => [
+      formatDate(item.date),
+      item.description,
+      item.bags > 0 ? item.bags : "—",
+      item.debit > 0 ? formatMoney(item.debit) : "—",
+      item.credit > 0 ? formatMoney(item.credit) : "—",
+      formatMoney(Math.abs(item.balance)) + (item.balance >= 0 ? " Dr" : " Cr"),
+    ]),
+    foot: [
+      [
+        "",
+        "TOTALS",
+        "",
+        formatMoney(summary.totalDebit),
+        formatMoney(summary.totalCredit),
+        formatMoney(Math.abs(summary.finalBalance)) + (summary.finalBalance >= 0 ? " Dr" : " Cr"),
+      ],
+    ],
+    footStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: "auto" },
+      2: { halign: "center", cellWidth: 15 },
+      3: { halign: "right", cellWidth: 25 },
+      4: { halign: "right", cellWidth: 25 },
+      5: { halign: "right", cellWidth: 25 },
+    },
+    ...tableTheme,
+  });
 
   addPageNumbers(doc);
-  doc.save(`supplier-history-${(name || "supplier").replace(/\s+/g, "-")}.pdf`);
+  doc.save(`supplier-ledger-${(name || "supplier").replace(/\s+/g, "-")}.pdf`);
 }
 
 /**
