@@ -115,30 +115,38 @@ export default function DailyKhata() {
       </section>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-4 border-l-4 border-l-slate-400 bg-slate-50">
+          <p className="text-xs font-bold text-slate-500 uppercase">Opening Balance</p>
+          <p className="text-xl font-black text-slate-700">{formatMoney(summary.openingBalance)}</p>
+          <p className="text-[10px] text-slate-400">Total till yesterday</p>
+        </div>
         <div className="card p-4 border-l-4 border-l-emerald-500">
-          <p className="text-sm text-slate-500">Total In (Credit)</p>
-          <p className="text-xl font-bold text-emerald-700">{formatMoney(summary.totalIn)}</p>
+          <p className="text-xs font-bold text-emerald-600 uppercase">Total In (Credit)</p>
+          <p className="text-xl font-black text-emerald-700">{formatMoney(summary.totalIn)}</p>
+          <p className="text-[10px] text-emerald-400">Cash entering mill</p>
         </div>
         <div className="card p-4 border-l-4 border-l-rose-500">
-          <p className="text-sm text-slate-500">Total Out (Debit)</p>
-          <p className="text-xl font-bold text-rose-700">{formatMoney(summary.totalOut)}</p>
+          <p className="text-xs font-bold text-rose-600 uppercase">Total Out (Debit)</p>
+          <p className="text-xl font-black text-rose-700">{formatMoney(summary.totalOut)}</p>
+          <p className="text-[10px] text-rose-400">Cash leaving mill</p>
         </div>
-        <div className="card p-4 border-l-4 border-l-amber-500">
-          <p className="text-sm text-slate-500">Net (In − Out)</p>
-          <p className={`text-xl font-bold ${summary.net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{formatMoney(summary.net)}</p>
+        <div className="card p-4 border-l-4 border-l-amber-500 bg-amber-50/30">
+          <p className="text-xs font-bold text-amber-600 uppercase">Closing Balance</p>
+          <p className="text-xl font-black text-amber-700">{formatMoney(summary.closingBalance)}</p>
+          <p className="text-[10px] text-amber-400">Net cash on hand</p>
         </div>
       </div>
 
       {/* Unified Table with Daily Grouping */}
-      <section className="card overflow-hidden">
+      <section className="card overflow-hidden border-t-4 border-t-amber-500">
         {loading ? (
           <div className="p-10 text-center text-slate-500"><div className="loading-spinner mb-3" /><p>Loading...</p></div>
         ) : list.length === 0 ? (
           <div className="p-10 text-center text-slate-500">
             <FaFileInvoiceDollar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="font-medium text-slate-700">Is date range mein koi record nahi.</p>
-            <p className="text-sm mt-1">Sales, Purchases, Transactions, Mill Expenses, ya Mazdoor expenses add karein — sab yahan dikhenge.</p>
+            <p className="text-sm mt-1">Transactions, Sales, ya Purchases add karein — sab yahan dikhenge.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -146,7 +154,7 @@ export default function DailyKhata() {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="text-left py-3 px-4 font-semibold text-slate-600">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Type</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Name / Account</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-600">Description</th>
                   <th className="text-right py-3 px-4 font-semibold text-emerald-700">
                     <span className="flex items-center justify-end gap-1"><FaArrowDown className="w-3 h-3" /> Credit (In)</span>
@@ -171,17 +179,17 @@ export default function DailyKhata() {
                     )}
                     {group.rows.map((row, i) => (
                       <tr key={`${group.date}-${i}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-2.5 px-4 text-slate-600">{formatDate(row.date)}</td>
-                        <td className="py-2.5 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${TYPE_COLORS[row.type] || "bg-slate-100 text-slate-700"}`}>
-                            {TYPE_LABELS[row.type] || row.type}
-                          </span>
+                        <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">{formatDate(row.date)}</td>
+                        <td className="py-2.5 px-4 font-bold text-slate-700">
+                          {row.name || "—"}
                         </td>
-                        <td className="py-2.5 px-4 text-slate-700 max-w-[280px] truncate" title={row.description}>{row.description || "—"}</td>
-                        <td className="py-2.5 px-4 text-right font-medium text-emerald-700">
+                        <td className="py-2.5 px-4 text-slate-600 max-w-[320px] truncate" title={row.description}>
+                          {row.description || "—"}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-black text-emerald-700 bg-emerald-50/20">
                           {row.amountType === "in" ? formatMoney(row.amount) : ""}
                         </td>
-                        <td className="py-2.5 px-4 text-right font-medium text-rose-700">
+                        <td className="py-2.5 px-4 text-right font-black text-rose-700 bg-rose-50/20">
                           {row.amountType === "out" ? formatMoney(row.amount) : ""}
                         </td>
                       </tr>
