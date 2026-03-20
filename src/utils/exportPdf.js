@@ -42,11 +42,12 @@ function addPageNumbers(doc) {
 }
 
 const tableTheme = {
+  theme: "grid",
   headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: "bold", fontSize: 9 },
   alternateRowColors: true,
   rowStartY: undefined,
   margin: { left: MARGIN, right: MARGIN },
-  styles: { fontSize: 8, cellPadding: 3 },
+  styles: { fontSize: 8, cellPadding: 3, lineWidth: 0.1 },
   didDrawPage: (data) => { },
 };
 
@@ -175,10 +176,9 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
        transactions.find(t => (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId))?.toAccountId?.name || "Account")
     : "All Accounts";
 
-  subtitleLines.push(`Account: ${accountName}`);
   subtitleLines.push(`Total records: ${transactions.length}`);
 
-  let startY = addReportHeader(doc, "Account Statement / Ledger", subtitleLines);
+  let startY = addReportHeader(doc, `${accountName} - Ledger`, subtitleLines);
 
   if (!transactions.length) {
     doc.setFontSize(10);
@@ -226,49 +226,45 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
        participant = row.fromAccountId?.name || row.toAccountId?.name || "Manual";
     }
 
+    const descriptionFinal = personName 
+      ? `${personName} ${description ? `(${description})` : ""} ${row.category ? `[${row.category}]` : ""}`
+      : `${description} ${row.category ? `[${row.category}]` : ""}`;
+
     return [
-      i + 1,
       formatDate(row.date),
-      participant.slice(0, 30),
-      description.slice(0, 40) || "—",
-      row.category || "—",
+      descriptionFinal.slice(0, 80) || "—",
       credit > 0 ? formatMoney(credit) : "—",
       debit > 0 ? formatMoney(debit) : "—",
+      "", // Individual row balance is empty
     ];
   });
 
+  const netBalance = totalCredit - totalDebit;
+  const balanceStr = `${formatMoney(Math.abs(netBalance))} ${netBalance >= 0 ? "CR" : "DR"}`;
+
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Participant", "Description", "Category", "Credit (Aya)", "Debit (Gaya)"]],
+    head: [["Date", "Description", "Credit (Aya)", "Debit (Gaya)", "Balance"]],
     body: formattedRows,
     foot: [[
-      { content: "TOTAL ACCOUNT MOVEMENTS", colSpan: 5, styles: { halign: "right", fontStyle: "bold" } },
+      { content: "TOTAL ACCOUNT MOVEMENTS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
       { content: formatMoney(totalCredit), styles: { halign: "right", fontStyle: "bold" } },
       { content: formatMoney(totalDebit), styles: { halign: "right", fontStyle: "bold" } },
+      { content: balanceStr, styles: { halign: "right", fontStyle: "bold", textColor: [0, 80, 0] } },
     ]],
     ...tableTheme,
-    styles: { ...tableTheme.styles, fontSize: 8 },
-    headStyles: { ...tableTheme.headStyles, fontSize: 8.5 },
-    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8.5 },
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1 },
+    headStyles: { ...tableTheme.headStyles, fontSize: 9 },
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, fontStyle: "bold" },
     columnStyles: {
-      0: { cellWidth: 8 },
-      1: { cellWidth: 22 },
-      2: { cellWidth: 35 },
-      3: { cellWidth: 45 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 23, halign: "right" },
-      6: { cellWidth: 23, halign: "right" },
+      0: { cellWidth: 30 },
+      1: { cellWidth: 85 },
+      2: { cellWidth: 25, halign: "right" },
+      3: { cellWidth: 25, halign: "right" },
+      4: { cellWidth: 25, halign: "right" },
     },
   });
-
-  // Final Closing Statement
-  const finalY = doc.lastAutoTable.finalY + 10;
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const netBalance = totalCredit - totalDebit;
-
-  doc.setFontSize(11);
-  doc.setFont(undefined, "bold");
-  doc.text(`Closing Statement Balance: ${formatMoney(netBalance)}`, pageWidth - MARGIN, finalY, { align: "right" });
 
   addPageNumbers(doc);
   doc.save(`ledger-${accountName.replace(/\s+/g, "_")}.pdf`);

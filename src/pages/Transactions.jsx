@@ -364,15 +364,13 @@ export default function Transactions() {
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("type")} className="flex items-center hover:text-slate-800">Type<SortIcon columnKey="type" /></button>
                     </th>
-                    <th className="table-header px-5 py-3.5">Participant / Account</th>
+                    <th className="table-header px-5 py-3.5">Description</th>
                     <th className="table-header px-5 py-3.5 text-right">
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Credit (In)<SortIcon columnKey="amount" /></button>
                     </th>
                     <th className="table-header px-5 py-3.5 text-right">
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Debit (Out)<SortIcon columnKey="amount" /></button>
                     </th>
-                    <th className="table-header px-5 py-3.5">Category</th>
-                    <th className="table-header px-5 py-3.5">Reference / Note</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -387,6 +385,9 @@ export default function Transactions() {
                        else debit = row.amount; 
                      }
 
+                     const participant = getParticipant(row);
+                     const reference = getReference(row);
+
                      return (
                       <tr key={row._id} className="table-row-hover">
                         <td className="table-cell text-sm">{formatDate(row.date)}</td>
@@ -394,15 +395,16 @@ export default function Transactions() {
                           <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
                             }`}>{typeLabel(row.type)}</span>
                         </td>
-                        <td className="table-cell font-medium text-slate-700 text-sm">{getParticipant(row)}</td>
+                        <td className="table-cell">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-800 text-sm leading-tight">{participant}</span>
+                            <span className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                              {reference} {row.category ? `• ${row.category}` : ""}
+                            </span>
+                          </div>
+                        </td>
                         <td className="table-cell text-right font-bold text-emerald-600">{credit > 0 ? formatMoney(credit) : "—"}</td>
                         <td className="table-cell text-right font-bold text-rose-600">{debit > 0 ? formatMoney(debit) : "—"}</td>
-                        <td className="table-cell">
-                           <span className="inline-flex px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-500 font-medium">{row.category || "—"}</span>
-                        </td>
-                        <td className="table-cell max-w-[200px] truncate text-slate-600 text-xs" title={row.note}>
-                          {getReference(row)}
-                        </td>
                       </tr>
                     );
                   })}
@@ -425,14 +427,6 @@ export default function Transactions() {
                         <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
                         <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tCredit)}</td>
                         <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tDebit)}</td>
-                        <td colSpan="2" className="px-5 py-5 text-right bg-slate-100">
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-slate-400 uppercase">Closing Balance</span>
-                            <span className={`text-lg ${tCredit - tDebit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-                              {formatMoney(tCredit - tDebit)}
-                            </span>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })()}
