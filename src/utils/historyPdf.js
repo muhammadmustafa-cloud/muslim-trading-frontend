@@ -265,48 +265,53 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
   );
   y += 10;
 
-  if (purchases && purchases.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Jitna daala (Purchase)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
-    autoTable(doc, {
-      startY: y,
-      head: [["#", "Date", "Supplier", "Weight", "Total", "Paid", "Balance"]],
-      body: purchases.map((p, i) => [
-        i + 1,
-        formatDate(p.date),
-        (p.supplierId && (p.supplierId.name || p.supplierId)) || "—",
-        p.receivedWeight ?? "—",
-        formatMoney(p.amount),
-        formatMoney(p.amountPaid),
-        formatMoney((p.amount || 0) - (p.amountPaid || 0)),
-      ]),
-      ...tableTheme,
-    });
-    y = doc.lastAutoTable.finalY + 10;
-  }
-  if (sales && sales.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Kis ko kitna becha (Sales)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
-    autoTable(doc, {
-      startY: y,
-      head: [["#", "Date", "Customer", "Item", "Qty", "Received"]],
-      body: sales.map((s, i) => [
-        i + 1,
-        formatDate(s.date),
-        (s.customerId && s.customerId.name) || "—",
-        s.itemName || (s.itemId && s.itemId.name) || "—",
-        `${s.quantity || ""} ${s.quality || ""}`.trim(),
-        formatMoney(s.amountReceived),
-      ]),
-      ...tableTheme,
-    });
-  }
+  const ledger = [
+    ...(purchases || []).map(p => ({ ...p, ledgerType: 'purchase' })),
+    ...(sales || []).map(s => ({ ...s, ledgerType: 'sale' }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const formattedRows = ledger.map((row) => {
+    const isSale = row.ledgerType === 'sale';
+    const amount = isSale ? (row.amountReceived || 0) : (row.amountPaid || 0);
+    const participant = isSale ? (row.customerId?.name || "Customer") : (row.supplierId?.name || "Supplier");
+    const description = isSale ? `Sale - ${participant}` : `Purchase - ${participant}`;
+
+    return [
+      formatDate(row.date),
+      description,
+      isSale ? formatMoney(amount) : "—",
+      !isSale ? formatMoney(amount) : "—",
+    ];
+  });
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Date", "Description", "Credit (Sale)", "Debit (Purchase)"]],
+    body: formattedRows,
+    foot: [[
+      { content: "TOTAL SUMMARY", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold" } },
+    ]],
+    ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1 },
+    headStyles: { ...tableTheme.headStyles, fontSize: 9 },
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9 },
+    columnStyles: {
+      0: { cellWidth: 30 },
+      1: { cellWidth: 100 },
+      2: { cellWidth: 30, halign: "right" },
+      3: { cellWidth: 30, halign: "right" },
+    },
+  });
+
+  // Final Net Result
+  const finalY = doc.lastAutoTable.finalY + 10;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.text(`Net Movement (Profit): ${formatMoney(profit)}`, pageWidth - MARGIN, finalY, { align: "right" });
 
   addPageNumbers(doc);
   doc.save(`${(name || "item").replace(/\s+/g, "-")}-khata.pdf`);

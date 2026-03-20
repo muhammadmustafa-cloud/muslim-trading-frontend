@@ -117,55 +117,64 @@ export default function ItemKhata() {
               <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(totalRevenue)}</p>
             </div>
             <div className="card p-5 border-l-4 border-l-blue-500">
-              <p className="text-sm text-slate-500 font-medium">Profit</p>
+              <p className="text-sm text-slate-500 font-medium">Net Movement (Profit)</p>
               <p className={`text-2xl font-bold mt-1 ${profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{formatMoney(profit)}</p>
             </div>
           </section>
 
           <section className="card overflow-hidden">
-            <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Jitna daala (Purchase history)</h2>
+            <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Unified Item Ledger</h2>
             <div className="overflow-x-auto">
-              {data.purchases?.length === 0 ? (
-                <p className="p-6 text-slate-500">Abhi koi purchase entry nahi.</p>
-              ) : (
-                <table className="w-full">
-                  <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Supplier</th><th className="table-header px-4 py-2">Weight</th><th className="table-header px-4 py-2 text-right">Paid</th></tr></thead>
-                  <tbody>
-                    {data.purchases?.map((p) => (
-                      <tr key={p._id} className="table-row-hover border-b border-slate-100">
-                        <td className="table-cell py-2">{formatDate(p.date)}</td>
-                        <td className="table-cell">{p.supplierId?.name || "—"}</td>
-                        <td className="table-cell">{p.receivedWeight ?? "—"}</td>
-                        <td className="table-cell text-right font-medium">{formatMoney(p.amountPaid)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </section>
+              {(() => {
+                const ledger = [
+                  ...(data.purchases || []).map(p => ({ ...p, ledgerType: 'purchase' })),
+                  ...(data.sales || []).map(s => ({ ...s, ledgerType: 'sale' }))
+                ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-          <section className="card overflow-hidden">
-            <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Kis ko kitna becha (Sales history)</h2>
-            <div className="overflow-x-auto">
-              {data.sales?.length === 0 ? (
-                <p className="p-6 text-slate-500">Abhi koi sale nahi.</p>
-              ) : (
-                <table className="w-full">
-                  <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Customer</th><th className="table-header px-4 py-2 text-left">Item</th><th className="table-header px-4 py-2">Qty</th><th className="table-header px-4 py-2 text-right">Received</th></tr></thead>
-                  <tbody>
-                    {data.sales?.map((s) => (
-                      <tr key={s._id} className="table-row-hover border-b border-slate-100">
-                        <td className="table-cell py-2">{formatDate(s.date)}</td>
-                        <td className="table-cell font-medium">{s.customerId?.name || "—"}</td>
-                        <td className="table-cell">{s.itemName || "—"}</td>
-                        <td className="table-cell">{s.quantity} {s.quality || ""}</td>
-                        <td className="table-cell text-right font-medium">{formatMoney(s.amountReceived)}</td>
+                if (ledger.length === 0) return <p className="p-6 text-slate-500 text-center">Abhi koi entries nahi.</p>;
+
+                return (
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="table-header px-5 py-3.5 italic">Date</th>
+                        <th className="table-header px-5 py-3.5">Description</th>
+                        <th className="table-header px-5 py-3.5 text-right">Credit (Sale)</th>
+                        <th className="table-header px-5 py-3.5 text-right">Debit (Purchase)</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody>
+                      {ledger.map((row) => {
+                        const isSale = row.ledgerType === 'sale';
+                        const amount = isSale ? (row.amountReceived || 0) : (row.amountPaid || 0);
+                        const participant = isSale ? (row.customerId?.name || "Customer") : (row.supplierId?.name || "Supplier");
+                        const description = isSale ? `Sale - ${participant}` : `Purchase - ${participant}`;
+
+                        return (
+                          <tr key={row._id} className="table-row-hover border-b border-slate-100">
+                            <td className="table-cell py-3 text-xs text-slate-500">{formatDate(row.date)}</td>
+                            <td className="table-cell font-medium">
+                              <div className="flex flex-col">
+                                <span className="text-slate-800">{description}</span>
+                                {row.note && <span className="text-[10px] text-slate-400 font-normal">{row.note}</span>}
+                              </div>
+                            </td>
+                            <td className="table-cell text-right font-bold text-emerald-600">{isSale ? formatMoney(amount) : "—"}</td>
+                            <td className="table-cell text-right font-bold text-rose-600">{!isSale ? formatMoney(amount) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+                      <tr className="font-bold text-slate-900 uppercase tracking-wider text-xs">
+                        <td colSpan="2" className="px-5 py-5 text-right">Total Summary:</td>
+                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(totalRevenue)}</td>
+                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(totalCost)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                );
+              })()}
             </div>
           </section>
         </>

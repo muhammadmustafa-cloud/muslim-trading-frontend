@@ -491,9 +491,8 @@ export function downloadSaleInvoicePdf(sale) {
   }
   doc.text(formatMoney(baseTotal), 175, yPos);
 
-  // Bottom line for table box
-  yPos = 200; // increased from 175 to give more professional space
-  doc.line(15, yPos, 195, yPos);
+  // Bottom line for table box (moved below memo)
+  yPos = 200; // base y for summary
 
   // --- SUMMARY SECTION ---
   yPos += 8;
@@ -574,6 +573,9 @@ export function downloadSaleInvoicePdf(sale) {
   }
 
   doc.text(memoText, 15, yPos);
+
+  // Unified bottom line (moved here from yPos=200)
+  doc.line(15, yPos + 4, 195, yPos + 4);
 
   // Signature line
   doc.line(140, yPos + 35, 195, yPos + 35);
@@ -699,8 +701,7 @@ export function downloadPurchaseInvoicePdf(entry) {
   const baseTotal = netKg > 0 && entry.rate ? Math.round((netKg / 40) * entry.rate) : 0;
   doc.text(formatMoney(baseTotal), 175, yPos);
 
-  yPos = 200; // increased from 175 to give more professional space
-  doc.line(15, yPos, 195, yPos);
+  yPos = 200; // base y for summary
 
   // --- SUMMARY SECTION ---
   yPos += 8;
@@ -757,6 +758,9 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.text(entry.notes || "—", 15, yPos);
+
+  // Unified bottom line (moved here from yPos=200)
+  doc.line(15, yPos + 4, 195, yPos + 4);
 
   doc.line(140, yPos + 35, 195, yPos + 35);
   doc.setFont("helvetica", "bold");
