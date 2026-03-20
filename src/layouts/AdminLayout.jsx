@@ -15,11 +15,13 @@ import {
   FaFileInvoiceDollar,
   FaIndustry,
   FaHandHoldingUsd,
+  FaBook,
 } from "react-icons/fa";
 
 const navItems = [
   { to: "/", end: true, icon: FaChartLine, label: "Dashboard" },
   { to: "/daily-khata", icon: FaFileInvoiceDollar, label: "Daily Khata" },
+  { to: "/universal-ledger", icon: FaBook, label: "Daily Cash Memo" },
   { to: "/mill-khata", icon: FaIndustry, label: "Mill Khata" },
   { to: "/customers", icon: FaUsers, label: "Customers" },
   { to: "/customers/receivables", icon: FaHandHoldingUsd, label: "Customer Receivables" },

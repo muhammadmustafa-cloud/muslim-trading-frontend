@@ -20,6 +20,7 @@ import CurrentStock from "./pages/CurrentStock";
 import Sales from "./pages/Sales";
 import Transactions from "./pages/Transactions";
 import DailyKhata from "./pages/DailyKhata";
+import UniversalLedger from "./pages/UniversalLedger";
 import MillKhata from "./pages/MillKhata";
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
           <Route path="sales" element={<Sales />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="daily-khata" element={<DailyKhata />} />
+          <Route path="universal-ledger" element={<UniversalLedger />} />
           <Route path="daily-cash-memo" element={<DailyKhata />} />
           <Route path="mill-khata" element={<MillKhata />} />
           <Route path="*" element={<Navigate to="/" replace />} />
