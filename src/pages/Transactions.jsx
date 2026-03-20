@@ -204,14 +204,34 @@ export default function Transactions() {
     return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
   };
 
+  const getParticipant = (row) => {
+    // 1. Prioritize direct person names from backend
+    const person = row.customerName || row.supplierName || row.mazdoorName;
+    if (person) return person;
+
+    // 2. Transfer logic
+    if (row.type === "transfer") {
+      return `${row.fromAccountId?.name || "—"} ➔ ${row.toAccountId?.name || "—"}`;
+    }
+
+    // 3. Account-specific view fallback
+    if (filters.accountId) {
+      if (row.fromAccountId?._id === filters.accountId) return row.toAccountId?.name || "Manual";
+      if (row.toAccountId?._id === filters.accountId) return row.fromAccountId?.name || "Manual";
+    }
+
+    // 4. Global view fallback
+    return row.fromAccountId?.name || row.toAccountId?.name || "Manual";
+  };
+
   const getReference = (row) => {
     if (row.stockEntryId) {
       const entry = row.stockEntryId;
-      return `Bill: ${entry._id?.slice(-6).toUpperCase() || '—'} ${entry.truckNumber ? `(${entry.truckNumber})` : ''}`;
+      return `Bill: ${entry._id?.slice(-6).toUpperCase() || "—"} ${entry.truckNumber ? `(${entry.truckNumber})` : ""}`;
     }
     if (row.saleId) {
       const sale = row.saleId;
-      return `Sale Ref: ${sale._id?.slice(-6).toUpperCase() || '—'} ${sale.truckNumber ? `(${sale.truckNumber})` : ''}`;
+      return `Sale Ref: ${sale._id?.slice(-6).toUpperCase() || "—"} ${sale.truckNumber ? `(${sale.truckNumber})` : ""}`;
     }
     return row.note || "—";
   };
@@ -344,37 +364,79 @@ export default function Transactions() {
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("type")} className="flex items-center hover:text-slate-800">Type<SortIcon columnKey="type" /></button>
                     </th>
-                    <th className="table-header px-5 py-3.5">From account</th>
-                    <th className="table-header px-5 py-3.5">To account</th>
+                    <th className="table-header px-5 py-3.5">Participant / Account</th>
                     <th className="table-header px-5 py-3.5 text-right">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Amount<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Credit (In)<SortIcon columnKey="amount" /></button>
+                    </th>
+                    <th className="table-header px-5 py-3.5 text-right">
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Debit (Out)<SortIcon columnKey="amount" /></button>
                     </th>
                     <th className="table-header px-5 py-3.5">Category</th>
                     <th className="table-header px-5 py-3.5">Reference / Note</th>
-                    <th className="table-header px-5 py-3.5 w-24">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedList.map((row) => (
-                    <tr key={row._id} className="table-row-hover">
-                      <td className="table-cell">{formatDate(row.date)}</td>
-                      <td className="table-cell">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
-                          }`}>{typeLabel(row.type)}</span>
-                      </td>
-                      <td className="table-cell">{row.fromAccountId?.name ?? "—"}</td>
-                      <td className="table-cell">{row.toAccountId?.name ?? "—"}</td>
-                      <td className="table-cell text-right font-medium">{formatMoney(row.amount)}</td>
-                      <td className="table-cell">{row.category || "—"}</td>
-                      <td className="table-cell max-w-[200px] truncate" title={row.note}>
-                        {getReference(row)}
-                      </td>
-                      <td className="table-cell">
-                        <span className="text-xs text-slate-500">{row.source === "sale" ? "From Sale" : row.source === "transaction" ? "Source transaction" : "From Stock"}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {paginatedList.map((row) => {
+                     let credit = 0;
+                     let debit = 0;
+                     if (row.type === "deposit" || row.type === "sale") credit = row.amount;
+                     else if (row.type === "withdraw" || row.type === "purchase") debit = row.amount;
+                     else if (row.type === "transfer") {
+                       if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
+                       else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
+                       else debit = row.amount; 
+                     }
+
+                     return (
+                      <tr key={row._id} className="table-row-hover">
+                        <td className="table-cell text-sm">{formatDate(row.date)}</td>
+                        <td className="table-cell">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                            }`}>{typeLabel(row.type)}</span>
+                        </td>
+                        <td className="table-cell font-medium text-slate-700 text-sm">{getParticipant(row)}</td>
+                        <td className="table-cell text-right font-bold text-emerald-600">{credit > 0 ? formatMoney(credit) : "—"}</td>
+                        <td className="table-cell text-right font-bold text-rose-600">{debit > 0 ? formatMoney(debit) : "—"}</td>
+                        <td className="table-cell">
+                           <span className="inline-flex px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-500 font-medium">{row.category || "—"}</span>
+                        </td>
+                        <td className="table-cell max-w-[200px] truncate text-slate-600 text-xs" title={row.note}>
+                          {getReference(row)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
+                <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+                  {(() => {
+                    let tCredit = 0;
+                    let tDebit = 0;
+                    list.forEach(row => {
+                      if (row.type === "deposit" || row.type === "sale") tCredit += row.amount;
+                      else if (row.type === "withdraw" || row.type === "purchase") tDebit += row.amount;
+                      else if (row.type === "transfer") {
+                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tCredit += row.amount;
+                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tDebit += row.amount;
+                        else tDebit += row.amount; 
+                      }
+                    });
+                    return (
+                      <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
+                        <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
+                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tCredit)}</td>
+                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tDebit)}</td>
+                        <td colSpan="2" className="px-5 py-5 text-right bg-slate-100">
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-slate-400 uppercase">Closing Balance</span>
+                            <span className={`text-lg ${tCredit - tDebit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                              {formatMoney(tCredit - tDebit)}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })()}
+                </tfoot>
               </table>
               <TablePagination page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} totalItems={sortedList.length} />
             </>

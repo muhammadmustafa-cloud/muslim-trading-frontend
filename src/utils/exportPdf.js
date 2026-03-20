@@ -165,14 +165,20 @@ export function downloadPurchasesPdf(entries, filters = {}) {
  * Transactions report PDF.
  */
 export function downloadTransactionsPdf(transactions, filters = {}) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo)
     subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
-  if (filters.accountId) subtitleLines.push("Filter: Account selected");
+  
+  const accountName = transactions.length > 0 && filters.accountId 
+    ? (transactions.find(t => (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId))?.fromAccountId?.name || 
+       transactions.find(t => (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId))?.toAccountId?.name || "Account")
+    : "All Accounts";
+
+  subtitleLines.push(`Account: ${accountName}`);
   subtitleLines.push(`Total records: ${transactions.length}`);
 
-  let startY = addReportHeader(doc, "Transactions Report (Lena-dena)", subtitleLines);
+  let startY = addReportHeader(doc, "Account Statement / Ledger", subtitleLines);
 
   if (!transactions.length) {
     doc.setFontSize(10);
@@ -181,40 +187,91 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     return;
   }
 
-  const typeLabel = (t) => (t === "deposit" ? "Deposit" : t === "withdraw" ? "Withdraw" : t === "transfer" ? "Transfer" : t);
+  // Calculate Totals
+  let totalCredit = 0;
+  let totalDebit = 0;
+
+  const formattedRows = transactions.map((row, i) => {
+    let credit = 0;
+    let debit = 0;
+
+    if (row.type === "deposit" || row.type === "sale") {
+      credit = row.amount;
+    } else if (row.type === "withdraw" || row.type === "purchase") {
+      debit = row.amount;
+    } else if (row.type === "transfer") {
+      if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
+      else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
+      else debit = row.amount; 
+    }
+
+    totalCredit += credit;
+    totalDebit += debit;
+
+    let participant = "—";
+    let description = row.note || "";
+
+    const personName = row.customerName || row.supplierName || row.mazdoorName;
+
+    if (personName) {
+      participant = personName;
+      if (row.type === 'sale') description = `Sale: ${row.itemName || ""}`;
+      else if (row.type === 'purchase') description = `Purchase: ${row.itemName || ""}`;
+      else if (row.mazdoorName) description = "Labor Payment / Advance";
+      else description = row.note || (row.type === 'deposit' ? "Received Funds" : "Payment Made");
+    } else if (row.type === 'transfer') {
+      participant = `${row.fromAccountId?.name || "—"} ➔ ${row.toAccountId?.name || "—"}`;
+      description = "Internal Transfer";
+    } else {
+       participant = row.fromAccountId?.name || row.toAccountId?.name || "Manual";
+    }
+
+    return [
+      i + 1,
+      formatDate(row.date),
+      participant.slice(0, 30),
+      description.slice(0, 40) || "—",
+      row.category || "—",
+      credit > 0 ? formatMoney(credit) : "—",
+      debit > 0 ? formatMoney(debit) : "—",
+    ];
+  });
 
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Type", "From Account", "To Account", "Amount", "Category", "Supplier", "Mazdoor", "Note"]],
-    body: transactions.map((row, i) => [
-      i + 1,
-      formatDate(row.date),
-      typeLabel(row.type),
-      (row.fromAccountId && row.fromAccountId.name) || "—",
-      (row.toAccountId && row.toAccountId.name) || "—",
-      formatMoney(row.amount),
-      (row.category || "—").slice(0, 12),
-      (row.supplierId && row.supplierId.name) || "—",
-      (row.mazdoorId && row.mazdoorId.name) || "—",
-      (row.note || "—").slice(0, 25),
-    ]),
+    head: [["#", "Date", "Participant", "Description", "Category", "Credit (Aya)", "Debit (Gaya)"]],
+    body: formattedRows,
+    foot: [[
+      { content: "TOTAL ACCOUNT MOVEMENTS", colSpan: 5, styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalCredit), styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalDebit), styles: { halign: "right", fontStyle: "bold" } },
+    ]],
     ...tableTheme,
+    styles: { ...tableTheme.styles, fontSize: 8 },
+    headStyles: { ...tableTheme.headStyles, fontSize: 8.5 },
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8.5 },
     columnStyles: {
-      0: { cellWidth: 10 },
+      0: { cellWidth: 8 },
       1: { cellWidth: 22 },
-      2: { cellWidth: 20 },
-      3: { cellWidth: 28 },
-      4: { cellWidth: 28 },
-      5: { cellWidth: 22 },
-      6: { cellWidth: 22 },
-      7: { cellWidth: 25 },
-      8: { cellWidth: 25 },
-      9: { cellWidth: 38 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 45 },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 23, halign: "right" },
+      6: { cellWidth: 23, halign: "right" },
     },
   });
 
+  // Final Closing Statement
+  const finalY = doc.lastAutoTable.finalY + 10;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const netBalance = totalCredit - totalDebit;
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.text(`Closing Statement Balance: ${formatMoney(netBalance)}`, pageWidth - MARGIN, finalY, { align: "right" });
+
   addPageNumbers(doc);
-  doc.save("transactions-report.pdf");
+  doc.save(`ledger-${accountName.replace(/\s+/g, "_")}.pdf`);
 }
 
 /**
