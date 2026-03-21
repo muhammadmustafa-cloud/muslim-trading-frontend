@@ -14,6 +14,7 @@ export default function Suppliers() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "", isAlsoCustomer: false, linkedCustomerId: "", createLinkedCustomer: false });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
@@ -69,6 +70,7 @@ export default function Suppliers() {
     e.preventDefault();
     if (!form.name.trim()) { setError("Name zaroori hai"); return; }
     setError("");
+    setSubmitting(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -84,6 +86,7 @@ export default function Suppliers() {
       resetForm();
       fetchList();
     } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
 
@@ -158,8 +161,15 @@ export default function Suppliers() {
           )}
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <button type="submit" className="btn-primary">{editingId ? "Update" : "Add supplier"}</button>
-            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : (editingId ? "Update" : "Add supplier")}
+            </button>
+            <button type="button" onClick={resetForm} className="btn-secondary" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>

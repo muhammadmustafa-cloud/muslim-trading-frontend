@@ -8,9 +8,13 @@ const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2
 const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
 
 function getRowType(t) {
-  if (t.type === "deposit" && t.category === "udhaar_received") return "Udhaar received";
-  if (t.type === "withdraw") return t.category === "udhaar" ? "Udhaar" : "Salary";
-  return t.category || "—";
+  if (t.type === "salary" || (t.type === "withdraw" && t.category === "salary")) return "Salary Paid";
+  if (t.type === "withdraw" && t.category === "udhaar") return "Udhaar (Advance)";
+  if (t.type === "accrual") return "Salary Posted (Earned)";
+  if (t.category === "mazdoor_expense") return "Work Earned (Wage)";
+  if (t.type === "deposit" && t.category === "udhaar_received") return "Udhaar wapas liya";
+  if (t.category === "daily_wage") return "Work Earned (Wage)";
+  return t.type === "deposit" ? "Deposit" : "Withdraw";
 }
 function getRowAccount(t) {
   if (t.type === "deposit" && t.toAccountId) return t.toAccountId.name || "—";
@@ -21,7 +25,7 @@ export default function MazdoorHistory() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState({ name: "", transactions: [], totalPaid: 0, totalReceived: 0 });
+  const [data, setData] = useState({ name: "", transactions: [], totalPaid: 0, totalReceived: 0, totalEarned: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -49,7 +53,7 @@ export default function MazdoorHistory() {
         const res = await fetch(`${API_BASE_URL}/mazdoor/${id}/history?${params}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.message || "Failed to load history");
-        if (!cancelled) setData(json.data || { name: "", transactions: [], totalPaid: 0, totalReceived: 0 });
+        if (!cancelled) setData(json.data || { name: "", transactions: [], totalPaid: 0, totalReceived: 0, totalEarned: 0, balance: 0 });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {
@@ -66,6 +70,8 @@ export default function MazdoorHistory() {
       data.transactions,
       data.totalPaid ?? 0,
       data.totalReceived ?? 0,
+      data.totalEarned ?? 0,
+      data.balance ?? 0,
       { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }
     );
   };
@@ -111,18 +117,27 @@ export default function MazdoorHistory() {
         <div className="card p-12 flex justify-center"><div className="loading-spinner" /></div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-4">
-            <div className="card p-5 border-l-4 border-l-amber-500 min-w-[180px]">
-              <p className="text-sm text-slate-500 font-medium">Total diya (salary + udhaar)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="card p-5 border-l-4 border-l-emerald-500">
+              <p className="text-sm text-slate-500 font-medium">Total Earned (Salary + Wage)</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(data.totalEarned)}</p>
+            </div>
+            <div className="card p-5 border-l-4 border-l-amber-500">
+              <p className="text-sm text-slate-500 font-medium">Total Paid (Advances)</p>
               <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(data.totalPaid)}</p>
             </div>
-            <div className="card p-5 border-l-4 border-l-emerald-500 min-w-[180px]">
-              <p className="text-sm text-slate-500 font-medium">Total wapas liya (udhaar)</p>
+            <div className="card p-5 border-l-4 border-l-blue-500">
+              <p className="text-sm text-slate-500 font-medium">Total Received Back</p>
               <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(data.totalReceived)}</p>
             </div>
-            <div className="card p-5 border-l-4 border-l-slate-400 min-w-[180px]">
-              <p className="text-sm text-slate-500 font-medium">Net (diya − wapas)</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney((data.totalPaid ?? 0) - (data.totalReceived ?? 0))}</p>
+            <div className={`card p-5 border-l-4 min-w-[180px] ${data.balance < 0 ? "border-l-red-500 bg-red-50" : "border-l-indigo-500"}`}>
+              <p className="text-sm text-slate-500 font-medium">Net Balance (Khata)</p>
+              <p className={`text-2xl font-bold mt-1 ${data.balance < 0 ? "text-red-700" : "text-slate-800"}`}>
+                {formatMoney(data.balance)}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 mt-1">
+                {data.balance < 0 ? "Worker owes you" : data.balance > 0 ? "You owe worker" : "Settled"}
+              </p>
             </div>
           </div>
 
@@ -143,7 +158,11 @@ export default function MazdoorHistory() {
                           <td className="table-cell py-2">{formatDate(t.date)}</td>
                           <td className="table-cell font-medium">{getRowAccount(t)}</td>
                           <td className="table-cell">
-                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${isReceive ? "bg-emerald-100 text-emerald-800" : rowType === "Udhaar" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700"}`}>
+                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium 
+                              ${t.type === "accrual" || t.category === "mazdoor_expense" ? "bg-emerald-100 text-emerald-800" : 
+                                isReceive ? "bg-blue-100 text-blue-800" : 
+                                rowType.includes("Udhaar") ? "bg-amber-100 text-amber-800" : 
+                                "bg-slate-100 text-slate-700"}`}>
                               {rowType}
                             </span>
                           </td>

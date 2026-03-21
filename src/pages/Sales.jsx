@@ -19,6 +19,7 @@ export default function Sales() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     date: today,
     customerId: "",
@@ -250,6 +251,7 @@ export default function Sales() {
       return;
     }
     setError("");
+    setSubmitting(true);
     try {
       const payload = {
         date: form.date,
@@ -276,6 +278,8 @@ export default function Sales() {
       fetchStockData(); // Refresh dropdown labels
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -481,9 +485,16 @@ export default function Sales() {
             <input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            <button type="submit" className="btn-primary">Add sale</button>
-            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+           <div className="flex gap-2">
+            <button type="submit" className="btn-primary flex-1" disabled={submitting}>
+              {submitting ? (
+                 <span className="flex items-center justify-center gap-2">
+                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                   Saving...
+                 </span>
+              ) : "Add sale"}
+            </button>
+            <button type="button" onClick={resetForm} className="btn-secondary px-6" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>

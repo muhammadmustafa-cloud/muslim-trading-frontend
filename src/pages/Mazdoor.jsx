@@ -16,11 +16,14 @@ export default function Mazdoor() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", role: "", notes: "" });
+  const [form, setForm] = useState({ name: "", phone: "", role: "", notes: "", monthlySalary: "" });
   const [paymentModal, setPaymentModal] = useState({ open: false, mazdoor: null });
   const [paymentForm, setPaymentForm] = useState({ date: today, accountId: "", amount: "", category: "salary", note: "" });
+  const [salaryModal, setSalaryModal] = useState({ open: false, mazdoor: null });
+  const [salaryForm, setSalaryForm] = useState({ date: today, amount: "", note: "Monthly Salary Posted" });
   const [receiveModal, setReceiveModal] = useState({ open: false, mazdoor: null });
   const [receiveForm, setReceiveForm] = useState({ date: today, accountId: "", amount: "", note: "" });
+  const [submitting, setSubmitting] = useState(false);
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -54,7 +57,7 @@ export default function Mazdoor() {
   useEffect(() => { fetchList(); }, [search]);
   useEffect(() => { fetchAccounts(); }, []);
 
-  const resetForm = () => { setForm({ name: "", phone: "", role: "", notes: "" }); setEditingId(null); setModalOpen(false); };
+  const resetForm = () => { setForm({ name: "", phone: "", role: "", notes: "", monthlySalary: "" }); setEditingId(null); setModalOpen(false); };
   const openAddModal = () => { resetForm(); setModalOpen(true); };
 
   const openPaymentModal = (row) => {
@@ -74,9 +77,10 @@ export default function Mazdoor() {
     if (isNaN(amt) || amt <= 0) { setError("Valid amount enter karein"); return; }
     if (!paymentForm.accountId) { setError("Account select karein — kis account se de rahe hain"); return; }
     setError("");
+    setSubmitting(true);
     try {
       await apiPost("/transactions", {
-        type: "withdraw",
+        type: paymentForm.category === "salary" ? "salary" : "withdraw",
         fromAccountId: paymentForm.accountId,
         amount: amt,
         category: paymentForm.category,
@@ -87,6 +91,7 @@ export default function Mazdoor() {
       closePaymentModal();
       fetchList();
     } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
   const openReceiveModal = (row) => {
@@ -104,6 +109,7 @@ export default function Mazdoor() {
     if (isNaN(amt) || amt <= 0) { setError("Valid amount enter karein"); return; }
     if (!receiveForm.accountId) { setError("Account select karein — kis account mein receive kar rahe hain"); return; }
     setError("");
+    setSubmitting(true);
     try {
       await apiPost("/transactions", {
         type: "deposit",
@@ -117,10 +123,40 @@ export default function Mazdoor() {
       closeReceiveModal();
       fetchList();
     } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const openSalaryModal = (row) => {
+    setSalaryModal({ open: true, mazdoor: row });
+    setSalaryForm({ date: today, amount: row.monthlySalary || "", note: "Monthly Salary Posted" });
+    setError("");
+  };
+  const closeSalaryModal = () => setSalaryModal({ open: false, mazdoor: null });
+
+  const handleSalarySubmit = async (e) => {
+    e.preventDefault();
+    if (!salaryModal.mazdoor) return;
+    const amt = Number(salaryForm.amount);
+    if (isNaN(amt) || amt <= 0) { setError("Valid amount enter karein"); return; }
+    setError("");
+    setSubmitting(true);
+    try {
+      await apiPost("/transactions", {
+        type: "accrual",
+        amount: amt,
+        category: "salary_accrual",
+        note: salaryForm.note || undefined,
+        mazdoorId: salaryModal.mazdoor._id,
+        date: salaryForm.date,
+      });
+      closeSalaryModal();
+      fetchList();
+    } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
   const handleEdit = (row) => {
-    setForm({ name: row.name || "", phone: row.phone || "", role: row.role || "", notes: row.notes || "" });
+    setForm({ name: row.name || "", phone: row.phone || "", role: row.role || "", notes: row.notes || "", monthlySalary: row.monthlySalary || "" });
     setEditingId(row._id);
     setModalOpen(true);
   };
@@ -129,12 +165,14 @@ export default function Mazdoor() {
     e.preventDefault();
     if (!form.name.trim()) { setError("Name zaroori hai"); return; }
     setError("");
+    setSubmitting(true);
     try {
       if (editingId) await apiPut(`/mazdoor/${editingId}`, form);
       else await apiPost("/mazdoor", form);
       resetForm();
       fetchList();
     } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
 
@@ -184,10 +222,41 @@ export default function Mazdoor() {
           <div><label className="input-label">Phone</label><input type="text" placeholder="0333-1112233" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className="input-field" /></div>
           <div><label className="input-label">Kaam / Role</label><input type="text" placeholder="e.g. Peesaai" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className="input-field" /></div>
           <div><label className="input-label">Notes</label><input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" /></div>
+          <div><label className="input-label">Monthly Salary (Optional)</label><input type="number" placeholder="e.g. 100000" value={form.monthlySalary} onChange={(e) => setForm((f) => ({ ...f, monthlySalary: e.target.value }))} className="input-field" /></div>
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <button type="submit" className="btn-primary">{editingId ? "Update" : "Add mazdoor"}</button>
-            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : (editingId ? "Update" : "Add mazdoor")}
+            </button>
+            <button type="button" onClick={resetForm} className="btn-secondary" disabled={submitting}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={salaryModal.open} onClose={closeSalaryModal} title={`Salary Post Karein — ${salaryModal.mazdoor?.name || ""}`}>
+        <p className="text-sm text-slate-600 mb-3">Isse mazdoor ke khate mein amount credit hogi. Ye Cash Memo mein nahi jayega (kyunke paisa abhi nahi diya), lekin history mein balance barh jayega.</p>
+        <form onSubmit={handleSalarySubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label className="input-label">Amount (Salary) *</label><input type="number" placeholder="0" value={salaryForm.amount} onChange={(e) => setSalaryForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" required /></div>
+            <div><label className="input-label">Tarikh</label><input type="date" value={salaryForm.date} onChange={(e) => setSalaryForm((f) => ({ ...f, date: e.target.value }))} className="input-field" /></div>
+          </div>
+          <div><label className="input-label">Note</label><input type="text" value={salaryForm.note} onChange={(e) => setSalaryForm((f) => ({ ...f, note: e.target.value }))} className="input-field" /></div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? (
+                 <span className="flex items-center gap-2">
+                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                   Posting...
+                 </span>
+              ) : "Post Salary"}
+            </button>
+            <button type="button" onClick={closeSalaryModal} className="btn-secondary" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>
@@ -226,8 +295,15 @@ export default function Mazdoor() {
           </div>
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <button type="submit" className="btn-primary">Payment save karein</button>
-            <button type="button" onClick={closePaymentModal} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : "Payment save karein"}
+            </button>
+            <button type="button" onClick={closePaymentModal} className="btn-secondary" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>
@@ -259,8 +335,15 @@ export default function Mazdoor() {
           </div>
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <button type="submit" className="btn-primary">Udhaar receive save karein</button>
-            <button type="button" onClick={closeReceiveModal} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : "Udhaar receive save karein"}
+            </button>
+            <button type="button" onClick={closeReceiveModal} className="btn-secondary" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>
@@ -296,9 +379,10 @@ export default function Mazdoor() {
                       {cols.map(({ key }) => <td key={key} className="table-cell">{key === "name" ? <span className="font-medium">{row[key]}</span> : (row[key] || "—")}</td>)}
                       <td className="table-cell">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <button type="button" onClick={() => openPaymentModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Salary / Udhaar</button>
+                          <button type="button" onClick={() => openSalaryModal(row)} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 border-emerald-100 hover:bg-emerald-50"><FaPlus className="w-3 h-3" /> Post Salary</button>
+                          <button type="button" onClick={() => openPaymentModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Advance / Salary de</button>
                           <button type="button" onClick={() => openReceiveModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaHandHoldingUsd className="w-3.5 h-3.5" /> Udhaar wapas lo</button>
-                          <button type="button" onClick={() => navigate(`/mazdoor/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History</button>
+                          <button type="button" onClick={() => navigate(`/mazdoor/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History / Khata</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
                         </div>
                       </td>

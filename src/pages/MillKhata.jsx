@@ -19,6 +19,7 @@ export default function MillKhata() {
 
   // Modals
   const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ date: today, amount: "", category: "", note: "" });
 
   const fetchDaybook = async (dateFrom, dateTo) => {
@@ -59,6 +60,7 @@ export default function MillKhata() {
       setError("Valid amount daalein.");
       return;
     }
+    setSubmitting(true);
     try {
       await apiPost("/mill-expenses", {
         date: form.date,
@@ -70,6 +72,8 @@ export default function MillKhata() {
       fetchDaybook(filters.dateFrom, filters.dateTo);
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -238,7 +242,17 @@ export default function MillKhata() {
           <div><label className="input-label">Amount (Rs.) *</label><input type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field text-lg font-bold" required min="0" step="1" placeholder="0" autoFocus /></div>
           <div><label className="input-label">Category</label><input type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="input-field" placeholder="e.g. Rent, Bijli, Maintenance, Chai" /></div>
           <div><label className="input-label">Note / Description</label><textarea value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field min-h-[80px]" placeholder="Add specific details..." /></div>
-          <div className="flex gap-2 pt-2"><button type="submit" className="btn-primary flex-1">Save Expense</button><button type="button" onClick={() => setModalOpen(false)} className="btn-secondary px-6">Cancel</button></div>
+          <div className="flex gap-2 pt-2">
+            <button type="submit" className="btn-primary flex-1" disabled={submitting}>
+              {submitting ? (
+                 <span className="flex items-center justify-center gap-2">
+                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                   Saving...
+                 </span>
+              ) : "Save Expense"}
+            </button>
+            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary px-6" disabled={submitting}>Cancel</button>
+          </div>
         </form>
       </Modal>
 

@@ -34,6 +34,7 @@ export default function Transactions() {
     supplierId: "",
     mazdoorId: "",
   });
+  const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "" });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
@@ -120,28 +121,41 @@ export default function Transactions() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError("");
+
     const amt = Number(form.amount);
     if (isNaN(amt) || amt <= 0) {
       setError("Valid amount enter karein.");
+      setSubmitting(false);
       return;
     }
     if (form.type === "deposit" && !form.toAccountId) {
       setError("Deposit ke liye account select karein.");
+      setSubmitting(false);
       return;
     }
-    if (form.type === "withdraw" && !form.fromAccountId) {
-      setError("Withdraw ke liye account select karein.");
+    if ((form.type === "withdraw" || form.type === "salary") && !form.fromAccountId) {
+      setError(`${form.type === "salary" ? "Salary" : "Withdraw"} ke liye account select karein.`);
+      setSubmitting(false);
+      return;
+    }
+    if (form.type === "salary" && !form.mazdoorId) {
+      setError("Mazdoor select karein jise salary de rahe hain.");
+      setSubmitting(false);
       return;
     }
     if (form.type === "transfer" && (!form.fromAccountId || !form.toAccountId)) {
       setError("Transfer ke liye dono accounts select karein.");
+      setSubmitting(false);
       return;
     }
     if (form.type === "transfer" && form.fromAccountId === form.toAccountId) {
       setError("Same account pe transfer nahi kar sakte.");
+      setSubmitting(false);
       return;
     }
-    setError("");
+
     try {
       const payload = {
         date: form.date,
@@ -159,6 +173,8 @@ export default function Transactions() {
       fetchList();
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -236,7 +252,15 @@ export default function Transactions() {
     return row.note || "—";
   };
 
-  const typeLabel = (t) => (t === "deposit" ? "Deposit" : t === "withdraw" ? "Withdraw" : t === "transfer" ? "Transfer" : t === "sale" ? "Sale" : t === "purchase" ? "Purchase" : t);
+  const typeLabel = (t) => {
+    if (t === "deposit") return "Deposit";
+    if (t === "withdraw") return "Withdraw";
+    if (t === "transfer") return "Transfer";
+    if (t === "salary") return "Salary Paid";
+    if (t === "sale") return "Sale";
+    if (t === "purchase") return "Purchase";
+    return t;
+  };
 
   return (
     <div className="space-y-6">
@@ -270,10 +294,11 @@ export default function Transactions() {
               <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className="input-field" required>
                 <option value="deposit">Deposit</option>
                 <option value="withdraw">Withdraw</option>
+                <option value="salary">Salary (Payment)</option>
                 <option value="transfer">Transfer</option>
               </select>
             </div>
-            {(form.type === "withdraw" || form.type === "transfer") && (
+            {(form.type === "withdraw" || form.type === "transfer" || form.type === "salary") && (
               <div>
                 <label className="input-label">From account *</label>
                 <SearchableSelect
@@ -313,7 +338,7 @@ export default function Transactions() {
               />
             </div>
             <div>
-              <label className="input-label">Mazdoor (optional)</label>
+              <label className={`input-label ${form.type === "salary" ? "text-amber-700 font-bold" : ""}`}>Mazdoor {form.type === "salary" ? "*" : "(optional)"}</label>
               <SearchableSelect
                 options={mazdoor}
                 value={form.mazdoorId}
@@ -327,9 +352,18 @@ export default function Transactions() {
             </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            <button type="submit" className="btn-primary">Add transaction</button>
-            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+          <div className="flex gap-2 pt-2">
+            <button type="submit" className="btn-primary flex-1 py-3" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : ("Save Transaction")}
+            </button>
+            <button type="button" onClick={resetForm} className="btn-secondary px-6" disabled={submitting}>
+              Cancel
+            </button>
           </div>
         </form>
       </Modal>
@@ -378,7 +412,7 @@ export default function Transactions() {
                      let credit = 0;
                      let debit = 0;
                      if (row.type === "deposit" || row.type === "sale") credit = row.amount;
-                     else if (row.type === "withdraw" || row.type === "purchase") debit = row.amount;
+                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary") debit = row.amount;
                      else if (row.type === "transfer") {
                        if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
@@ -392,8 +426,8 @@ export default function Transactions() {
                       <tr key={row._id} className="table-row-hover">
                         <td className="table-cell text-sm">{formatDate(row.date)}</td>
                         <td className="table-cell">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
-                            }`}>{typeLabel(row.type)}</span>
+                           <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "salary" ? "bg-amber-100 text-amber-700 border border-amber-200" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                             }`}>{typeLabel(row.type)}</span>
                         </td>
                         <td className="table-cell">
                           <div className="flex flex-col">
@@ -415,7 +449,7 @@ export default function Transactions() {
                     let tDebit = 0;
                     list.forEach(row => {
                       if (row.type === "deposit" || row.type === "sale") tCredit += row.amount;
-                      else if (row.type === "withdraw" || row.type === "purchase") tDebit += row.amount;
+                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary") tDebit += row.amount;
                       else if (row.type === "transfer") {
                         if (filters.accountId && row.toAccountId?._id === filters.accountId) tCredit += row.amount;
                         else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tDebit += row.amount;

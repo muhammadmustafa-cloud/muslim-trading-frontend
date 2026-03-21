@@ -169,7 +169,7 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
 /**
  * Mazdoor history: transactions (salary/udhaar paid + udhaar received).
  */
-export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalReceived, filters = {}) {
+export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalReceived, totalEarned, balance, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let y = 15;
 
@@ -190,17 +190,31 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
     );
     y += 6;
   }
-  doc.setFontSize(10);
   doc.text(
-    `Total diya: ${formatMoney(totalPaid)}  |  Total wapas liya: ${formatMoney(totalReceived)}  |  Net: ${formatMoney((totalPaid ?? 0) - (totalReceived ?? 0))}`,
+    `Total kamaai: ${formatMoney(totalEarned)}  |  Total diya: ${formatMoney(totalPaid)}  |  Wapas mila: ${formatMoney(totalReceived)}`,
+    MARGIN,
+    y
+  );
+  y += 6;
+  doc.setFont(undefined, "bold");
+  doc.text(
+    `Net Balance: ${formatMoney(balance)} ${balance < 0 ? "(Worker owes you)" : balance > 0 ? "(You owe worker)" : "(Settled)"}`,
     MARGIN,
     y
   );
   y += 10;
 
   const getRowType = (t) => {
-    if (t.type === "deposit" && t.category === "udhaar_received") return "Udhaar received";
-    if (t.type === "withdraw") return t.category === "udhaar" ? "Udhaar" : "Salary";
+    if (t.type === "salary" || (t.type === "withdraw" && t.category === "salary")) return "Salary Paid";
+    if (t.type === "withdraw" && t.category === "udhaar") return "Udhaar (Advance)";
+    if (t.type === "accrual") return "Salary Posted (Earned)";
+    if (t.category === "mazdoor_expense") return "Work Earned (Wage)";
+    if (t.type === "deposit" && t.category === "udhaar_received") return "Udhaar wapas liya";
+    if (t.type === "withdraw") {
+      if (t.category === "udhaar") return "Udhaar (Advance)";
+      if (t.category === "salary") return "Salary (Advance)";
+      return t.category || "Payment";
+    }
     return t.category || "—";
   };
   const getRowAccount = (t) => {

@@ -275,7 +275,16 @@ export default function MazdoorExpenses() {
           </div>
           <div className="sm:col-span-2 lg:col-span-6">
             <button type="submit" className="btn-primary" disabled={submitting}>
-              <FaPlus className="w-4 h-4" /> Add expense
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Adding...
+                </span>
+              ) : (
+                <>
+                  <FaPlus className="w-4 h-4" /> Add expense
+                </>
+              )}
             </button>
           </div>
         </form>

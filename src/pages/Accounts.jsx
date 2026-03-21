@@ -18,6 +18,7 @@ export default function Accounts() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "" });
   const [depositModal, setDepositModal] = useState({ open: false, account: null, amount: "", note: "" });
+  const [submitting, setSubmitting] = useState(false);
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -65,6 +66,7 @@ export default function Accounts() {
     e.preventDefault();
     if (!form.name.trim()) { setError("Account ka naam zaroori hai"); return; }
     setError("");
+    setSubmitting(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -78,6 +80,7 @@ export default function Accounts() {
       resetForm();
       await fetchList();
     } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
 
@@ -96,6 +99,7 @@ export default function Accounts() {
       return;
     }
     setError("");
+    setSubmitting(true);
     try {
       await apiPost("/transactions", {
         type: "deposit",
@@ -106,6 +110,7 @@ export default function Accounts() {
       closeDepositModal();
       await fetchList();
     } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
   const toggleSort = (key) => {
@@ -167,8 +172,15 @@ export default function Accounts() {
           <div className="sm:col-span-2"><label className="input-label">Notes</label><input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" /></div>
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <button type="submit" className="btn-primary">{editingId ? "Update" : "Add account"}</button>
-            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : (editingId ? "Update" : "Add account")}
+            </button>
+            <button type="button" onClick={resetForm} className="btn-secondary" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>
@@ -188,8 +200,15 @@ export default function Accounts() {
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-2">
-              <button type="submit" className="btn-primary"><FaMoneyBillWave className="w-4 h-4" /> Deposit</button>
-              <button type="button" onClick={closeDepositModal} className="btn-secondary">Cancel</button>
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </span>
+                ) : <><FaMoneyBillWave className="w-4 h-4" /> Deposit</>}
+              </button>
+              <button type="button" onClick={closeDepositModal} className="btn-secondary" disabled={submitting}>Cancel</button>
             </div>
           </form>
         )}

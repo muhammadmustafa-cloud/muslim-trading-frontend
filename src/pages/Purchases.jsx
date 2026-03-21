@@ -18,6 +18,7 @@ export default function Purchases() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     date: today,
     itemId: "",
@@ -182,6 +183,7 @@ export default function Purchases() {
       return;
     }
     setError("");
+    setSubmitting(true);
     try {
       const payload = {
         date: form.date,
@@ -195,18 +197,23 @@ export default function Purchases() {
         supplierWeight: Number(form.supplierWeight) || 0,
         rate: Number(form.rate) || 0,
         amount: Number(form.amount) || 0,
-        bardanaAmount: Number(form.bardanaAmount) || 0,
+        bardanaAmount: Number(form.amount) || 0, // Wait, was this bardanaAmount? Let me check lines 198
         truckNumber: (form.truckNumber || "").trim(),
         amountPaid: Number(form.amountPaid) || 0,
         dueDate: form.dueDate || undefined,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
       };
+      // Correction: bardanaAmount was correct in target content.
+      payload.bardanaAmount = Number(form.bardanaAmount) || 0;
+
       await apiPost("/stock-entries", payload);
       resetForm();
       fetchList();
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -393,8 +400,15 @@ export default function Purchases() {
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
-             <button type="submit" className="btn-primary">Add entry</button>
-            <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary flex-1" disabled={submitting}>
+              {submitting ? (
+                 <span className="flex items-center justify-center gap-2">
+                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                   Saving...
+                 </span>
+              ) : "Add entry"}
+            </button>
+            <button type="button" onClick={resetForm} className="btn-secondary px-6" disabled={submitting}>Cancel</button>
           </div>
         </form>
       </Modal>
