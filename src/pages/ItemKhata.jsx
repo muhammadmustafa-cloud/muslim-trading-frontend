@@ -11,7 +11,7 @@ export default function ItemKhata() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState({ name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0 });
+  const [data, setData] = useState({ name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -39,7 +39,7 @@ export default function ItemKhata() {
         const res = await fetch(`${API_BASE_URL}/items/${id}/khata?${params}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.message || "Failed to load khata");
-        if (!cancelled) setData(json.data || { name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0 });
+        if (!cancelled) setData(json.data || { name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0 });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {
@@ -52,7 +52,7 @@ export default function ItemKhata() {
 
   const handlePdf = () => {
     downloadKhataPdf(
-      data.name,
+      data,
       data.purchases,
       data.sales,
       data.totalCost ?? 0,
@@ -107,18 +107,26 @@ export default function ItemKhata() {
         <div className="card p-12 flex justify-center"><div className="loading-spinner" /></div>
       ) : (
         <>
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="card p-5 border-l-4 border-l-amber-500">
-              <p className="text-sm text-slate-500 font-medium">Jitna daala (Total cost)</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(totalCost)}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Purchase Cost</p>
+              <p className="text-xl font-black text-slate-900 mt-1">{formatMoney(totalCost)}</p>
+              <p className="text-[10px] text-amber-600 font-bold mt-1 uppercase italic">{data.totalBagsPurchased || 0} Bags In</p>
             </div>
             <div className="card p-5 border-l-4 border-l-emerald-500">
-              <p className="text-sm text-slate-500 font-medium">Jitna becha (Total revenue)</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(totalRevenue)}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Sales Revenue</p>
+              <p className="text-xl font-black text-slate-900 mt-1">{formatMoney(totalRevenue)}</p>
+              <p className="text-[10px] text-emerald-600 font-bold mt-1 uppercase italic">{data.totalBagsSold || 0} Bags Out</p>
             </div>
             <div className="card p-5 border-l-4 border-l-blue-500">
-              <p className="text-sm text-slate-500 font-medium">Net Movement (Profit)</p>
-              <p className={`text-2xl font-bold mt-1 ${profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{formatMoney(profit)}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Stock Balance (Bags)</p>
+              <p className="text-xl font-black text-blue-800 mt-1">{(data.totalBagsPurchased || 0) - (data.totalBagsSold || 0)}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase italic">Remaining in mill</p>
+            </div>
+            <div className="card p-5 border-l-4 border-l-indigo-500">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Net Movement (Profit)</p>
+              <p className={`text-xl font-black mt-1 ${profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{formatMoney(profit)}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase italic">Cash basis profit</p>
             </div>
           </section>
 
@@ -135,41 +143,49 @@ export default function ItemKhata() {
 
                 return (
                   <table className="w-full">
-                    <thead className="bg-slate-50">
+                    <thead className="bg-slate-800 text-white font-bold text-[10px] uppercase tracking-wider">
                       <tr>
-                        <th className="table-header px-5 py-3.5 italic">Date</th>
-                        <th className="table-header px-5 py-3.5">Description</th>
-                        <th className="table-header px-5 py-3.5 text-right">Credit (Sale)</th>
-                        <th className="table-header px-5 py-3.5 text-right">Debit (Purchase)</th>
+                        <th className="py-3 px-4 text-left border-r border-slate-700">Date</th>
+                        <th className="py-3 px-4 text-left border-r border-slate-700">Audit Detail (Party / Note)</th>
+                        <th className="py-3 px-4 text-center border-r border-slate-700">Bags</th>
+                        <th className="py-3 px-4 text-center border-r border-slate-700">Mun (40kg)</th>
+                        <th className="py-3 px-4 text-right border-r border-slate-700 text-emerald-300">Sale (Cr)</th>
+                        <th className="py-3 px-4 text-right text-rose-300">Purchase (Dr)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ledger.map((row) => {
                         const isSale = row.ledgerType === 'sale';
-                        const amount = isSale ? (row.amountReceived || 0) : (row.amountPaid || 0);
+                        const amount = isSale ? (row.totalAmount || 0) : (row.amount || 0);
                         const participant = isSale ? (row.customerId?.name || "Customer") : (row.supplierId?.name || "Supplier");
-                        const description = isSale ? `Sale - ${participant}` : `Purchase - ${participant}`;
+                        const bags = Number(row.kattay) || 0;
+                        const weight = Number(isSale ? row.quantity : row.receivedWeight) || 0;
+                        const mun = (weight / 40).toFixed(2);
 
                         return (
-                          <tr key={row._id} className="table-row-hover border-b border-slate-100">
-                            <td className="table-cell py-3 text-xs text-slate-500">{formatDate(row.date)}</td>
-                            <td className="table-cell font-medium">
+                          <tr key={row._id} className="table-row-hover border-b border-slate-100 text-[11px]">
+                            <td className="py-3 px-4 text-slate-500 italic font-medium border-r border-slate-100">{formatDate(row.date)}</td>
+                            <td className="py-3 px-4 border-r border-slate-100">
                               <div className="flex flex-col">
-                                <span className="text-slate-800">{description}</span>
-                                {row.note && <span className="text-[10px] text-slate-400 font-normal">{row.note}</span>}
+                                <span className="font-bold text-slate-900 uppercase">{participant}</span>
+                                {row.note && <span className="text-[10px] text-slate-500 font-normal italic truncate max-w-[200px]">{row.note}</span>}
                               </div>
                             </td>
-                            <td className="table-cell text-right font-bold text-emerald-600">{isSale ? formatMoney(amount) : "—"}</td>
-                            <td className="table-cell text-right font-bold text-rose-600">{!isSale ? formatMoney(amount) : "—"}</td>
+                            <td className="py-3 px-4 text-center font-bold text-slate-700 border-r border-slate-100 bg-slate-50/30">{bags || "—"}</td>
+                            <td className="py-3 px-4 text-center font-bold text-indigo-700 border-r border-slate-100 bg-indigo-50/10">{mun > 0 ? mun : "—"}</td>
+                            <td className="py-3 px-4 text-right font-black text-emerald-600 border-r border-slate-100 bg-emerald-50/10">{isSale ? formatMoney(amount) : "—"}</td>
+                            <td className="py-3 px-4 text-right font-black text-rose-700 bg-rose-50/10">{!isSale ? formatMoney(amount) : "—"}</td>
                           </tr>
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-slate-100 border-t-2 border-slate-300">
-                      <tr className="font-bold text-slate-900 uppercase tracking-wider text-xs">
-                        <td colSpan="2" className="px-5 py-5 text-right">Total Summary:</td>
-                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(totalRevenue)}</td>
-                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(totalCost)}</td>
+                    <tfoot className="bg-slate-900 text-white font-black text-xs border-t-2 border-slate-300 uppercase tracking-tight">
+                      <tr>
+                        <td colSpan="2" className="px-4 py-4 text-right border-r border-slate-800">Audit Summary:</td>
+                        <td className="px-4 py-4 text-center border-r border-slate-800 text-amber-400 font-black">{data.totalBagsPurchased - data.totalBagsSold}</td>
+                        <td className="px-4 py-4 text-center border-r border-slate-800">—</td>
+                        <td className="px-4 py-4 text-right border-r border-slate-800 text-emerald-400">{formatMoney(totalRevenue)}</td>
+                        <td className="px-4 py-4 text-right text-rose-400">{formatMoney(totalCost)}</td>
                       </tr>
                     </tfoot>
                   </table>

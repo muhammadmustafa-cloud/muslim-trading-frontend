@@ -929,3 +929,61 @@ export function downloadMachineryItemKhataPdf(itemData, filters = {}) {
   addPageNumbers(doc);
   doc.save(`machinery-khata-${itemData.name.replace(/\s+/g, "_")}.pdf`);
 }
+
+/**
+ * Mazdoor Expenses Report PDF.
+ */
+export function downloadMazdoorExpensesPdf(entries, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const totalAmount = entries.reduce((sum, row) => sum + (Number(row.totalAmount) || 0), 0);
+  const totalBags = entries.reduce((sum, row) => sum + (Number(row.bags) || 0), 0);
+
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo)
+    subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
+  if (filters.mazdoorId) {
+    const name = entries[0]?.mazdoorId?.name || "Selected Mazdoor";
+    subtitleLines.push(`Mazdoor: ${name}`);
+  }
+  subtitleLines.push(`Total Bags: ${totalBags} | Total Expense: ${formatMoney(totalAmount)}`);
+
+  let startY = addReportHeader(doc, "Mazdoor Expenses Report", subtitleLines);
+
+  autoTable(doc, {
+    startY,
+    head: [["#", "Date", "Mazdoor", "Item", "Bags", "Rate", "Total", "Account"]],
+    body: entries.map((row, i) => [
+      i + 1,
+      formatDate(row.date),
+      row.mazdoorId?.name || "—",
+      row.mazdoorItemId?.name || "—",
+      row.bags != null ? row.bags : "—",
+      formatMoney(row.mazdoorItemId?.rate),
+      formatMoney(row.totalAmount),
+      row.accountId?.name || "—",
+    ]),
+    foot: [[
+      { content: "AUDIT TOTALS", colSpan: 4, styles: { halign: "right", fontStyle: "bold" } },
+      { content: totalBags, styles: { halign: "center", fontStyle: "bold" } },
+      { content: "—", styles: { halign: "center", fontStyle: "bold" } },
+      { content: formatMoney(totalAmount), styles: { halign: "right", fontStyle: "bold" } },
+      { content: "—", styles: { halign: "center", fontStyle: "bold" } },
+    ]],
+    ...tableTheme,
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 35 },
+      4: { cellWidth: 15, halign: "center" },
+      5: { cellWidth: 20, halign: "right" },
+      6: { cellWidth: 25, halign: "right" },
+      7: { cellWidth: 22 },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save("mazdoor-expenses.pdf");
+}

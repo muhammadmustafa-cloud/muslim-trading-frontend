@@ -289,13 +289,13 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
 /**
  * Item Khata: purchases + sales + total cost, revenue, profit.
  */
-export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue, profit, filters = {}) {
+export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue, profit, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let y = 15;
 
   doc.setFontSize(18);
   doc.setFont(undefined, "bold");
-  doc.text(`${name} Khata`, MARGIN, y);
+  doc.text(`${data.name || "Item"} Khata`, MARGIN, y);
   y += 8;
   doc.setFont(undefined, "normal");
   y = addGeneratedLine(doc, y);
@@ -310,9 +310,11 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
     );
     y += 6;
   }
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.text(`Total Bags In: ${data.totalBagsPurchased || 0}  |  Total Bags Out: ${data.totalBagsSold || 0}  |  Stock Balance: ${(data.totalBagsPurchased || 0) - (data.totalBagsSold || 0)}`, MARGIN, y);
+  y += 6;
   doc.text(
-    `Total daala (cost): ${formatMoney(totalCost)}  |  Total becha (revenue): ${formatMoney(totalRevenue)}  |  Profit: ${formatMoney(profit)}`,
+    `Total Cost: ${formatMoney(totalCost)}  |  Total Revenue: ${formatMoney(totalRevenue)}  |  Profit: ${formatMoney(profit)}`,
     MARGIN,
     y
   );
@@ -325,13 +327,17 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
 
   const formattedRows = ledger.map((row) => {
     const isSale = row.ledgerType === 'sale';
-    const amount = isSale ? (row.amountReceived || 0) : (row.amountPaid || 0);
+    const amount = isSale ? (row.totalAmount || 0) : (row.amount || 0);
     const participant = isSale ? (row.customerId?.name || "Customer") : (row.supplierId?.name || "Supplier");
-    const description = isSale ? `Sale - ${participant}` : `Purchase - ${participant}`;
+    const bags = Number(row.kattay) || 0;
+    const weight = Number(isSale ? row.quantity : row.receivedWeight) || 0;
+    const mun = (weight / 40).toFixed(2);
 
     return [
       formatDate(row.date),
-      description,
+      `${participant}${row.note ? `\nNote: ${row.note}` : ""}`,
+      bags || "—",
+      mun > 0 ? mun : "—",
       isSale ? formatMoney(amount) : "—",
       !isSale ? formatMoney(amount) : "—",
     ];
@@ -339,23 +345,27 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Description", "Credit (Sale)", "Debit (Purchase)"]],
+    head: [["Date", "Audit Detail", "Bags", "Mun", "Sale (Cr)", "Purchase (Dr)"]],
     body: formattedRows,
     foot: [[
-      { content: "TOTAL SUMMARY", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+      { content: "AUDIT TOTALS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+      { content: (data.totalBagsPurchased || 0) - (data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold" } },
+      { content: "—", styles: { halign: "center", fontStyle: "bold" } },
       { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold" } },
       { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold" } },
     ]],
     ...tableTheme,
     theme: "grid",
-    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1 },
-    headStyles: { ...tableTheme.headStyles, fontSize: 9 },
-    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9 },
+    styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
     columnStyles: {
-      0: { cellWidth: 30 },
-      1: { cellWidth: 100 },
-      2: { cellWidth: 30, halign: "right" },
-      3: { cellWidth: 30, halign: "right" },
+      0: { cellWidth: 25 },
+      1: { cellWidth: 65 },
+      2: { cellWidth: 15, halign: "center" },
+      3: { cellWidth: 20, halign: "center" },
+      4: { cellWidth: 28, halign: "right" },
+      5: { cellWidth: 28, halign: "right" },
     },
   });
 
@@ -367,5 +377,5 @@ export function downloadKhataPdf(name, purchases, sales, totalCost, totalRevenue
   doc.text(`Net Movement (Profit): ${formatMoney(profit)}`, pageWidth - MARGIN, finalY, { align: "right" });
 
   addPageNumbers(doc);
-  doc.save(`${(name || "item").replace(/\s+/g, "-")}-khata.pdf`);
+  doc.save(`${(data.name || "item").replace(/\s+/g, "-")}-khata.pdf`);
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiPost, apiDelete } from "../config/api.js";
+import { downloadMazdoorExpensesPdf } from "../utils/exportPdf.js";
 import {
   FaMoneyBillWave,
   FaPlus,
@@ -8,6 +9,7 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
+  FaFilePdf
 } from "react-icons/fa";
 import TablePagination from "../components/TablePagination.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
@@ -328,6 +330,7 @@ export default function MazdoorExpenses() {
             </button>
           </div>
           <p className="text-sm text-slate-500 ml-auto">{list.length} expense(s)</p>
+          <button type="button" onClick={() => downloadMazdoorExpensesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
