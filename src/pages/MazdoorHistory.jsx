@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../config/api.js";
 import { FaArrowLeft, FaFilePdf, FaUser } from "react-icons/fa";
@@ -76,6 +76,27 @@ export default function MazdoorHistory() {
     );
   };
 
+  const getDrCr = (t) => {
+    const isReceive = t.type === "deposit" && t.category === "udhaar_received";
+    const cr = (t.type === "accrual" || t.category === "mazdoor_expense" || isReceive) ? (Number(t.amount) || 0) : 0;
+    const dr = (t.type === "salary" || t.type === "withdraw") ? (Number(t.amount) || 0) : 0;
+    return { dr, cr };
+  };
+
+  const transactionsWithBalance = useMemo(() => {
+    if (!data.transactions) return [];
+    // Calculate running balance from oldest to newest
+    const list = [...data.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let current = 0;
+    const withDetails = list.map((t) => {
+      const { dr, cr } = getDrCr(t);
+      current += (cr - dr);
+      return { ...t, dr, cr, runningBalance: current };
+    });
+    // Return newest first for display
+    return withDetails.reverse();
+  }, [data.transactions]);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -88,7 +109,7 @@ export default function MazdoorHistory() {
               <FaUser className="w-7 h-7 text-amber-500" />
               History — {data.name || "Mazdoor"}
             </h1>
-            <p className="page-subtitle">Salary / udhaar diya + udhaar wapas liya — saari entries.</p>
+            <p className="page-subtitle">Professional Ledger: Money Earned (Credit) vs Money Paid (Debit).</p>
           </div>
         </div>
         <button type="button" onClick={handlePdf} className="btn-primary flex items-center gap-2" disabled={loading}>
@@ -99,7 +120,7 @@ export default function MazdoorHistory() {
       {error && <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">{error}</div>}
 
       <section className="card p-4">
-        <h3 className="font-semibold text-slate-800 mb-3">Filter</h3>
+        <h3 className="font-semibold text-slate-800 mb-3">Audit Filter</h3>
         <div className="flex flex-wrap items-center gap-4">
           <div>
             <label className="input-label text-xs">Date from</label>
@@ -118,60 +139,86 @@ export default function MazdoorHistory() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="card p-5 border-l-4 border-l-emerald-500">
-              <p className="text-sm text-slate-500 font-medium">Total Earned (Salary + Wage)</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(data.totalEarned)}</p>
+            <div className="card p-5 border-l-4 border-l-slate-800">
+              <p className="text-sm text-slate-500 font-medium">Total Earned (Credit)</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatMoney(data.totalEarned + data.totalReceived)}</p>
+              <p className="text-[10px] text-slate-400 uppercase mt-1 text-black">Work + Udhaar Returns</p>
             </div>
-            <div className="card p-5 border-l-4 border-l-amber-500">
-              <p className="text-sm text-slate-500 font-medium">Total Paid (Advances)</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(data.totalPaid)}</p>
+            <div className="card p-5 border-l-4 border-l-slate-800">
+              <p className="text-sm text-slate-500 font-medium">Total Paid (Debit)</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatMoney(data.totalPaid)}</p>
+              <p className="text-[10px] text-slate-400 uppercase mt-1 text-black">Advances + Salaries</p>
             </div>
-            <div className="card p-5 border-l-4 border-l-blue-500">
-              <p className="text-sm text-slate-500 font-medium">Total Received Back</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{formatMoney(data.totalReceived)}</p>
-            </div>
-            <div className={`card p-5 border-l-4 min-w-[180px] ${data.balance < 0 ? "border-l-red-500 bg-red-50" : "border-l-indigo-500"}`}>
-              <p className="text-sm text-slate-500 font-medium">Net Balance (Khata)</p>
-              <p className={`text-2xl font-bold mt-1 ${data.balance < 0 ? "text-red-700" : "text-slate-800"}`}>
-                {formatMoney(data.balance)}
+            <div className="card p-5 border-l-4 border-l-slate-800 bg-slate-50">
+              <p className="text-sm text-slate-500 font-medium">Net Financial Position</p>
+              <p className="text-2xl font-bold mt-1 text-slate-900">
+                {formatMoney(Math.abs(data.balance))} {data.balance >= 0 ? "Cr" : "Dr"}
               </p>
-              <p className="text-[10px] uppercase tracking-wider text-slate-400 mt-1">
-                {data.balance < 0 ? "Worker owes you" : data.balance > 0 ? "You owe worker" : "Settled"}
+              <p className="text-[10px] uppercase tracking-wider text-slate-600 mt-1 font-semibold">
+                {data.balance < 0 ? "Worker Owes Mill" : data.balance > 0 ? "Mill Owes Worker" : "Settled"}
               </p>
+            </div>
+            <div className="card p-5 border-l-4 border-l-slate-800">
+              <p className="text-sm text-slate-500 font-medium">Last Updated</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{formatDate(new Date())}</p>
             </div>
           </div>
 
           <section className="card overflow-hidden">
-            <h2 className="p-4 border-b border-slate-100 font-semibold text-slate-800">Transaction history</h2>
+            <header className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+               <h2 className="font-bold text-slate-900 uppercase tracking-wider text-sm text-black">Account Ledger (Audit View)</h2>
+               <span className="text-xs text-slate-600 italic">Showing {transactionsWithBalance.length} entries</span>
+            </header>
             <div className="overflow-x-auto">
-              {data.transactions?.length === 0 ? (
-                <p className="p-6 text-slate-500">Abhi koi entry nahi. Mazdoor page se Salary / Udhaar do ya Udhaar wapas lo.</p>
+              {transactionsWithBalance.length === 0 ? (
+                <p className="p-6 text-slate-500">No transactions found for the selected period.</p>
               ) : (
-                <table className="w-full">
-                  <thead><tr><th className="table-header px-4 py-2 text-left">Date</th><th className="table-header px-4 py-2 text-left">Account</th><th className="table-header px-4 py-2">Type</th><th className="table-header px-4 py-2 text-right">Amount</th><th className="table-header px-4 py-2 text-left">Note</th></tr></thead>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="table-header px-4 py-3 text-left w-32 text-black border border-slate-200">Date</th>
+                      <th className="table-header px-4 py-3 text-left text-black border border-slate-200">Description / Account</th>
+                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200">Credit (+)</th>
+                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200">Debit (-)</th>
+                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200 bg-slate-50">Balance</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {data.transactions?.map((t) => {
+                    {transactionsWithBalance.map((t) => {
                       const rowType = getRowType(t);
-                      const isReceive = t.type === "deposit" && t.category === "udhaar_received";
                       return (
-                        <tr key={t._id} className="table-row-hover border-b border-slate-100">
-                          <td className="table-cell py-2">{formatDate(t.date)}</td>
-                          <td className="table-cell font-medium">{getRowAccount(t)}</td>
-                          <td className="table-cell">
-                            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium 
-                              ${t.type === "accrual" || t.category === "mazdoor_expense" ? "bg-emerald-100 text-emerald-800" : 
-                                isReceive ? "bg-blue-100 text-blue-800" : 
-                                rowType.includes("Udhaar") ? "bg-amber-100 text-amber-800" : 
-                                "bg-slate-100 text-slate-700"}`}>
-                              {rowType}
-                            </span>
+                        <tr key={t._id} className="hover:bg-slate-50 border-b border-slate-200 group">
+                          <td className="px-4 py-3 align-top text-black border-r border-slate-200">{formatDate(t.date)}</td>
+                          <td className="px-4 py-3 align-top border-r border-slate-200">
+                            <div className="font-medium text-black">{rowType}</div>
+                            <div className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
+                              Via: {getRowAccount(t)}
+                            </div>
+                            {t.note && <div className="text-[11px] text-slate-500 italic mt-1 line-clamp-1 group-hover:line-clamp-none transition-all">"{t.note}"</div>}
                           </td>
-                          <td className="table-cell text-right font-medium">{formatMoney(t.amount)}</td>
-                          <td className="table-cell text-slate-600">{t.note || "—"}</td>
+                          <td className="px-4 py-3 text-right align-top font-semibold text-black border-r border-slate-200">
+                            {t.cr > 0 ? formatMoney(t.cr) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right align-top font-semibold text-black border-r border-slate-200">
+                            {t.dr > 0 ? formatMoney(t.dr) : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right align-top font-bold text-black bg-slate-50/50">
+                            {formatMoney(Math.abs(t.runningBalance))} {t.runningBalance >= 0 ? "Cr" : "Dr"}
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-800 text-white font-bold text-sm">
+                       <td colSpan="2" className="px-4 py-3 text-right uppercase tracking-widest border border-slate-700">Total Period Movement</td>
+                       <td className="px-4 py-3 text-right border border-slate-700">{formatMoney(data.totalEarned + data.totalReceived)}</td>
+                       <td className="px-4 py-3 text-right border border-slate-700">{formatMoney(data.totalPaid)}</td>
+                       <td className="px-4 py-3 text-right bg-slate-700 border border-slate-700">
+                         {formatMoney(Math.abs(data.balance))} {data.balance >= 0 ? "Cr" : "Dr"}
+                       </td>
+                    </tr>
+                  </tfoot>
                 </table>
               )}
             </div>

@@ -198,12 +198,11 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
   y += 6;
   doc.setFont(undefined, "bold");
   doc.text(
-    `Net Balance: ${formatMoney(balance)} ${balance < 0 ? "(Worker owes you)" : balance > 0 ? "(You owe worker)" : "(Settled)"}`,
+    `Net Financial Position: ${formatMoney(Math.abs(balance))} ${balance >= 0 ? "Cr" : "Dr"} (${balance < 0 ? "Worker owes mill" : balance > 0 ? "Mill owes worker" : "Settled"})`,
     MARGIN,
     y
   );
   y += 10;
-
   const getRowType = (t) => {
     if (t.type === "salary" || (t.type === "withdraw" && t.category === "salary")) return "Salary Paid";
     if (t.type === "withdraw" && t.category === "udhaar") return "Udhaar (Advance)";
@@ -217,29 +216,69 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
     }
     return t.category || "—";
   };
+
   const getRowAccount = (t) => {
     if (t.type === "deposit" && t.toAccountId) return t.toAccountId.name || "—";
     return (t.fromAccountId && t.fromAccountId.name) || "—";
   };
 
+  const getDrCr = (t) => {
+    const isReceive = t.type === "deposit" && t.category === "udhaar_received";
+    const cr = (t.type === "accrual" || t.category === "mazdoor_expense" || isReceive) ? (Number(t.amount) || 0) : 0;
+    const dr = (t.type === "salary" || t.type === "withdraw") ? (Number(t.amount) || 0) : 0;
+    return { dr, cr };
+  };
+
+  // Pre-calculate running balances for auditing
+  const sortedList = [...(transactions || [])].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let curr = 0;
+  const balancesMap = {};
+  sortedList.forEach((t) => {
+    const { dr, cr } = getDrCr(t);
+    curr += (cr - dr);
+    balancesMap[t._id] = curr;
+  });
+
   if (transactions && transactions.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Transactions (salary / udhaar diya + udhaar wapas liya)", MARGIN, y);
-    y += 6;
-    doc.setFont(undefined, "normal");
     autoTable(doc, {
       startY: y,
-      head: [["#", "Date", "Account", "Type", "Amount", "Note"]],
-      body: transactions.map((t, i) => [
-        i + 1,
-        formatDate(t.date),
-        getRowAccount(t),
-        getRowType(t),
-        formatMoney(t.amount),
-        (t.note || "—").slice(0, 40),
-      ]),
+      theme: "grid", // Professional ledger grid lines
+      head: [["Date", "Description / Account", "Credit (+)", "Debit (-)", "Balance"]],
+      body: transactions.map((t) => {
+        const { dr, cr } = getDrCr(t);
+        const bal = balancesMap[t._id] ?? 0;
+        return [
+          formatDate(t.date),
+          { 
+            content: `${getRowType(t)}\nVia: ${getRowAccount(t)}${t.note ? `\n"${t.note.slice(0, 50)}"` : ""}`, 
+            styles: { fontSize: 7, textColor: [0, 0, 0] } 
+          },
+          cr > 0 ? formatMoney(cr) : "—",
+          dr > 0 ? formatMoney(dr) : "—",
+          { 
+            content: `${formatMoney(Math.abs(bal))} ${bal >= 0 ? "Cr" : "Dr"}`, 
+            styles: { fontStyle: "bold", textColor: [0, 0, 0] } 
+          }
+        ];
+      }),
+      foot: [[
+        { content: "TOTAL MOVEMENT", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+        { content: formatMoney(totalEarned + totalReceived), styles: { halign: "right", fontStyle: "bold", textColor: [0, 0, 0] } },
+        { content: formatMoney(totalPaid), styles: { halign: "right", fontStyle: "bold", textColor: [0, 0, 0] } },
+        { 
+          content: `${formatMoney(Math.abs(balance))} ${balance >= 0 ? "Cr" : "Dr"}`, 
+          styles: { halign: "right", fontStyle: "bold", fillColor: [230, 230, 230], textColor: [0, 0, 0] } 
+        }
+      ]],
       ...tableTheme,
+      styles: { ...tableTheme.styles, textColor: [0, 0, 0], lineWidth: 0.1 }, 
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: "auto" },
+        2: { halign: "right", cellWidth: 25 },
+        3: { halign: "right", cellWidth: 25 },
+        4: { halign: "right", cellWidth: 25 },
+      },
     });
   }
 
