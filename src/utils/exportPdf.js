@@ -768,3 +768,164 @@ export function downloadPurchaseInvoicePdf(entry) {
 
   doc.save(`purchase-invoice-${entryNo.replace(/\//g, "-")}.pdf`);
 }
+
+/**
+ * Machinery Items Registry PDF.
+ */
+export function downloadMachineryItemsPdf(items) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [`Total items: ${items.length}`];
+  let startY = addReportHeader(doc, "Machinery Items Registry", subtitleLines);
+
+  if (!items.length) {
+    doc.setFontSize(10);
+    doc.text("No machinery items.", MARGIN, startY);
+    doc.save("machinery-items.pdf");
+    return;
+  }
+
+  autoTable(doc, {
+    startY,
+    head: [["#", "Item Name", "Model/Quality", "Description"]],
+    body: items.map((row, i) => [
+      i + 1,
+      row.name || "—",
+      row.quality || "—",
+      row.description || "—",
+    ]),
+    ...tableTheme,
+    columnStyles: {
+      0: { cellWidth: 10 },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 40 },
+      3: { cellWidth: 80 },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save("machinery-items.pdf");
+}
+
+/**
+ * Machinery Purchases Report PDF.
+ */
+export function downloadMachineryPurchasesPdf(entries, filters = {}) {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo)
+    subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
+  subtitleLines.push(`Total records: ${entries.length}`);
+
+  let startY = addReportHeader(doc, "Machinery Purchase Report", subtitleLines);
+
+  if (!entries.length) {
+    doc.setFontSize(10);
+    doc.text("No entries.", MARGIN, startY);
+    doc.save("machinery-purchases.pdf");
+    return;
+  }
+
+  autoTable(doc, {
+    startY,
+    head: [["#", "Date", "Item", "Supplier", "Account", "Qty", "Amount", "Note"]],
+    body: entries.map((row, i) => [
+      i + 1,
+      formatDate(row.date),
+      row.machineryItemId?.name || "—",
+      row.supplierId?.name || "—",
+      row.accountId?.name || "—",
+      row.quantity || 1,
+      formatMoney(row.amount),
+      row.note || "—",
+    ]),
+    ...tableTheme,
+    columnStyles: {
+      0: { cellWidth: 10 },
+      1: { cellWidth: 25 },
+      2: { cellWidth: 40 },
+      3: { cellWidth: 40 },
+      4: { cellWidth: 35 },
+      5: { cellWidth: 15 },
+      6: { cellWidth: 30, halign: "right" },
+      7: { cellWidth: 70 },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save("machinery-purchases.pdf");
+}
+
+/**
+ * Machinery Ledger (Investment) PDF.
+ */
+export function downloadMachineryLedgerPdf(items) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const totalInvestment = items.reduce((sum, item) => sum + (item.totalCost || 0), 0);
+  const subtitleLines = [
+    `Total items: ${items.length}`,
+    `Total Investment: ${formatMoney(totalInvestment)}`,
+  ];
+  let startY = addReportHeader(doc, "Machinery Ledger Summary", subtitleLines);
+
+  autoTable(doc, {
+    startY,
+    head: [["#", "Machinery Item", "Model/Quality", "Total Investment (DR)"]],
+    body: items.map((row, i) => [
+      i + 1,
+      row.name || "—",
+      row.quality || "—",
+      formatMoney(row.totalCost),
+    ]),
+    ...tableTheme,
+    columnStyles: {
+      0: { cellWidth: 15 },
+      1: { cellWidth: 80 },
+      2: { cellWidth: 45 },
+      3: { cellWidth: 40, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save("machinery-ledger.pdf");
+}
+
+/**
+ * Machinery Item Khata (Audit/History) PDF.
+ */
+export function downloadMachineryItemKhataPdf(itemData, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo)
+    subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
+  subtitleLines.push(`Current Valuation/Total Cost: ${formatMoney(itemData.totalCost)}`);
+
+  let startY = addReportHeader(doc, `${itemData.name} - Professional Audit Ledger`, subtitleLines);
+
+  autoTable(doc, {
+    startY,
+    head: [["Date", "Description", "Credit (In)", "Debit (Out)"]],
+    body: itemData.purchases.map((row) => [
+      formatDate(row.date),
+      `${row.supplierId?.name || "Supplier"} [VIA: ${row.accountId?.name || "Cash"}]${row.note ? `\nNote: ${row.note}` : ""}`,
+      "—",
+      formatMoney(row.amount),
+    ]),
+    foot: [[
+      { content: "GRAND TOTAL EXPENSE", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+      { content: "—", styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(itemData.totalCost), styles: { halign: "right", fontStyle: "bold" } },
+    ]],
+    ...tableTheme,
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 30 },
+      1: { cellWidth: 90 },
+      2: { cellWidth: 30, halign: "right" },
+      3: { cellWidth: 30, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`machinery-khata-${itemData.name.replace(/\s+/g, "_")}.pdf`);
+}

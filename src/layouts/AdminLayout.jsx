@@ -16,6 +16,8 @@ import {
   FaIndustry,
   FaHandHoldingUsd,
   FaBook,
+  FaCogs,
+  FaTools,
 } from "react-icons/fa";
 
 const navItems = [
@@ -35,6 +37,9 @@ const navItems = [
   { to: "/purchases", icon: FaBoxOpen, label: "Purchase" },
   { to: "/current-stock", icon: FaBoxes, label: "Current Stock" },
   { to: "/sales", icon: FaShoppingCart, label: "Sales" },
+  { to: "/machinery-items", icon: FaCogs, label: "Machinery Items" },
+  { to: "/machinery-purchases", icon: FaTools, label: "Machinery Purchase" },
+  { to: "/machinery-ledger", icon: FaBook, label: "Machinery Ledger" },
   { to: "/transactions", icon: FaExchangeAlt, label: "Transactions" },
 ];
 

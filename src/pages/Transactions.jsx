@@ -236,6 +236,11 @@ export default function Transactions() {
       if (row.toAccountId?._id === filters.accountId) return row.fromAccountId?.name || "Manual";
     }
 
+    // 5. Machinery fallback
+    if (row.machineryPurchaseId) {
+      return row.machineryPurchaseId.machineryItemId?.name || "Machinery Part";
+    }
+    
     // 4. Global view fallback
     return row.fromAccountId?.name || row.toAccountId?.name || "Manual";
   };
@@ -248,6 +253,9 @@ export default function Transactions() {
     if (row.saleId) {
       const sale = row.saleId;
       return `Sale Ref: ${sale._id?.slice(-6).toUpperCase() || "—"} ${sale.truckNumber ? `(${sale.truckNumber})` : ""}`;
+    }
+    if (row.machineryPurchaseId) {
+      return `Machinery: ${row.machineryPurchaseId.machineryItemId?.name || "Asset"} (Ref: ${row.machineryPurchaseId._id?.slice(-6).toUpperCase()})`;
     }
     return row.note || "—";
   };

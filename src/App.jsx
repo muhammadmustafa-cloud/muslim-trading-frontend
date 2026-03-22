@@ -22,6 +22,10 @@ import Transactions from "./pages/Transactions";
 import DailyKhata from "./pages/DailyKhata";
 import UniversalLedger from "./pages/UniversalLedger";
 import MillKhata from "./pages/MillKhata";
+import MachineryItems from "./pages/MachineryItems";
+import MachineryItemKhata from "./pages/MachineryItemKhata.jsx";
+import MachineryLedger from "./pages/MachineryLedger.jsx";
+import MachineryPurchases from "./pages/MachineryPurchases";
 
 function App() {
   return (
@@ -52,6 +56,10 @@ function App() {
           <Route path="universal-ledger" element={<UniversalLedger />} />
           <Route path="daily-cash-memo" element={<DailyKhata />} />
           <Route path="mill-khata" element={<MillKhata />} />
+          <Route path="machinery-items" element={<MachineryItems />} />
+          <Route path="machinery-items/:id/khata" element={<MachineryItemKhata />} />
+          <Route path="machinery-ledger" element={<MachineryLedger />} />
+          <Route path="machinery-purchases" element={<MachineryPurchases />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
