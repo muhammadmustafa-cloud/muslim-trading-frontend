@@ -331,7 +331,7 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
     const participant = isSale ? (row.customerId?.name || "Customer") : (row.supplierId?.name || "Supplier");
     const bags = Number(row.kattay) || 0;
     const weight = Number(isSale ? row.quantity : row.receivedWeight) || 0;
-    const mun = (weight / 40).toFixed(2);
+    const mun = weight > 0 ? (weight / 40).toFixed(3) : 0;
 
     return [
       formatDate(row.date),
@@ -347,13 +347,29 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
     startY: y,
     head: [["Date", "Audit Detail", "Bags", "Mun", "Sale (Cr)", "Purchase (Dr)"]],
     body: formattedRows,
-    foot: [[
-      { content: "AUDIT TOTALS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
-      { content: (data.totalBagsPurchased || 0) - (data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold" } },
-      { content: "—", styles: { halign: "center", fontStyle: "bold" } },
-      { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold" } },
-      { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold" } },
-    ]],
+    foot: [
+      [
+        { content: "PURCHASED (IN)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [6, 78, 59] } },
+        { content: String(data.totalBagsPurchased || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [6, 78, 59] } },
+        { content: (data.totalMunPurchased || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [6, 78, 59] } },
+        { content: "—", styles: { halign: "right", fontStyle: "bold", fillColor: [6, 78, 59] } },
+        { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold", fillColor: [6, 78, 59] } },
+      ],
+      [
+        { content: "SOLD (OUT)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [127, 29, 29] } },
+        { content: String(data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [127, 29, 29] } },
+        { content: (data.totalMunSold || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [127, 29, 29] } },
+        { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [127, 29, 29] } },
+        { content: "—", styles: { halign: "right", fontStyle: "bold", fillColor: [127, 29, 29] } },
+      ],
+      [
+        { content: "BALANCE (REMAINING)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: String((data.totalBagsPurchased || 0) - (data.totalBagsSold || 0)), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: ((data.totalMunPurchased || 0) - (data.totalMunSold || 0)).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
+      ],
+    ],
     ...tableTheme,
     theme: "grid",
     styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1 },
