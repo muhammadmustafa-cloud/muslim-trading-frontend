@@ -21,6 +21,7 @@ export default function Transactions() {
   const [suppliers, setSuppliers] = useState([]);
   const [mazdoor, setMazdoor] = useState([]);
   const [taxTypes, setTaxTypes] = useState([]);
+  const [expenseTypes, setExpenseTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -35,6 +36,7 @@ export default function Transactions() {
     supplierId: "",
     mazdoorId: "",
     taxTypeId: "",
+    expenseTypeId: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "" });
@@ -76,6 +78,12 @@ export default function Transactions() {
       setTaxTypes(data || []);
     } catch (_) { }
   };
+  const fetchExpenseTypes = async () => {
+    try {
+      const { data } = await apiGet("/expense-types");
+      setExpenseTypes(data || []);
+    } catch (_) { }
+  };
 
   const fetchList = async () => {
     setLoading(true);
@@ -103,6 +111,7 @@ export default function Transactions() {
     fetchSuppliers();
     fetchMazdoor();
     fetchTaxTypes();
+    fetchExpenseTypes();
   }, []);
   useEffect(() => {
     fetchList();
@@ -120,6 +129,7 @@ export default function Transactions() {
       supplierId: "",
       mazdoorId: "",
       taxTypeId: "",
+      expenseTypeId: "",
     });
     setModalOpen(false);
   };
@@ -145,13 +155,18 @@ export default function Transactions() {
       setSubmitting(false);
       return;
     }
-    if ((form.type === "withdraw" || form.type === "salary" || form.type === "tax") && !form.fromAccountId) {
-      setError(`${form.type === "salary" ? "Salary" : form.type === "tax" ? "Tax" : "Withdraw"} ke liye account select karein.`);
+    if ((form.type === "withdraw" || form.type === "salary" || form.type === "tax" || form.type === "expense") && !form.fromAccountId) {
+      setError(`${form.type === "salary" ? "Salary" : form.type === "tax" ? "Tax" : form.type === "expense" ? "Expense" : "Withdraw"} ke liye account select karein.`);
       setSubmitting(false);
       return;
     }
     if (form.type === "tax" && !form.taxTypeId) {
       setError("Tax type select karein.");
+      setSubmitting(false);
+      return;
+    }
+    if (form.type === "expense" && !form.expenseTypeId) {
+      setError("Expense type select karein.");
       setSubmitting(false);
       return;
     }
@@ -183,6 +198,7 @@ export default function Transactions() {
         supplierId: form.supplierId || undefined,
         mazdoorId: form.mazdoorId || undefined,
         taxTypeId: form.taxTypeId || undefined,
+        expenseTypeId: form.expenseTypeId || undefined,
       };
       await apiPost("/transactions", payload);
       resetForm();
@@ -259,6 +275,7 @@ export default function Transactions() {
     
     // 6. Tax logic
     if (row.type === "tax") return row.taxTypeName || "Tax Payment";
+    if (row.type === "expense") return row.expenseTypeName || "General Expense";
     
     // 4. Global view fallback
     return row.fromAccountId?.name || row.toAccountId?.name || "Manual";
@@ -277,6 +294,7 @@ export default function Transactions() {
       return `Machinery: ${row.machineryPurchaseId.machineryItemId?.name || "Asset"} (Ref: ${row.machineryPurchaseId._id?.slice(-6).toUpperCase()})`;
     }
     if (row.type === "tax") return `Tax Payment: ${row.taxTypeName || "—"}`;
+    if (row.type === "expense") return `Expense: ${row.expenseTypeName || "—"}`;
     return row.note || "—";
   };
 
@@ -286,6 +304,7 @@ export default function Transactions() {
     if (t === "transfer") return "Transfer";
     if (t === "salary") return "Salary Paid";
     if (t === "tax") return "Tax Paid";
+    if (t === "expense") return "Expense Paid";
     if (t === "sale") return "Sale";
     if (t === "purchase") return "Purchase";
     return t;
@@ -324,6 +343,7 @@ export default function Transactions() {
                 <option value="deposit">Deposit</option>
                 <option value="withdraw">Withdraw</option>
                 <option value="tax">Tax Payment (Audit)</option>
+                <option value="expense">General Expense (Kharcha)</option>
                 <option value="salary">Salary (Payment)</option>
                 <option value="transfer">Transfer</option>
               </select>
@@ -344,7 +364,23 @@ export default function Transactions() {
                 </select>
               </div>
             )}
-            {(form.type === "withdraw" || form.type === "transfer" || form.type === "salary" || form.type === "tax") && (
+            {form.type === "expense" && (
+              <div>
+                <label className="input-label font-bold text-rose-600">Expense Type *</label>
+                <select 
+                  value={form.expenseTypeId} 
+                  onChange={(e) => setForm((f) => ({ ...f, expenseTypeId: e.target.value }))} 
+                  className="input-field border-rose-200 bg-rose-50/30"
+                  required
+                >
+                  <option value="">Select expense category</option>
+                  {expenseTypes.map(t => (
+                    <option key={t._id} value={t._id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {(form.type === "withdraw" || form.type === "transfer" || form.type === "salary" || form.type === "tax" || form.type === "expense") && (
               <div>
                 <label className="input-label">From account *</label>
                 <SearchableSelect
@@ -458,7 +494,7 @@ export default function Transactions() {
                      let credit = 0;
                      let debit = 0;
                      if (row.type === "deposit" || row.type === "sale") credit = row.amount;
-                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax") debit = row.amount;
+                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") debit = row.amount;
                      else if (row.type === "transfer") {
                        if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
@@ -478,6 +514,7 @@ export default function Transactions() {
                               row.type === "withdraw" ? "bg-red-100 text-red-700" : 
                               row.type === "tax" ? "bg-orange-100 text-orange-700 border border-orange-200" :
                               row.type === "salary" ? "bg-amber-100 text-amber-700 border border-amber-200" : 
+                              row.type === "expense" ? "bg-rose-100 text-rose-700 border border-rose-200" :
                               row.type === "purchase" ? "bg-orange-100 text-orange-700" : 
                               "bg-blue-100 text-blue-700"
                               }`}>{typeLabel(row.type)}</span>
@@ -502,7 +539,7 @@ export default function Transactions() {
                     let tDebit = 0;
                     list.forEach(row => {
                       if (row.type === "deposit" || row.type === "sale") tCredit += row.amount;
-                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary") tDebit += row.amount;
+                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tDebit += row.amount;
                       else if (row.type === "transfer") {
                         if (filters.accountId && row.toAccountId?._id === filters.accountId) tCredit += row.amount;
                         else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tDebit += row.amount;

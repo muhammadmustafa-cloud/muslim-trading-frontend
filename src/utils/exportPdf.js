@@ -1046,3 +1046,62 @@ export function downloadMazdoorExpensesPdf(entries, filters = {}) {
   addPageNumbers(doc);
   doc.save("mazdoor-expenses.pdf");
 }
+
+/**
+ * Individual Expense Ledger PDF.
+ */
+export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo) {
+    subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
+  }
+  subtitleLines.push(`Total Transactions recorded: ${sessions.length}`);
+  subtitleLines.push(`Total Spent Amount: Rs. ${formatMoney(totalPaid)}`);
+
+  let startY = addReportHeader(doc, `Expense Ledger — ${expenseType.name.toUpperCase()}`, subtitleLines);
+
+  if (!sessions.length) {
+    doc.setFontSize(10);
+    doc.text("No records found for this expense category in the selected range.", MARGIN, startY);
+    doc.save(`expense-ledger-${expenseType.name.replace(/\s+/g, "_")}.pdf`);
+    return;
+  }
+
+  let runningBalance = 0;
+  autoTable(doc, {
+    startY,
+    head: [["Date", "Description / Account", "Credit (In)", "Debit (Out)", "Balance"]],
+    body: sessions.map((row) => {
+      const debit = row.amount || 0;
+      const credit = 0;
+      runningBalance += debit - credit;
+      return [
+        formatDate(row.date),
+        `${row.fromAccountId?.name || "Manual"}\n${row.note || ""}`,
+        "—",
+        formatMoney(debit),
+        { content: formatMoney(runningBalance), styles: { halign: "right", fontStyle: "bold" } },
+      ];
+    }),
+    foot: [[
+      { content: "GRAND TOTALS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+      "—",
+      { content: formatMoney(totalPaid), styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalPaid), styles: { halign: "right", fontStyle: "bold" } },
+    ]],
+    ...tableTheme,
+    headStyles: { ...tableTheme.headStyles, fillColor: [225, 29, 72] }, // rose color for expense theme
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 25, halign: "right" },
+      3: { cellWidth: 30, halign: "right" },
+      4: { cellWidth: 30, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`expense-ledger-${expenseType.name.replace(/\s+/g, "_")}.pdf`);
+}

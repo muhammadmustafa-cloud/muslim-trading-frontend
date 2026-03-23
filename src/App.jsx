@@ -28,6 +28,8 @@ import MachineryLedger from "./pages/MachineryLedger.jsx";
 import MachineryPurchases from "./pages/MachineryPurchases";
 import TaxTypes from "./pages/TaxTypes";
 import TaxLedger from "./pages/TaxLedger";
+import ExpenseTypes from "./pages/ExpenseTypes";
+import ExpenseLedger from "./pages/ExpenseLedger";
 
 function App() {
   return (
@@ -64,6 +66,8 @@ function App() {
           <Route path="machinery-purchases" element={<MachineryPurchases />} />
           <Route path="tax-types" element={<TaxTypes />} />
           <Route path="tax-types/:id/ledger" element={<TaxLedger />} />
+          <Route path="expense-types" element={<ExpenseTypes />} />
+          <Route path="expense-types/:id/ledger" element={<ExpenseLedger />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
