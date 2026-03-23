@@ -18,6 +18,7 @@ import {
   FaBook,
   FaCogs,
   FaTools,
+  FaBalanceScale,
 } from "react-icons/fa";
 
 const navItems = [
@@ -41,6 +42,7 @@ const navItems = [
   { to: "/machinery-purchases", icon: FaTools, label: "Machinery Purchase" },
   { to: "/machinery-ledger", icon: FaBook, label: "Machinery Ledger" },
   { to: "/transactions", icon: FaExchangeAlt, label: "Transactions" },
+  { to: "/tax-types", icon: FaBalanceScale, label: "Tax Management" },
 ];
 
 export default function AdminLayout() {

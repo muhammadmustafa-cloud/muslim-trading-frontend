@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadTransactionsPdf } from "../utils/exportPdf.js";
 import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
@@ -20,6 +20,7 @@ export default function Transactions() {
   const [accounts, setAccounts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [mazdoor, setMazdoor] = useState([]);
+  const [taxTypes, setTaxTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function Transactions() {
     note: "",
     supplierId: "",
     mazdoorId: "",
+    taxTypeId: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "" });
@@ -68,6 +70,12 @@ export default function Transactions() {
       if (res.ok) setMazdoor(data.data || []);
     } catch (_) { }
   };
+  const fetchTaxTypes = async () => {
+    try {
+      const { data } = await apiGet("/tax-types");
+      setTaxTypes(data || []);
+    } catch (_) { }
+  };
 
   const fetchList = async () => {
     setLoading(true);
@@ -94,6 +102,7 @@ export default function Transactions() {
     fetchAccounts();
     fetchSuppliers();
     fetchMazdoor();
+    fetchTaxTypes();
   }, []);
   useEffect(() => {
     fetchList();
@@ -110,6 +119,7 @@ export default function Transactions() {
       note: "",
       supplierId: "",
       mazdoorId: "",
+      taxTypeId: "",
     });
     setModalOpen(false);
   };
@@ -135,8 +145,13 @@ export default function Transactions() {
       setSubmitting(false);
       return;
     }
-    if ((form.type === "withdraw" || form.type === "salary") && !form.fromAccountId) {
-      setError(`${form.type === "salary" ? "Salary" : "Withdraw"} ke liye account select karein.`);
+    if ((form.type === "withdraw" || form.type === "salary" || form.type === "tax") && !form.fromAccountId) {
+      setError(`${form.type === "salary" ? "Salary" : form.type === "tax" ? "Tax" : "Withdraw"} ke liye account select karein.`);
+      setSubmitting(false);
+      return;
+    }
+    if (form.type === "tax" && !form.taxTypeId) {
+      setError("Tax type select karein.");
       setSubmitting(false);
       return;
     }
@@ -167,6 +182,7 @@ export default function Transactions() {
         note: (form.note || "").trim(),
         supplierId: form.supplierId || undefined,
         mazdoorId: form.mazdoorId || undefined,
+        taxTypeId: form.taxTypeId || undefined,
       };
       await apiPost("/transactions", payload);
       resetForm();
@@ -241,6 +257,9 @@ export default function Transactions() {
       return row.machineryPurchaseId.machineryItemId?.name || "Machinery Part";
     }
     
+    // 6. Tax logic
+    if (row.type === "tax") return row.taxTypeName || "Tax Payment";
+    
     // 4. Global view fallback
     return row.fromAccountId?.name || row.toAccountId?.name || "Manual";
   };
@@ -257,6 +276,7 @@ export default function Transactions() {
     if (row.machineryPurchaseId) {
       return `Machinery: ${row.machineryPurchaseId.machineryItemId?.name || "Asset"} (Ref: ${row.machineryPurchaseId._id?.slice(-6).toUpperCase()})`;
     }
+    if (row.type === "tax") return `Tax Payment: ${row.taxTypeName || "—"}`;
     return row.note || "—";
   };
 
@@ -265,6 +285,7 @@ export default function Transactions() {
     if (t === "withdraw") return "Withdraw";
     if (t === "transfer") return "Transfer";
     if (t === "salary") return "Salary Paid";
+    if (t === "tax") return "Tax Paid";
     if (t === "sale") return "Sale";
     if (t === "purchase") return "Purchase";
     return t;
@@ -302,11 +323,28 @@ export default function Transactions() {
               <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className="input-field" required>
                 <option value="deposit">Deposit</option>
                 <option value="withdraw">Withdraw</option>
+                <option value="tax">Tax Payment (Audit)</option>
                 <option value="salary">Salary (Payment)</option>
                 <option value="transfer">Transfer</option>
               </select>
             </div>
-            {(form.type === "withdraw" || form.type === "transfer" || form.type === "salary") && (
+            {form.type === "tax" && (
+              <div>
+                <label className="input-label font-bold text-orange-600">Tax Type *</label>
+                <select 
+                  value={form.taxTypeId} 
+                  onChange={(e) => setForm((f) => ({ ...f, taxTypeId: e.target.value }))} 
+                  className="input-field border-orange-200 bg-orange-50/30"
+                  required
+                >
+                  <option value="">Select tax type</option>
+                  {taxTypes.map(t => (
+                    <option key={t._id} value={t._id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {(form.type === "withdraw" || form.type === "transfer" || form.type === "salary" || form.type === "tax") && (
               <div>
                 <label className="input-label">From account *</label>
                 <SearchableSelect
@@ -420,7 +458,7 @@ export default function Transactions() {
                      let credit = 0;
                      let debit = 0;
                      if (row.type === "deposit" || row.type === "sale") credit = row.amount;
-                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary") debit = row.amount;
+                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax") debit = row.amount;
                      else if (row.type === "transfer") {
                        if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
@@ -433,10 +471,17 @@ export default function Transactions() {
                      return (
                       <tr key={row._id} className="table-row-hover">
                         <td className="table-cell text-sm">{formatDate(row.date)}</td>
-                        <td className="table-cell">
-                           <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${row.type === "deposit" ? "bg-green-100 text-green-700" : row.type === "sale" ? "bg-emerald-100 text-emerald-700" : row.type === "withdraw" ? "bg-red-100 text-red-700" : row.type === "salary" ? "bg-amber-100 text-amber-700 border border-amber-200" : row.type === "purchase" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
-                             }`}>{typeLabel(row.type)}</span>
-                        </td>
+                         <td className="table-cell">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
+                              row.type === "deposit" ? "bg-green-100 text-green-700" : 
+                              row.type === "sale" ? "bg-emerald-100 text-emerald-700" : 
+                              row.type === "withdraw" ? "bg-red-100 text-red-700" : 
+                              row.type === "tax" ? "bg-orange-100 text-orange-700 border border-orange-200" :
+                              row.type === "salary" ? "bg-amber-100 text-amber-700 border border-amber-200" : 
+                              row.type === "purchase" ? "bg-orange-100 text-orange-700" : 
+                              "bg-blue-100 text-blue-700"
+                              }`}>{typeLabel(row.type)}</span>
+                         </td>
                         <td className="table-cell">
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-800 text-sm leading-tight">{participant}</span>

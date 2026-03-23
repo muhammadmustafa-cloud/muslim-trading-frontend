@@ -22,6 +22,7 @@ const TYPE_LABELS = {
   mill_expense: "Mill Expense",
   mazdoor_expense: "Mazdoor",
   salary: "Salary Paid",
+  tax_payment: "Tax Paid",
 };
 const TYPE_COLORS = {
   sale: "bg-emerald-100 text-emerald-800",
@@ -32,6 +33,7 @@ const TYPE_COLORS = {
   mill_expense: "bg-purple-100 text-purple-800",
   mazdoor_expense: "bg-amber-100 text-amber-800",
   salary: "bg-rose-100 text-rose-700 font-bold border border-rose-200",
+  tax_payment: "bg-orange-100 text-orange-700 font-bold border border-orange-200",
 };
 
 export default function DailyKhata() {

@@ -26,6 +26,8 @@ import MachineryItems from "./pages/MachineryItems";
 import MachineryItemKhata from "./pages/MachineryItemKhata.jsx";
 import MachineryLedger from "./pages/MachineryLedger.jsx";
 import MachineryPurchases from "./pages/MachineryPurchases";
+import TaxTypes from "./pages/TaxTypes";
+import TaxLedger from "./pages/TaxLedger";
 
 function App() {
   return (
@@ -60,6 +62,8 @@ function App() {
           <Route path="machinery-items/:id/khata" element={<MachineryItemKhata />} />
           <Route path="machinery-ledger" element={<MachineryLedger />} />
           <Route path="machinery-purchases" element={<MachineryPurchases />} />
+          <Route path="tax-types" element={<TaxTypes />} />
+          <Route path="tax-types/:id/ledger" element={<TaxLedger />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

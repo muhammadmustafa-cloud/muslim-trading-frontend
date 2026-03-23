@@ -197,7 +197,7 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
 
     if (row.type === "deposit" || row.type === "sale") {
       credit = row.amount;
-    } else if (row.type === "withdraw" || row.type === "purchase") {
+    } else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax") {
       debit = row.amount;
     } else if (row.type === "transfer") {
       if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
@@ -852,7 +852,66 @@ export function downloadMachineryPurchasesPdf(entries, filters = {}) {
   });
 
   addPageNumbers(doc);
-  doc.save("machinery-purchases.pdf");
+  doc.save(`machinery-purchases-${new Date().getTime()}.pdf`);
+}
+
+/**
+ * Individual Tax Ledger PDF.
+ */
+export function downloadTaxLedgerPdf(taxType, sessions, totalPaid, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo) {
+    subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
+  }
+  subtitleLines.push(`Total Payments recorded: ${sessions.length}`);
+  subtitleLines.push(`Total Paid Amount: Rs. ${formatMoney(totalPaid)}`);
+
+  let startY = addReportHeader(doc, `Tax Ledger — ${taxType.name.toUpperCase()}`, subtitleLines);
+
+  if (!sessions.length) {
+    doc.setFontSize(10);
+    doc.text("No payments found for this tax type in the selected range.", MARGIN, startY);
+    doc.save(`tax-ledger-${taxType.name.replace(/\s+/g, "_")}.pdf`);
+    return;
+  }
+
+  let runningBalance = 0;
+  autoTable(doc, {
+    startY,
+    head: [["Date", "Description / Account", "Credit (In)", "Debit (Out)", "Balance"]],
+    body: sessions.map((row) => {
+      const debit = row.amount || 0;
+      const credit = 0;
+      runningBalance += debit - credit;
+      return [
+        formatDate(row.date),
+        `${row.fromAccountId?.name || "Manual"}\n${row.note || ""}`,
+        "—",
+        formatMoney(debit),
+        { content: formatMoney(runningBalance), styles: { halign: "right", fontStyle: "bold" } },
+      ];
+    }),
+    foot: [[
+      { content: "GRAND TOTALS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+      "—",
+      { content: formatMoney(totalPaid), styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalPaid), styles: { halign: "right", fontStyle: "bold" } },
+    ]],
+    ...tableTheme,
+    headStyles: { ...tableTheme.headStyles, fillColor: [211, 84, 0] }, // orange color for tax theme
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 25, halign: "right" },
+      3: { cellWidth: 30, halign: "right" },
+      4: { cellWidth: 30, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`tax-ledger-${taxType.name.replace(/\s+/g, "_")}.pdf`);
 }
 
 /**

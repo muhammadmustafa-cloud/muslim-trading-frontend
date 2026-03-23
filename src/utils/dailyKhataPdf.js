@@ -16,6 +16,7 @@ const TYPE_LABELS = {
     mill_expense: "Mill Expense",
     mazdoor_expense: "Mazdoor",
     salary: "Salary Paid",
+    tax_payment: "Tax Paid",
 };
 
 /**
