@@ -20,6 +20,7 @@ import {
   FaTools,
   FaBalanceScale,
   FaReceipt,
+  FaFileContract,
 } from "react-icons/fa";
 
 const navItems = [
@@ -43,8 +44,9 @@ const navItems = [
   { to: "/machinery-purchases", icon: FaTools, label: "Machinery Purchase" },
   { to: "/machinery-ledger", icon: FaBook, label: "Machinery Ledger" },
   { to: "/transactions", icon: FaExchangeAlt, label: "Transactions" },
-  { to: "/tax-types", icon: FaBalanceScale, label: "Tax Management" },
   { to: "/expense-types", icon: FaReceipt, label: "Expense Management" },
+  { to: "/tax-types", icon: FaBalanceScale, label: "Tax Management" },
+  { to: "/audit-summary", icon: FaFileContract, label: "Audit (Submail)" },
 ];
 
 export default function AdminLayout() {

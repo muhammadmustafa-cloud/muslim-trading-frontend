@@ -5,7 +5,7 @@ const MARGIN = 14;
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 const formatMoney = (n) =>
-  n != null && n !== "" ? Number(n).toLocaleString("en-PK") : "—";
+  n != null && n !== "" ? Math.abs(Number(n)).toLocaleString("en-PK") : "—";
 
 function addReportHeader(doc, title, subtitleLines = []) {
   let y = 15;
@@ -1104,4 +1104,116 @@ export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filte
 
   addPageNumbers(doc);
   doc.save(`expense-ledger-${expenseType.name.replace(/\s+/g, "_")}.pdf`);
+}
+
+/**
+ * Consolidated Master Trial Balance (Submail) PDF.
+ * Lists all entities in a single Debit/Credit format.
+ */
+export function downloadAuditSummaryPdf(data, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo) {
+    subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
+  }
+  
+  const netPosition = (data.totalCash + data.totalReceivables + data.totalStockValue + data.totalMachineryValue) - data.totalPayables;
+
+  addReportHeader(doc, "Master Trial Balance (Submail Report)", subtitleLines);
+
+  const tableRows = [];
+
+  // Helper to push header row
+  const addGroupHeader = (title) => {
+    tableRows.push([{ content: title, colSpan: 3, styles: { fontStyle: "bold", fillColor: [240, 240, 240] } }]);
+  };
+
+  // 1. Bank & Cash Accounts
+  addGroupHeader("1. CASH & BANK ACCOUNTS");
+  data.accounts.forEach(a => {
+    tableRows.push([a.name, formatMoney(a.balance), "-"]);
+  });
+
+  // 2. Customers
+  addGroupHeader("2. CUSTOMER POSITIONS (Receivables/Advances)");
+  data.customers.forEach(c => {
+    tableRows.push([
+      c.name,
+      c.balance > 0 ? formatMoney(c.balance) : "-",
+      c.balance < 0 ? formatMoney(Math.abs(c.balance)) : "-"
+    ]);
+  });
+
+  // 3. Suppliers
+  addGroupHeader("3. SUPPLIER POSITIONS (Payables/Advances)");
+  data.suppliers.forEach(s => {
+    tableRows.push([
+      s.name,
+      s.balance < 0 ? formatMoney(Math.abs(s.balance)) : "-",
+      s.balance > 0 ? formatMoney(s.balance) : "-"
+    ]);
+  });
+
+  // 4. Mazdoor
+  addGroupHeader("4. MAZDOOR OUTSTANDING WAGES");
+  data.mazdoors.forEach(m => {
+    tableRows.push([
+      m.name, 
+      m.balance < 0 ? formatMoney(m.balance) : "-", // Advance (Debit)
+      m.balance > 0 ? formatMoney(m.balance) : "-"  // Owed (Credit)
+    ]);
+  });
+
+  // 5. Assets (Stock & Machinery)
+  addGroupHeader("5. STOCK & FIXED ASSETS");
+  tableRows.push(["Current Inventory Value", formatMoney(data.totalStockValue), "-"]);
+  tableRows.push(["Machinery & Equipment", formatMoney(data.totalMachineryValue), "-"]);
+
+  // 6. Operating Expenses & Taxes
+  addGroupHeader("6. PERIOD EXPENSES & TAXES");
+  const totalExp = data.expenses.reduce((s,e) => s+e.amount, 0);
+  const totalTax = data.taxes.reduce((s,t) => s+t.amount, 0);
+  tableRows.push(["Total Operating Expenses", formatMoney(totalExp), "-"]);
+  tableRows.push(["Total Period Taxes Paid", formatMoney(totalTax), "-"]);
+
+  // Calculate Column Totals
+  const totalDebit = data.totalCash + 
+                     data.customers.filter(c => c.balance > 0).reduce((s,c)=>s+c.balance, 0) +
+                     data.suppliers.filter(s => s.balance < 0).reduce((s,s1)=>s+Math.abs(s1.balance), 0) +
+                     data.mazdoors.filter(m => m.balance < 0).reduce((s,m)=>s+Math.abs(m.balance), 0) +
+                     data.totalStockValue + data.totalMachineryValue + totalExp + totalTax;
+
+  const totalCredit = data.customers.filter(c => c.balance < 0).reduce((s,c)=>s+Math.abs(c.balance), 0) +
+                      data.suppliers.filter(s => s.balance > 0).reduce((s,s1)=>s+s1.balance, 0) +
+                      data.mazdoors.filter(m => m.balance > 0).reduce((s,m)=>s+m.balance, 0);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [["Particulars / Account Name", "Debit (Lene Wale)", "Credit (Dene Wale)"]],
+    body: tableRows,
+    foot: [
+      [
+        { content: "GRAND TOTAL BALANCES", styles: { fontStyle: "bold" } },
+        { content: formatMoney(totalDebit), styles: { halign: "right", fontStyle: "bold" } },
+        { content: formatMoney(totalCredit), styles: { halign: "right", fontStyle: "bold" } }
+      ],
+      [
+        { content: `NET FINANCIAL POSITION (${netPosition >= 0 ? "SURPLUS / PROFIT" : "DEFICIT / LOSS"})`, styles: { fontStyle: "bold" } },
+        { content: `Rs. ${formatMoney(netPosition)}`, colSpan: 2, styles: { halign: "center", fontStyle: "bold", fillColor: [44, 62, 80], textColor: [255, 255, 255] } }
+      ]
+    ],
+    ...tableTheme,
+    margin: { left: MARGIN, right: MARGIN, top: 20 },
+    columnStyles: {
+      0: { cellWidth: 100 },
+      1: { cellWidth: 40, halign: "right" },
+      2: { cellWidth: 40, halign: "right" }
+    },
+    didDrawPage: (data) => {
+      // Add standard header on new pages if needed
+    }
+  });
+
+  addPageNumbers(doc);
+  doc.save(`Master_Trial_Balance_${filters.dateTo || "Export"}.pdf`);
 }

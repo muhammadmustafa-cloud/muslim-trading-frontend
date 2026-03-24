@@ -30,6 +30,7 @@ import TaxTypes from "./pages/TaxTypes";
 import TaxLedger from "./pages/TaxLedger";
 import ExpenseTypes from "./pages/ExpenseTypes";
 import ExpenseLedger from "./pages/ExpenseLedger";
+import AuditSummary from "./pages/AuditSummary";
 
 function App() {
   return (
@@ -68,6 +69,7 @@ function App() {
           <Route path="tax-types/:id/ledger" element={<TaxLedger />} />
           <Route path="expense-types" element={<ExpenseTypes />} />
           <Route path="expense-types/:id/ledger" element={<ExpenseLedger />} />
+          <Route path="audit-summary" element={<AuditSummary />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
