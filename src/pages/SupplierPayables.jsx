@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { API_BASE_URL } from "../config/api";
-import { FaHandHoldingUsd, FaFileInvoiceDollar, FaChevronRight, FaHistory, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
+import { FaHandHoldingUsd, FaFileInvoiceDollar, FaChevronRight, FaHistory, FaCheckCircle, FaExclamationCircle, FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import PayBillModal from "../components/PayBillModal";
 
@@ -14,6 +14,7 @@ export default function SupplierPayables() {
     const [selectedEntry, setSelectedEntry] = useState(null);
     const [payModalOpen, setPayModalOpen] = useState(false);
     const [expandedSupplier, setExpandedSupplier] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const fetchPayables = async () => {
         setLoading(true);
@@ -57,15 +58,28 @@ export default function SupplierPayables() {
 
             {error && <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg">{error}</div>}
 
+            <div className="relative max-w-md">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                    type="text"
+                    placeholder="Search supplier by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input-field pl-10 h-11"
+                />
+            </div>
+
             <div className="grid grid-cols-1 gap-4">
-                {payables.length === 0 ? (
+                {payables.filter(s => s.supplierName.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
                     <div className="card p-12 text-center text-slate-500">
                         <FaCheckCircle className="w-12 h-12 text-emerald-200 mx-auto mb-4" />
                         <p className="font-medium text-lg text-slate-700">Koi outstanding payments nahi hain!</p>
-                        <p className="text-sm">Abhi saare bill clear hain.</p>
+                        <p className="text-sm">Abhi saare bill clear hain ya aapki search ka koi result nahi.</p>
                     </div>
                 ) : (
-                    payables.map((supplier) => (
+                    payables
+                        .filter(s => s.supplierName.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map((supplier) => (
                         <div key={supplier.supplierId} className="card overflow-hidden">
                             {/* Supplier Summary Row */}
                             <div

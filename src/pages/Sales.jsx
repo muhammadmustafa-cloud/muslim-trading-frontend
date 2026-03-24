@@ -376,7 +376,7 @@ export default function Sales() {
               />
             </div>
             <div>
-              <label className="input-label">Item * <span className="text-[10px] text-slate-400">(sirf stock wale items)</span></label>
+              <label className="input-label">Item *</label>
               <SearchableSelect
                 options={items
                   .map((i) => {
@@ -385,10 +385,8 @@ export default function Sales() {
                     return {
                       ...i,
                       displayName: `${i.name}${i.categoryId?.name ? ` (${i.categoryId.name})` : ""} — ${availQty} kattay`,
-                      availQty
                     };
                   })
-                  .filter(i => i.availQty > 0 || form.itemId === i._id)
                   .map(i => ({ _id: i._id, name: i.displayName }))
                 }
                 value={form.itemId}

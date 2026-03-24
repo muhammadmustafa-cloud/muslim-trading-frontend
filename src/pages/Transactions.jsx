@@ -351,33 +351,25 @@ export default function Transactions() {
             {form.type === "tax" && (
               <div>
                 <label className="input-label font-bold text-orange-600">Tax Type *</label>
-                <select 
-                  value={form.taxTypeId} 
-                  onChange={(e) => setForm((f) => ({ ...f, taxTypeId: e.target.value }))} 
-                  className="input-field border-orange-200 bg-orange-50/30"
-                  required
-                >
-                  <option value="">Select tax type</option>
-                  {taxTypes.map(t => (
-                    <option key={t._id} value={t._id}>{t.name}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={taxTypes}
+                  value={form.taxTypeId}
+                  onChange={(val) => setForm((f) => ({ ...f, taxTypeId: val }))}
+                  placeholder="Select tax type"
+                  className="border-orange-200 bg-orange-50/30"
+                />
               </div>
             )}
             {form.type === "expense" && (
               <div>
                 <label className="input-label font-bold text-rose-600">Expense Type *</label>
-                <select 
-                  value={form.expenseTypeId} 
-                  onChange={(e) => setForm((f) => ({ ...f, expenseTypeId: e.target.value }))} 
-                  className="input-field border-rose-200 bg-rose-50/30"
-                  required
-                >
-                  <option value="">Select expense category</option>
-                  {expenseTypes.map(t => (
-                    <option key={t._id} value={t._id}>{t.name}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={expenseTypes}
+                  value={form.expenseTypeId}
+                  onChange={(val) => setForm((f) => ({ ...f, expenseTypeId: val }))}
+                  placeholder="Select expense category"
+                  className="border-rose-200 bg-rose-50/30"
+                />
               </div>
             )}
             {(form.type === "withdraw" || form.type === "transfer" || form.type === "salary" || form.type === "tax" || form.type === "expense") && (

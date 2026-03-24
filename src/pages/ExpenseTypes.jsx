@@ -7,6 +7,7 @@ import {
   FaTrash,
   FaChartLine,
   FaReceipt,
+  FaSearch,
 } from "react-icons/fa";
 
 export default function ExpenseTypes() {
@@ -16,6 +17,7 @@ export default function ExpenseTypes() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newType, setNewType] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTypes = async () => {
     setLoading(true);
@@ -79,6 +81,17 @@ export default function ExpenseTypes() {
         </button>
       </header>
 
+      <div className="relative max-w-md">
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search expense category..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="input-field pl-10 h-11"
+        />
+      </div>
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-shake">
           {error}
@@ -106,7 +119,9 @@ export default function ExpenseTypes() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {types.map((type) => (
+          {types
+            .filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map((type) => (
             <div
               key={type._id}
               className="group card overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-t-4 border-t-rose-500"

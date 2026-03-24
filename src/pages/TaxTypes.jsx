@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { apiGet, apiPost, apiDelete } from "../config/api.js";
-import { FaBalanceScale, FaPlus, FaTrash, FaHistory } from "react-icons/fa";
+import { FaBalanceScale, FaPlus, FaTrash, FaHistory, FaSearch } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 
 export default function TaxTypes() {
@@ -11,6 +11,7 @@ export default function TaxTypes() {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchList = async () => {
     setLoading(true);
@@ -71,6 +72,17 @@ export default function TaxTypes() {
         </button>
       </header>
 
+      <div className="relative max-w-md">
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search tax type..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="input-field pl-10 h-11"
+        />
+      </div>
+
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">{error}</div>}
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -86,7 +98,9 @@ export default function TaxTypes() {
             <p className="text-sm">Click the button above to add your first tax type (e.g., Income Tax).</p>
           </div>
         ) : (
-          list.map((t) => (
+          list
+            .filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map((t) => (
             <div key={t._id} className="card p-5 group hover:border-orange-200 transition-all flex flex-col justify-between">
               <div>
                 <h3 className="text-lg font-bold text-slate-800 group-hover:text-orange-600 transition-colors uppercase">{t.name}</h3>
