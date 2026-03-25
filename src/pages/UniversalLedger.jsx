@@ -19,7 +19,7 @@ export default function UniversalLedger() {
   const today = getToday();
   const [list, setList] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [summary, setSummary] = useState({ totalIn: 0, totalOut: 0, net: 0 });
+  const [summary, setSummary] = useState({ openingBalance: 0, totalIn: 0, totalOut: 0, net: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ dateFrom: today, dateTo: today, accountId: "" });
@@ -40,7 +40,7 @@ export default function UniversalLedger() {
       
       const data = await apiGet("/daily-memo", params);
       setList(data.data || []);
-      setSummary(data.summary || { totalIn: 0, totalOut: 0, net: 0 });
+      setSummary(data.summary || { openingBalance: 0, totalIn: 0, totalOut: 0, net: 0 });
     } catch (e) {
       setError(e.message);
       setList([]);
@@ -160,6 +160,30 @@ export default function UniversalLedger() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {/* Opening Balance Row */}
+                <tr className="bg-slate-50/80 font-bold border-b border-slate-200">
+                  <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
+                  <td className="py-2 px-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-700 leading-tight">PREVIOUS BALANCE</span>
+                      <span className="text-[10px] text-slate-400 uppercase">Opening Balance</span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-3 text-right font-black text-emerald-700 border-r border-slate-200 bg-emerald-50/20">
+                    {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : ""}
+                  </td>
+                  <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
+                  <td className="py-2 px-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-700 leading-tight">PREVIOUS BALANCE</span>
+                      <span className="text-[10px] text-slate-400 uppercase">Opening Balance</span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-3 text-right font-black text-rose-700 bg-rose-50/20">
+                    {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : ""}
+                  </td>
+                </tr>
+
                 {[...Array(maxRows)].map((_, i) => {
                   const cr = credits[i];
                   const dr = debits[i];

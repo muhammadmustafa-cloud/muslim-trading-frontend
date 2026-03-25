@@ -14,11 +14,14 @@ const TYPE_LABELS = {
   deposit: "Deposit",
   withdraw: "Withdraw",
   transfer: "Transfer",
+  mill_expense: "Mill Expense",
+  mazdoor_expense: "Mazdoor Expense",
 };
 
 export default function DailyCashMemo() {
   const today = getToday();
   const [list, setList] = useState([]);
+  const [summary, setSummary] = useState({ openingBalance: 0, totalIn: 0, totalOut: 0, closingBalance: 0 });
   const [accounts, setAccounts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -49,9 +52,11 @@ export default function DailyCashMemo() {
       if (filters.itemId) params.itemId = filters.itemId;
       const data = await apiGet("/daily-memo", params);
       setList(data.data || []);
+      setSummary(data.summary || { openingBalance: 0, totalIn: 0, totalOut: 0, closingBalance: 0 });
     } catch (e) {
       setError(e.message);
       setList([]);
+      setSummary({ openingBalance: 0, totalIn: 0, totalOut: 0, closingBalance: 0 });
     } finally {
       setLoading(false);
     }
@@ -99,8 +104,8 @@ export default function DailyCashMemo() {
     });
   };
 
-  const totalIn = list.filter((r) => r.amountType === "in").reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  const totalOut = list.filter((r) => r.amountType === "out").reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const totalIn = summary.totalIn;
+  const totalOut = summary.totalOut;
 
   return (
     <div>
@@ -261,6 +266,23 @@ export default function DailyCashMemo() {
                 </tr>
               </thead>
               <tbody>
+                {/* Previous Balance Row (Opening) */}
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <td className="py-2.5 px-4 text-slate-400 font-bold">—</td>
+                  <td className="py-2.5 px-4 font-bold">
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-slate-200 text-slate-700 uppercase">Opening</span>
+                  </td>
+                  <td className="py-2.5 px-4 text-slate-800 font-bold italic">Previous Balance (Opening Balance)</td>
+                  <td className="py-2.5 px-4 text-slate-400">—</td>
+                  <td className="py-2.5 px-4 text-slate-400">—</td>
+                  <td className="py-2.5 px-4 text-right font-black text-emerald-700 bg-emerald-50/20">
+                    {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : ""}
+                  </td>
+                  <td className="py-2.5 px-4 text-right font-black text-rose-700 bg-rose-50/20">
+                    {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : ""}
+                  </td>
+                </tr>
+
                 {list.map((row, idx) => (
                   <tr key={`${row.type}-${row.referenceId}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50">
                     <td className="py-2.5 px-4 text-slate-700">

@@ -82,11 +82,32 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   }
   y += 6;
 
+  // Draw "Previous Balance" row manually above the table
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const tableWidth = pageWidth - MARGIN * 2;
+  doc.setFillColor(235, 235, 235);
+  doc.rect(MARGIN, y, tableWidth, 7, "F");
+  doc.setDrawColor(180);
+  doc.rect(MARGIN, y, tableWidth, 7, "S");
+  doc.setFontSize(8);
+  doc.setFont(undefined, "bold");
+  doc.setTextColor(0);
+  doc.text("Previous Balance (Opening Balance)", MARGIN + 2, y + 5);
+  const balStr = summary.openingBalance !== 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0";
+  if (summary.openingBalance >= 0) {
+    // Credit side — show amount at the end of Credit Amount column (col 0+1+2 = ~95mm from left)
+    doc.text(balStr, MARGIN + 90, y + 5, { align: "right" });
+  } else {
+    // Debit side — show amount at the end of Debit Amount column
+    doc.text(balStr, pageWidth - MARGIN - 2, y + 5, { align: "right" });
+  }
+  y += 7;
+
   autoTable(doc, {
     startY: y,
     head: [["Date", "Credit (Account -> Participant)", "Amount", "Date", "Debit (Account -> Participant)", "Amount"]],
     body: formattedRows,
-    headStyles: { fillColor: [63, 81, 181], textColor: 255, fontStyle: "bold", fontSize: 8, halign: "center" },
+    headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 8, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 15 },
@@ -97,7 +118,7 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
       5: { cellWidth: 25, halign: "right", fontStyle: "bold" },
     },
     didParseCell: function (data) {
-      // Styling summary rows
+      // Styling summary rows (Totals and Net)
       if (data.row.index >= formattedRows.length - 2) {
         data.cell.styles.fillColor = [240, 240, 255];
         data.cell.styles.fontStyle = "bold";

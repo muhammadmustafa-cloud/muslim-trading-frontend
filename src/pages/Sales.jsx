@@ -26,8 +26,9 @@ export default function Sales() {
     itemId: "",
     kattay: "",
     kgPerKata: "",
-    quantity: "",
-    shCut: "",
+    grossWeight: "", // NEW: Total weight entered by user or calculated initially
+    quantity: "",    // Net weight result
+    shCut: "",       // Manual S.H Cut
     rate: "",
     bardanaRate: "",
     bardanaAmount: "",
@@ -137,6 +138,7 @@ export default function Sales() {
       itemId: "",
       kattay: "",
       kgPerKata: "",
+      grossWeight: "",
       quantity: "",
       shCut: "",
       rate: "",
@@ -162,34 +164,25 @@ export default function Sales() {
       const kgPerKata = Number(next.kgPerKata) || 0;
       const rate = Number(next.rate) || 0;
       
-      // Standard Rule: 0.1 kg S.H Cut per bag
-      let shCut = Number(next.shCut) || 0;
-      if ("kattay" in updates && kattay > 0) {
-        shCut = Number((kattay * 0.1).toFixed(2));
-        next.shCut = String(shCut);
-      } else {
-        shCut = Number(next.shCut) || 0;
-      }
+      // Manual S.H Cut: No auto-changing now as per user request
+      const shCut = Number(next.shCut) || 0;
 
       const bardanaRate = Number(next.bardanaRate) || 0;
       const mazdori = Number(next.mazdori) || 0;
 
-      // Auto-calc quantity (total weight) = (kattay × kgPerKata) - shCut
-      if (kattay > 0 && kgPerKata > 0) {
-        next.quantity = String(Math.max(0, (kattay * kgPerKata) - shCut));
+      // Auto-calc Gross Weight if kattay or kgPerKata changed, but user can override it too
+      if ("kattay" in updates || "kgPerKata" in updates) {
+        if (kattay > 0 && kgPerKata > 0) {
+          next.grossWeight = String(kattay * kgPerKata);
+        }
       }
- else if ("kattay" in updates || "kgPerKata" in updates) {
-        // Only clear if neither exists
-        if (!kattay && !kgPerKata && next.quantity !== "") {
-          next.quantity = String(Math.max(0, Number(next.quantity || 0) - shCut));
-        }
-      } else if ("shCut" in updates) {
-        // If only shCut changed, recalculate quantity if we don't have kattay math
-        if (!(kattay > 0 && kgPerKata > 0)) {
-           // Fallback to whatever is in quantity, deducting new shCut
-           // Note: This isn't perfect if they manually type quantity then change shcut,
-           // but the server logic handles it perfectly.
-        }
+
+      const grossWeight = Number(next.grossWeight) || 0;
+
+      // Quantity (Net weight) is ALWAYS grossWeight - shCut now
+      // This satisfies the "agr S.H cut bhi enter krta tw minus kr ke net weight show kare" requirement
+      if (grossWeight > 0 || shCut > 0) {
+        next.quantity = String(Math.max(0, grossWeight - shCut));
       }
 
       // Auto-calc Bardana Amount
@@ -208,8 +201,8 @@ export default function Sales() {
         calculatedTotalAmount = Math.round(mun * rate) + bardanaAmt + mazdori;
       }
       
-      // Only override total amount if we have rate formulas firing
-      if (calculatedTotalAmount > 0 || ("quantity" in updates || "rate" in updates || "bardanaRate" in updates || "mazdori" in updates || "shCut" in updates)) {
+      // Only override total amount if we have rate formulas firing or relevant inputs changed
+      if (calculatedTotalAmount > 0 || ("quantity" in updates || "rate" in updates || "bardanaRate" in updates || "mazdori" in updates || "shCut" in updates || "grossWeight" in updates)) {
           next.totalAmount = calculatedTotalAmount > 0 ? String(calculatedTotalAmount) : "";
       }
 
@@ -408,12 +401,18 @@ export default function Sales() {
               <p className="text-xs text-slate-500 mt-0.5">Total weight auto: kattay × kg/katta</p>
             </div>
             <div>
-              <label className="input-label">Total SH.CUT (kg)</label>
-              <input type="number" placeholder="0" value={form.shCut} onChange={(e) => updateFormWithAutoCalc({ shCut: e.target.value })} className="input-field" min="0" step="any" />
+              <label className="input-label">Total Weight / Gross (kg)</label>
+              <input type="number" placeholder="0" value={form.grossWeight} onChange={(e) => updateFormWithAutoCalc({ grossWeight: e.target.value })} className="input-field" min="0" step="any" />
+              <p className="text-xs text-slate-500 mt-0.5">Scale weight enter karein ya uppar se auto lein.</p>
             </div>
             <div>
-              <label className="input-label">Net Weight (kg)</label>
-              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field border-amber-200 bg-amber-50/50" min="0" step="any" />
+              <label className="input-label">S.H CUT (kg)</label>
+              <input type="number" placeholder="0" value={form.shCut} onChange={(e) => updateFormWithAutoCalc({ shCut: e.target.value })} className="input-field" min="0" step="any" />
+              <p className="text-xs text-slate-500 mt-0.5">Manual S.H Cut enter karein.</p>
+            </div>
+            <div>
+              <label className="input-label font-bold text-amber-700">Net Weight (kg)</label>
+              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field border-amber-200 bg-amber-50" min="0" step="any" />
               {availableStock != null && (
                 <p className="text-[10px] text-slate-600 mt-0.5">Avail: <strong>{availableStock.weight} kg</strong>, <strong>{availableStock.kattay} bags</strong>.</p>
               )}
