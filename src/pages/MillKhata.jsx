@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL, apiPost } from "../config/api.js";
-import { FaIndustry, FaPlus, FaCalendarDay, FaFilePdf } from "react-icons/fa";
+import { API_BASE_URL, apiPost, apiPostFormData } from "../config/api.js";
+import { FaIndustry, FaPlus, FaCalendarDay, FaFilePdf, FaImage } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
+import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 import { downloadMillKhataPdf } from "../utils/millKhataPdf.js";
 
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -20,7 +21,8 @@ export default function MillKhata() {
   // Modals
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ date: today, amount: "", category: "", note: "" });
+  const [form, setForm] = useState({ date: today, amount: "", category: "", note: "", image: null });
+  const [previewImage, setPreviewImage] = useState(null);
 
   const fetchDaybook = async (dateFrom, dateTo) => {
     setLoading(true);
@@ -48,7 +50,7 @@ export default function MillKhata() {
   }, [filters.dateFrom, filters.dateTo]);
 
   const handleOpenAdd = () => {
-    setForm({ date: filters.dateTo || today, amount: "", category: "", note: "" });
+    setForm({ date: filters.dateTo || today, amount: "", category: "", note: "", image: null });
     setModalOpen(true);
   };
 
@@ -62,12 +64,20 @@ export default function MillKhata() {
     }
     setSubmitting(true);
     try {
-      await apiPost("/mill-expenses", {
+      const payload = {
         date: form.date,
         amount: amt,
         category: (form.category || "").trim(),
         note: (form.note || "").trim(),
-      });
+      };
+
+      const formData = new FormData();
+      Object.keys(payload).forEach(key => formData.append(key, payload[key]));
+      if (form.image) {
+        formData.append("image", form.image);
+      }
+
+      await apiPostFormData("/mill-expenses", formData);
       setModalOpen(false);
       fetchDaybook(filters.dateFrom, filters.dateTo);
     } catch (e) {
@@ -212,9 +222,10 @@ export default function MillKhata() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-100 text-slate-400 text-left text-xs uppercase tracking-wider">
-                          <th className="px-6 py-3 font-semibold w-1/4">Category</th>
-                          <th className="px-6 py-3 font-semibold w-1/2">Note / Description</th>
-                          <th className="px-6 py-3 font-semibold text-right w-1/6">Amount (Rs)</th>
+                          <th className="px-6 py-3 font-semibold w-1/5">Category</th>
+                          <th className="px-6 py-3 font-semibold w-2/5">Note / Description</th>
+                          <th className="px-6 py-3 font-semibold w-1/5 text-center">Receipt</th>
+                          <th className="px-6 py-3 font-semibold text-right w-1/5">Amount (Rs)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -222,6 +233,13 @@ export default function MillKhata() {
                           <tr key={row._id} className="hover:bg-white transition-colors group">
                             <td className="py-3 px-6 text-slate-700 font-medium">{row.category || "—"}</td>
                             <td className="py-3 px-6 text-slate-500">{row.note || "—"}</td>
+                            <td className="py-3 px-6 text-center">
+                              {row.image && (
+                                <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary inline-flex items-center justify-center p-2 rounded-full text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="Preview Receipt">
+                                  <FaImage className="w-4 h-4" /> 
+                                </button>
+                              )}
+                            </td>
                             <td className="py-3 px-6 text-right font-bold text-slate-800">{formatMoney(row.amount)}</td>
                           </tr>
                         ))}
@@ -241,7 +259,25 @@ export default function MillKhata() {
           <div><label className="input-label">Date *</label><input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" required /></div>
           <div><label className="input-label">Amount (Rs.) *</label><input type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field text-lg font-bold" required min="0" step="1" placeholder="0" autoFocus /></div>
           <div><label className="input-label">Category</label><input type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="input-field" placeholder="e.g. Rent, Bijli, Maintenance, Chai" /></div>
-          <div><label className="input-label">Note / Description</label><textarea value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field min-h-[80px]" placeholder="Add specific details..." /></div>
+          <div><label className="input-label">Note / Description</label><textarea value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field min-h-[60px]" placeholder="Add specific details..." /></div>
+          <div>
+            <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Upload Image / Receipt (Max 5MB)</label>
+            <input type="file" accept="image/jpeg, image/png, image/jpg, image/webp" onChange={(e) => {
+              const file = e.target.files[0];
+              if (file && file.size > 5 * 1024 * 1024) {
+                alert("File size exceeds 5MB limit. Please choose a smaller image.");
+                e.target.value = "";
+                return;
+              }
+              setForm(f => ({ ...f, image: file }));
+            }} className="input-field cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+            {form.image && (
+              <div className="mt-3 bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                <p className="text-xs text-slate-500 font-medium mb-2">Selected File Preview:</p>
+                <img src={URL.createObjectURL(form.image)} alt="Preview" className="max-h-24 object-contain mx-auto rounded shadow-sm" />
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 pt-2">
             <button type="submit" className="btn-primary flex-1" disabled={submitting}>
               {submitting ? (
@@ -256,6 +292,12 @@ export default function MillKhata() {
         </form>
       </Modal>
 
+      <ImagePreviewModal
+        open={!!previewImage}
+        onClose={() => setPreviewImage(null)}
+        imageUrl={previewImage}
+        title="Mill Expense Receipt"
+      />
     </div>
   );
 }
