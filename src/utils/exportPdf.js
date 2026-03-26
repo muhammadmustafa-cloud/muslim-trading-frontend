@@ -434,16 +434,24 @@ export function downloadSaleInvoicePdf(sale) {
   doc.text(sale.truckNumber || "—", 155, 72);
   doc.line(155, 73, 195, 73);
 
-  doc.text("Account:", 135, 80);
-  doc.text(sale.accountId?.name || "—", 155, 80);
+  doc.text("Gate Pass:", 135, 80);
+  doc.text(sale.gatePassNo || "—", 155, 80);
   doc.line(155, 81, 195, 81);
 
-  doc.text("Due Date:", 135, 88);
-  doc.text(formatDate(sale.dueDate), 155, 88);
+  doc.text("Goods:", 135, 88);
+  doc.text(sale.goods || "—", 155, 88);
   doc.line(155, 89, 195, 89);
 
+  doc.text("Account:", 135, 96);
+  doc.text(sale.accountId?.name || "—", 155, 96);
+  doc.line(155, 97, 195, 97);
+
+  doc.text("Due Date:", 135, 104);
+  doc.text(formatDate(sale.dueDate), 155, 104);
+  doc.line(155, 105, 195, 105);
+
   // --- ITEM TABLE ---
-  let yPos = 95;
+  let yPos = 115;
 
   doc.setFillColor(235, 235, 235);
   doc.rect(15, yPos, 180, 8, "F");
@@ -653,16 +661,24 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.text(entry.truckNumber || "—", 155, 72);
   doc.line(155, 73, 195, 73);
 
-  doc.text("Account:", 135, 80);
-  doc.text(entry.accountId?.name || "—", 155, 80);
+  doc.text("Gate Pass:", 135, 80);
+  doc.text(entry.gatePassNo || "—", 155, 80);
   doc.line(155, 81, 195, 81);
 
-  doc.text("Due Date:", 135, 88);
-  doc.text(entry.dueDate ? formatDate(entry.dueDate) : "—", 155, 88);
+  doc.text("Goods:", 135, 88);
+  doc.text(entry.goods || "—", 155, 88);
   doc.line(155, 89, 195, 89);
 
+  doc.text("Account:", 135, 96);
+  doc.text(entry.accountId?.name || "—", 155, 96);
+  doc.line(155, 97, 195, 97);
+
+  doc.text("Due Date:", 135, 104);
+  doc.text(entry.dueDate ? formatDate(entry.dueDate) : "—", 155, 104);
+  doc.line(155, 105, 195, 105);
+
   // --- ITEM TABLE ---
-  let yPos = 95;
+  let yPos = 115;
 
   doc.setFillColor(235, 235, 235);
   doc.rect(15, yPos, 180, 8, "F");
@@ -1131,7 +1147,11 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   // 1. Bank & Cash Accounts
   addGroupHeader("1. CASH & BANK ACCOUNTS");
   data.accounts.forEach(a => {
-    tableRows.push([a.name, formatMoney(a.balance), "-"]);
+    tableRows.push([
+      a.name,
+      a.balance < 0 ? formatMoney(Math.abs(a.balance)) : "-",
+      a.balance > 0 ? formatMoney(a.balance) : "-"
+    ]);
   });
 
   // 2. Customers
@@ -1149,8 +1169,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   data.suppliers.forEach(s => {
     tableRows.push([
       s.name,
-      s.balance < 0 ? formatMoney(Math.abs(s.balance)) : "-",
-      s.balance > 0 ? formatMoney(s.balance) : "-"
+      s.balance > 0 ? formatMoney(s.balance) : "-",
+      s.balance < 0 ? formatMoney(Math.abs(s.balance)) : "-"
     ]);
   });
 
@@ -1177,14 +1197,18 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   tableRows.push(["Total Period Taxes Paid", formatMoney(totalTax), "-"]);
 
   // Calculate Column Totals
-  const totalDebit = data.totalCash + 
+  const accountsDebit = data.accounts.filter(a => a.balance < 0).reduce((s, a) => s + Math.abs(a.balance), 0);
+  const accountsCredit = data.accounts.filter(a => a.balance > 0).reduce((s, a) => s + a.balance, 0);
+
+  const totalDebit = accountsDebit + 
                      data.customers.filter(c => c.balance > 0).reduce((s,c)=>s+c.balance, 0) +
-                     data.suppliers.filter(s => s.balance < 0).reduce((s,s1)=>s+Math.abs(s1.balance), 0) +
+                     data.suppliers.filter(s => s.balance > 0).reduce((s,s1)=>s+s1.balance, 0) +
                      data.mazdoors.filter(m => m.balance < 0).reduce((s,m)=>s+Math.abs(m.balance), 0) +
                      data.totalStockValue + data.totalMachineryValue + totalExp + totalTax;
 
-  const totalCredit = data.customers.filter(c => c.balance < 0).reduce((s,c)=>s+Math.abs(c.balance), 0) +
-                      data.suppliers.filter(s => s.balance > 0).reduce((s,s1)=>s+s1.balance, 0) +
+  const totalCredit = accountsCredit +
+                      data.customers.filter(c => c.balance < 0).reduce((s,c)=>s+Math.abs(c.balance), 0) +
+                      data.suppliers.filter(s => s.balance < 0).reduce((s,s1)=>s+Math.abs(s1.balance), 0) +
                       data.mazdoors.filter(m => m.balance > 0).reduce((s,m)=>s+m.balance, 0);
 
   autoTable(doc, {

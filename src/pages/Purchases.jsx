@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiPost, apiPut, apiDelete, apiPostFormData } from "../config/api.js";
 import { downloadPurchasesPdf, downloadPurchaseInvoicePdf } from "../utils/exportPdf.js";
-import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
+import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf, FaImage } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import PayBillModal from "../components/PayBillModal.jsx";
 import { FaMoneyBillWave } from "react-icons/fa";
 import SearchableSelect from "../components/SearchableSelect.jsx";
+import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -32,11 +33,14 @@ export default function Purchases() {
     amount: "",
     bardanaAmount: "",
     truckNumber: "",
+    gatePassNo: "",
+    goods: "",
     amountPaid: "",
     accountId: "",
     notes: "",
     paymentTerms: "cash",
     dueDate: "",
+    image: null,
   });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", supplierId: "" });
   const [sortKey, setSortKey] = useState("date");
@@ -45,6 +49,7 @@ export default function Purchases() {
   const [pageSize, setPageSize] = useState(10);
   const [payEntry, setPayEntry] = useState(null);
   const [payModalOpen, setPayModalOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const fetchItems = async () => {
     try {
@@ -112,11 +117,14 @@ export default function Purchases() {
       amount: "",
       bardanaAmount: "",
       truckNumber: "",
+      gatePassNo: "",
+      goods: "",
       amountPaid: "",
       accountId: "",
       notes: "",
       paymentTerms: "cash",
       dueDate: "",
+      image: null,
     });
     setModalOpen(false);
   };
@@ -196,18 +204,29 @@ export default function Purchases() {
         millWeight: Number(form.millWeight) || 0,
         supplierWeight: Number(form.supplierWeight) || 0,
         rate: Number(form.rate) || 0,
-        amount: Number(form.amount) || 0,
         bardanaAmount: Number(form.amount) || 0, // Wait, was this bardanaAmount? Let me check lines 198
         truckNumber: (form.truckNumber || "").trim(),
+        gatePassNo: (form.gatePassNo || "").trim(),
+        goods: (form.goods || "").trim(),
         amountPaid: Number(form.amountPaid) || 0,
         dueDate: form.dueDate || undefined,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
       };
-      // Correction: bardanaAmount was correct in target content.
+      payload.amount = Number(form.amount) || 0;
       payload.bardanaAmount = Number(form.bardanaAmount) || 0;
 
-      await apiPost("/stock-entries", payload);
+      const formData = new FormData();
+      Object.keys(payload).forEach(key => {
+        if (payload[key] !== undefined) {
+          formData.append(key, payload[key]);
+        }
+      });
+      if (form.image) {
+        formData.append("image", form.image);
+      }
+
+      await apiPostFormData("/stock-entries", formData);
       resetForm();
       fetchList();
     } catch (e) {
@@ -315,6 +334,32 @@ export default function Purchases() {
             <div>
               <label className="input-label">Truck number</label>
               <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
+            </div>
+            <div>
+              <label className="input-label">Gate Pass No</label>
+              <input type="text" placeholder="e.g. GP-1092" value={form.gatePassNo} onChange={(e) => setForm((f) => ({ ...f, gatePassNo: e.target.value }))} className="input-field" />
+            </div>
+            <div>
+              <label className="input-label">Goods Description</label>
+              <input type="text" placeholder="e.g. Rice, Wheat" value={form.goods} onChange={(e) => setForm((f) => ({ ...f, goods: e.target.value }))} className="input-field" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Upload Image / Receipt (Max 5MB)</label>
+              <input type="file" accept="image/jpeg, image/png, image/jpg, image/webp" onChange={(e) => {
+                const file = e.target.files[0];
+                if (file && file.size > 5 * 1024 * 1024) {
+                  alert("File size exceeds 5MB limit. Please choose a smaller image.");
+                  e.target.value = "";
+                  return;
+                }
+                setForm(f => ({ ...f, image: file }));
+              }} className="input-field cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+              {form.image && (
+                <div className="mt-3 bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                  <p className="text-xs text-slate-500 font-medium mb-2">Selected File Preview:</p>
+                  <img src={URL.createObjectURL(form.image)} alt="Preview" className="max-h-32 object-contain mx-auto rounded shadow-sm" />
+                </div>
+              )}
             </div>
             <div>
               <label className="input-label">Kitne kattay aaye</label>
@@ -497,6 +542,11 @@ export default function Purchases() {
                       </td>
                       <td className="table-cell">
                         <div className="flex items-center gap-1">
+                          {row.image && (
+                            <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center gap-1 text-indigo-500 hover:text-indigo-700 bg-indigo-50" title="Preview Image">
+                              <FaImage className="w-3.5 h-3.5" /> 
+                            </button>
+                          )}
                           {row.paymentStatus !== "paid" && (
                             <button
                               type="button"
@@ -536,6 +586,13 @@ export default function Purchases() {
         onClose={() => setPayModalOpen(false)}
         entry={payEntry}
         onSuccess={() => fetchList()}
+      />
+
+      <ImagePreviewModal
+        open={!!previewImage}
+        onClose={() => setPreviewImage(null)}
+        imageUrl={previewImage}
+        title="Purchase Receipt Preview"
       />
     </div>
   );

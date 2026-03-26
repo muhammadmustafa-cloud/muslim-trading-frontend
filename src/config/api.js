@@ -44,3 +44,23 @@ export async function apiDelete(path) {
   if (!res.ok) throw new Error(data.message || res.statusText);
   return data;
 }
+
+export async function apiPostFormData(path, formData) {
+  const res = await fetch(API_BASE_URL + path, {
+    method: "POST",
+    body: formData, // No Content-Type header; browser sets multipart/form-data with boundary
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || res.statusText);
+  return data;
+}
+
+export async function apiPutFormData(path, formData) {
+  const res = await fetch(API_BASE_URL + path, {
+    method: "PUT",
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || res.statusText);
+  return data;
+}

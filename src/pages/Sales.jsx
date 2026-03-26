@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiPost, apiPut, apiDelete, apiPostFormData } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadSalesPdf, downloadSaleInvoicePdf } from "../utils/exportPdf.js";
-import { FaShoppingCart, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd } from "react-icons/fa";
+import { FaShoppingCart, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd, FaImage } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
+import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -35,11 +36,14 @@ export default function Sales() {
     mazdori: "",
     totalAmount: "",
     truckNumber: "",
+    gatePassNo: "",
+    goods: "",
     amountReceived: "",
     accountId: "",
     notes: "",
     paymentTerms: "cash",
     dueDate: "",
+    image: null,
   });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", customerId: "", itemId: "" });
   const [sortKey, setSortKey] = useState("date");
@@ -49,6 +53,7 @@ export default function Sales() {
   const [availableStock, setAvailableStock] = useState(null);
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedCollectEntry, setSelectedCollectEntry] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const fetchCustomers = async () => {
     try {
@@ -147,11 +152,14 @@ export default function Sales() {
       mazdori: "",
       totalAmount: "",
       truckNumber: "",
+      gatePassNo: "",
+      goods: "",
       amountReceived: "",
       accountId: "",
       notes: "",
       paymentTerms: "cash",
       dueDate: "",
+      image: null,
     });
     setModalOpen(false);
   };
@@ -260,12 +268,25 @@ export default function Sales() {
         mazdori: Number(form.mazdori) || 0,
         totalAmount: Number(form.totalAmount) || 0,
         truckNumber: (form.truckNumber || "").trim(),
+        gatePassNo: (form.gatePassNo || "").trim(),
+        goods: (form.goods || "").trim(),
         amountReceived: Number(form.amountReceived) || 0,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
         dueDate: form.dueDate || undefined,
       };
-      await apiPost("/sales", payload);
+
+      const formData = new FormData();
+      Object.keys(payload).forEach(key => {
+        if (payload[key] !== undefined) {
+          formData.append(key, payload[key]);
+        }
+      });
+      if (form.image) {
+        formData.append("image", form.image);
+      }
+
+      await apiPostFormData("/sales", formData);
       resetForm();
       fetchList();
       fetchStockData(); // Refresh dropdown labels
@@ -390,6 +411,32 @@ export default function Sales() {
             <div>
               <label className="input-label">Truck number</label>
               <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
+            </div>
+            <div>
+              <label className="input-label">Gate Pass No</label>
+              <input type="text" placeholder="e.g. GP-1092" value={form.gatePassNo} onChange={(e) => setForm((f) => ({ ...f, gatePassNo: e.target.value }))} className="input-field" />
+            </div>
+            <div>
+              <label className="input-label">Goods Description</label>
+              <input type="text" placeholder="e.g. Rice, Wheat" value={form.goods} onChange={(e) => setForm((f) => ({ ...f, goods: e.target.value }))} className="input-field" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Upload Image / Receipt (Max 5MB)</label>
+              <input type="file" accept="image/jpeg, image/png, image/jpg, image/webp" onChange={(e) => {
+                const file = e.target.files[0];
+                if (file && file.size > 5 * 1024 * 1024) {
+                  alert("File size exceeds 5MB limit. Please choose a smaller image.");
+                  e.target.value = "";
+                  return;
+                }
+                setForm(f => ({ ...f, image: file }));
+              }} className="input-field cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+              {form.image && (
+                <div className="mt-3 bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                  <p className="text-xs text-slate-500 font-medium mb-2">Selected File Preview:</p>
+                  <img src={URL.createObjectURL(form.image)} alt="Preview" className="max-h-32 object-contain mx-auto rounded shadow-sm" />
+                </div>
+              )}
             </div>
             <div>
               <label className="input-label">Kitne katte beche</label>
@@ -585,6 +632,11 @@ export default function Sales() {
                       </td>
                       <td className="table-cell">
                         <div className="flex items-center gap-1">
+                          {row.image && (
+                            <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center gap-1 text-indigo-500 hover:text-indigo-700 bg-indigo-50" title="Preview Image">
+                              <FaImage className="w-3.5 h-3.5" /> 
+                            </button>
+                          )}
                           {row.paymentStatus !== 'paid' && (
                             <button type="button" onClick={() => { setSelectedCollectEntry(row); setCollectModalOpen(true); }} className="btn-ghost-primary flex items-center gap-1">
                               <FaHandHoldingUsd className="w-3.5 h-3.5" /> Collect
@@ -617,6 +669,13 @@ export default function Sales() {
         onClose={() => setCollectModalOpen(false)}
         entry={selectedCollectEntry}
         onSuccess={handleCollectSuccess}
+      />
+
+      <ImagePreviewModal
+        open={!!previewImage}
+        onClose={() => setPreviewImage(null)}
+        imageUrl={previewImage}
+        title="Sale Receipt Preview"
       />
     </div>
   );

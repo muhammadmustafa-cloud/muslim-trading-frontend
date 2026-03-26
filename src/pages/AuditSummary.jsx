@@ -260,7 +260,7 @@ export default function AuditSummary() {
           <div className="animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Customer Balances Breakdown</h3>
-                <div className="text-xs font-bold text-slate-400">Total {data.customers.length} Entires</div>
+                <div className="text-xs font-bold text-slate-400">Total {data.customers.length} Entries</div>
              </div>
              <div className="card p-0 overflow-hidden border-none shadow-xl">
                <table className="w-full border-collapse">
@@ -310,7 +310,7 @@ export default function AuditSummary() {
           <div className="animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Supplier Payables Breakdown</h3>
-                <div className="text-xs font-bold text-slate-400">Total {data.suppliers.length} Entires</div>
+                <div className="text-xs font-bold text-slate-400">Total {data.suppliers.length} Entries</div>
              </div>
              <div className="card p-0 overflow-hidden border-none shadow-xl">
                <table className="w-full border-collapse">
@@ -329,12 +329,12 @@ export default function AuditSummary() {
                            <div className="text-[10px] text-slate-400 font-medium">{s.phone || 'No Phone'}</div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                           {s.balance > 0 ? (
+                           {s.balance < 0 ? (
                              <span className="text-sm font-black text-rose-600 font-mono">Rs. {formatMoney(s.balance)}</span>
                            ) : <span className="text-slate-200">—</span>}
                         </td>
                         <td className="px-6 py-4 text-right">
-                           {s.balance < 0 ? (
+                           {s.balance > 0 ? (
                              <span className="text-sm font-black text-indigo-600 font-mono">Rs. {formatMoney(s.balance)}</span>
                            ) : <span className="text-slate-200">—</span>}
                         </td>
@@ -344,8 +344,8 @@ export default function AuditSummary() {
                  <tfoot className="bg-rose-950 text-white font-black">
                     <tr>
                       <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Payables</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+s.balance,0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-indigo-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+s.balance,0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(s.balance),0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-indigo-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+s.balance,0))}</td>
                     </tr>
                  </tfoot>
                </table>

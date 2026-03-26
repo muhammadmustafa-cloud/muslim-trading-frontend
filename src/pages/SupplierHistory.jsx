@@ -103,7 +103,7 @@ export default function SupplierHistory() {
             <div className={`text-2xl font-black ${data.summary?.finalBalance >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
               Rs. {formatMoney(Math.abs(data.summary?.finalBalance || 0))}
               <span className="text-xs ml-1 font-bold">
-                {data.summary?.finalBalance > 0 ? '(Payable)' : data.summary?.finalBalance < 0 ? '(Receivable)' : ''}
+                {data.summary?.finalBalance < 0 ? '(Payable)' : data.summary?.finalBalance > 0 ? '(Receivable)' : ''}
               </span>
             </div>
           </div>
