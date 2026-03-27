@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";

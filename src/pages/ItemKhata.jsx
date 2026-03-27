@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { API_BASE_URL, apiGet } from "../config/api.js";
+import { apiGet } from "../config/api.js";
 import { FaArrowLeft, FaBox, FaFilePdf } from "react-icons/fa";
 import { downloadKhataPdf } from "../utils/historyPdf.js";
 
@@ -11,7 +11,7 @@ export default function ItemKhata() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState({ name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0 });
+  const [data, setData] = useState({ name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0, totalMunPurchased: 0, totalMunSold: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -37,7 +37,7 @@ export default function ItemKhata() {
           dateFrom: dateFrom || undefined,
           dateTo: dateTo || undefined,
         });
-        if (!cancelled) setData(data.data || { name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0 });
+        if (!cancelled) setData(data.data || { name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0, totalMunPurchased: 0, totalMunSold: 0 });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {
@@ -109,16 +109,22 @@ export default function ItemKhata() {
             <div className="card p-5 border-l-4 border-l-amber-500">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Purchase Cost</p>
               <p className="text-xl font-black text-slate-900 mt-1">{formatMoney(totalCost)}</p>
-              <p className="text-[10px] text-amber-600 font-bold mt-1 uppercase italic">{data.totalBagsPurchased || 0} Bags In</p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-[10px] text-amber-600 font-bold uppercase italic">{data.totalBagsPurchased || 0} Bags In</p>
+                <p className="text-[10px] text-slate-400 font-bold">Dharo: {data.totalMunPurchased > 0 ? (totalCost / data.totalMunPurchased).toFixed(2) : "0"}</p>
+              </div>
             </div>
             <div className="card p-5 border-l-4 border-l-emerald-500">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Sales Revenue</p>
               <p className="text-xl font-black text-slate-900 mt-1">{formatMoney(totalRevenue)}</p>
-              <p className="text-[10px] text-emerald-600 font-bold mt-1 uppercase italic">{data.totalBagsSold || 0} Bags Out</p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-[10px] text-emerald-600 font-bold uppercase italic">{data.totalBagsSold || 0} Bags Out</p>
+                <p className="text-[10px] text-slate-400 font-bold">Dharo: {data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "0"}</p>
+              </div>
             </div>
             <div className="card p-5 border-l-4 border-l-blue-500">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Stock Balance (Bags)</p>
-              <p className="text-xl font-black text-blue-800 mt-1">{(data.totalBagsPurchased || 0) - (data.totalBagsSold || 0)}</p>
+              <p className="text-xl font-black text-blue-800 mt-1">{Math.abs((data.totalBagsPurchased || 0) - (data.totalBagsSold || 0))}</p>
               <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase italic">Remaining in mill</p>
             </div>
             <div className="card p-5 border-l-4 border-l-indigo-500">
@@ -194,8 +200,8 @@ export default function ItemKhata() {
                       </tr>
                       <tr className="bg-slate-900 text-white">
                         <td colSpan="2" className="px-4 py-3 text-right border-r border-slate-800">Balance (Remaining):</td>
-                        <td className="px-4 py-3 text-center border-r border-slate-800 text-amber-400">{data.totalBagsPurchased - data.totalBagsSold}</td>
-                        <td className="px-4 py-3 text-center border-r border-slate-800 text-amber-400">{((data.totalMunPurchased || 0) - (data.totalMunSold || 0)).toFixed(3)}</td>
+                        <td className="px-4 py-3 text-center border-r border-slate-800 text-amber-400">{Math.abs(data.totalBagsPurchased - data.totalBagsSold)}</td>
+                        <td className="px-4 py-3 text-center border-r border-slate-800 text-amber-400">{Math.abs((data.totalMunPurchased || 0) - (data.totalMunSold || 0)).toFixed(3)}</td>
                         <td className="px-4 py-3 text-right border-r border-slate-800 text-emerald-400">{formatMoney(totalRevenue)}</td>
                         <td className="px-4 py-3 text-right text-rose-400">{formatMoney(totalCost)}</td>
                       </tr>
