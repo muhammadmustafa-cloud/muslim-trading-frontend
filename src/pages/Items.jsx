@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -24,9 +24,8 @@ export default function Items() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/categories`);
-      const data = await res.json();
-      if (res.ok) setCategories(data.data || []);
+      const data = await apiGet("/categories");
+      setCategories(data.data || []);
     } catch (_) { }
   };
 
@@ -34,12 +33,10 @@ export default function Items() {
     setLoading(true);
     setError("");
     try {
-      const params = {};
-      if (search) params.search = search;
-      if (categoryFilter) params.categoryId = categoryFilter;
-      const res = await fetch(`${API_BASE_URL}/items?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/items", {
+        search: search || undefined,
+        categoryId: categoryFilter || undefined,
+      });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

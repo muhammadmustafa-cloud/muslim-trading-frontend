@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL } from "../config/api.js";
+import { apiGet } from "../config/api.js";
 import { downloadCurrentStockPdf } from "../utils/exportPdf.js";
 import { FaBoxes, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import TablePagination from "../components/TablePagination.jsx";
@@ -17,9 +17,7 @@ export default function CurrentStock() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/stock/current`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/stock/current");
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

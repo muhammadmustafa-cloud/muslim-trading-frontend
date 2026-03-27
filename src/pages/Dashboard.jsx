@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE_URL } from "../config/api.js";
+import { apiGet } from "../config/api.js";
 import {
   FaChartLine,
   FaUsers,
@@ -41,9 +41,7 @@ export default function Dashboard() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${API_BASE_URL}/dashboard?lowStockThreshold=50`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to load summary");
+        const data = await apiGet("/dashboard", { lowStockThreshold: 50 });
         if (!cancelled) setSummary(data.data);
       } catch (e) {
         if (!cancelled) setError(e.message);

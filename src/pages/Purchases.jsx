@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL, apiPost, apiPut, apiDelete, apiPostFormData } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
 import { downloadPurchasesPdf, downloadPurchaseInvoicePdf } from "../utils/exportPdf.js";
 import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf, FaImage } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import PayBillModal from "../components/PayBillModal.jsx";
@@ -18,6 +19,8 @@ export default function Purchases() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const { isAdmin } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -53,23 +56,20 @@ export default function Purchases() {
 
   const fetchItems = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/items`);
-      const data = await res.json();
-      if (res.ok) setItems(data.data || []);
+      const data = await apiGet("/items");
+      setItems(data.data || []);
     } catch (_) { }
   };
   const fetchSuppliers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/suppliers`);
-      const data = await res.json();
-      if (res.ok) setSuppliers(data.data || []);
+      const data = await apiGet("/suppliers");
+      setSuppliers(data.data || []);
     } catch (_) { }
   };
   const fetchAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/accounts`);
-      const data = await res.json();
-      if (res.ok) setAccounts(data.data || []);
+      const data = await apiGet("/accounts");
+      setAccounts(data.data || []);
     } catch (_) { }
   };
 
@@ -77,14 +77,12 @@ export default function Purchases() {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams();
-      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.set("dateTo", filters.dateTo);
-      if (filters.itemId) params.set("itemId", filters.itemId);
-      if (filters.supplierId) params.set("supplierId", filters.supplierId);
-      const res = await fetch(`${API_BASE_URL}/stock-entries?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/stock-entries", {
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        itemId: filters.itemId || undefined,
+        supplierId: filters.supplierId || undefined,
+      });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);
@@ -126,7 +124,41 @@ export default function Purchases() {
       dueDate: "",
       image: null,
     });
+    setForm((f) => ({ ...f, image: null }));
+    setEditingId(null);
     setModalOpen(false);
+  };
+
+  const handleEdit = (row) => {
+    setEditingId(row._id);
+    setForm({
+      date: formatDateForInput(row.date),
+      itemId: row.itemId?._id || "",
+      supplierId: row.supplierId?._id || "",
+      truckNumber: row.truckNumber || "",
+      kattay: String(row.kattay || ""),
+      kgPerKata: String(row.kgPerKata || ""),
+      grossWeight: String((row.kattay || 0) * (row.kgPerKata || 0)),
+      shCut: String(row.shCut || ""),
+      receivedWeight: String(row.receivedWeight || ""),
+      millWeight: String(row.millWeight || ""),
+      supplierWeight: String(row.supplierWeight || ""),
+      rate: String(row.rate || ""),
+      amount: String(row.totalAmount || row.amount || ""),
+      amountPaid: String(row.amountPaid || ""),
+      dueDate: row.dueDate ? formatDateForInput(row.dueDate) : "",
+      accountId: row.accountId?._id || row.accountId || "",
+      notes: row.notes || "",
+      paymentTerms: "custom",
+      bardanaAmount: String(row.bardanaAmount || ""),
+      image: null,
+    });
+    setModalOpen(true);
+  };
+
+  const formatDateForInput = (d) => {
+    if (!d) return "";
+    return new Date(d).toISOString().slice(0, 10);
   };
 
   const updateFormWithAutoCalc = (updates) => {
@@ -181,6 +213,7 @@ export default function Purchases() {
   const openAddModal = () => {
     resetForm();
     setForm((f) => ({ ...f, date: today }));
+    setEditingId(null);
     setModalOpen(true);
   };
 
@@ -225,8 +258,12 @@ export default function Purchases() {
       if (form.image) {
         formData.append("image", form.image);
       }
-
-      await apiPostFormData("/stock-entries", formData);
+      
+      if (editingId) {
+        await apiPutFormData(`/stock-entries/${editingId}`, formData);
+      } else {
+        await apiPostFormData("/stock-entries", formData);
+      }
       resetForm();
       fetchList();
     } catch (e) {
@@ -301,12 +338,14 @@ export default function Purchases() {
           </h1>
           <p className="page-subtitle">Naya maal jo suppliers se aata hai.</p>
         </div>
-        <button type="button" onClick={openAddModal} className="btn-primary">
-          <FaPlus className="w-4 h-4" /> Add Purchase
-        </button>
+        {isAdmin && (
+          <button type="button" onClick={openAddModal} className="btn-primary">
+            <FaPlus className="w-4 h-4" /> Add Purchase
+          </button>
+        )}
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title="New Purchase">
+      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit Purchase Record" : "Add Purchase Record"} size="2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -449,9 +488,9 @@ export default function Purchases() {
               {submitting ? (
                  <span className="flex items-center justify-center gap-2">
                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                   Saving...
+                   {editingId ? "Updating..." : "Saving..."}
                  </span>
-              ) : "Add entry"}
+              ) : (editingId ? "Update purchase" : "Add entry")}
             </button>
             <button type="button" onClick={resetForm} className="btn-secondary px-6" disabled={submitting}>Cancel</button>
           </div>
@@ -547,18 +586,25 @@ export default function Purchases() {
                               <FaImage className="w-3.5 h-3.5" /> 
                             </button>
                           )}
-                          {row.paymentStatus !== "paid" && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPayEntry(row);
-                                setPayModalOpen(true);
-                              }}
-                              className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700 flex items-center gap-1"
-                              title="Bill Settle Karein"
-                            >
-                              <FaMoneyBillWave className="w-3 h-3" /> Pay
-                            </button>
+                          {isAdmin && (
+                            <>
+                              {row.paymentStatus !== "paid" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPayEntry(row);
+                                    setPayModalOpen(true);
+                                  }}
+                                  className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-700 flex items-center gap-1"
+                                  title="Bill Settle Karein"
+                                >
+                                  <FaMoneyBillWave className="w-3 h-3" /> Pay
+                                </button>
+                              )}
+                              <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1 shadow-sm px-3 hover:bg-slate-100 transition-colors">
+                                <FaEdit className="w-3.5 h-3.5" /> Edit
+                              </button>
+                            </>
                           )}
                           <button type="button" onClick={() => downloadPurchaseInvoicePdf(row)} className="btn-ghost-secondary flex items-center gap-1">
                             <FaFilePdf className="w-3.5 h-3.5" /> Invoice

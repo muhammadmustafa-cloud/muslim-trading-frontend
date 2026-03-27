@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { apiGet } from "../config/api.js";
 import {
   FaFileInvoiceDollar,
@@ -170,7 +170,7 @@ export default function DailyKhata() {
               </thead>
               <tbody>
                 {groupedData.map((group) => (
-                  <>
+                  <Fragment key={group.date}>
                     {/* Day Header (only show if range spans multiple days) */}
                     {isRange && (
                       <tr key={`header-${group.date}`} className="bg-slate-100/80">
@@ -198,7 +198,7 @@ export default function DailyKhata() {
                         </td>
                       </tr>
                     ))}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

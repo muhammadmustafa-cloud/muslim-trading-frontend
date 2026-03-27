@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { API_BASE_URL } from "../config/api.js";
+import { apiGet } from "../config/api.js";
 import { downloadMachineryItemKhataPdf } from "../utils/exportPdf.js";
 import { FaArrowLeft, FaCogs, FaFilePdf } from "react-icons/fa";
 
@@ -33,13 +33,11 @@ export default function MachineryItemKhata() {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        if (dateFrom) params.set("dateFrom", dateFrom);
-        if (dateTo) params.set("dateTo", dateTo);
-        const res = await fetch(`${API_BASE_URL}/machinery-items/${id}/khata?${params}`);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || "Failed to load khata");
-        if (!cancelled) setData(json.data || { name: "", purchases: [], totalCost: 0 });
+        const data = await apiGet(`/machinery-items/${id}/khata`, {
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        });
+        if (!cancelled) setData(data.data || { name: "", purchases: [], totalCost: 0 });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {

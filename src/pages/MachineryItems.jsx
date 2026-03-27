@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { downloadMachineryItemsPdf } from "../utils/exportPdf.js";
 import { FaCogs, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
@@ -25,11 +25,7 @@ export default function MachineryItems() {
     setLoading(true);
     setError("");
     try {
-      const params = {};
-      if (search) params.search = search;
-      const res = await fetch(`${API_BASE_URL}/machinery-items?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/machinery-items", { search: search || undefined });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

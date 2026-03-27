@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import {
   FaClipboardList,
   FaMoneyBillWave,
@@ -35,10 +35,7 @@ export default function MazdoorManagement() {
     setItemsLoading(true);
     setError("");
     try {
-      const params = search ? { search } : {};
-      const res = await fetch(`${API_BASE_URL}/mazdoor-items?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch items");
+      const data = await apiGet("/mazdoor-items", { search: search || undefined });
       setItems(data.data || []);
     } catch (e) {
       setError(e.message);

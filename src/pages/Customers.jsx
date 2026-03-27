@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaUsers, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -26,11 +26,7 @@ export default function Customers() {
     setError("");
     try {
       const params = search ? { search } : {};
-      const res = await fetch(
-        `${API_BASE_URL}/customers?${new URLSearchParams(params)}`
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/customers", params);
       setList(data.data || []);
     } catch (e) {
       setError(e.message);
@@ -42,9 +38,8 @@ export default function Customers() {
 
   const fetchSuppliers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/suppliers`);
-      const data = await res.json();
-      if (res.ok) setSuppliers(data.data || []);
+      const data = await apiGet("/suppliers");
+      setSuppliers(data.data || []);
     } catch (_) { }
   };
 

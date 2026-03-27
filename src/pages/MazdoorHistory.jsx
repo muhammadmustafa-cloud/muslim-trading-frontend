@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { API_BASE_URL } from "../config/api.js";
+import { API_BASE_URL, apiGet } from "../config/api.js";
 import { FaArrowLeft, FaFilePdf, FaUser } from "react-icons/fa";
 import { downloadMazdoorHistoryPdf } from "../utils/historyPdf.js";
 
@@ -47,13 +47,11 @@ export default function MazdoorHistory() {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        if (dateFrom) params.set("dateFrom", dateFrom);
-        if (dateTo) params.set("dateTo", dateTo);
-        const res = await fetch(`${API_BASE_URL}/mazdoor/${id}/history?${params}`);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || "Failed to load history");
-        if (!cancelled) setData(json.data || { name: "", transactions: [], totalPaid: 0, totalReceived: 0, totalEarned: 0, balance: 0 });
+        const data = await apiGet(`/mazdoor/${id}/history`, {
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        });
+        if (!cancelled) setData(data.data || { name: "", transactions: [], totalPaid: 0, totalReceived: 0, totalEarned: 0, balance: 0 });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {

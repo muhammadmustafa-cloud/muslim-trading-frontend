@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL, apiPost, apiPostFormData } from "../config/api.js";
+import { apiGet, apiPost, apiPostFormData } from "../config/api.js";
 import { FaIndustry, FaPlus, FaCalendarDay, FaFilePdf, FaImage } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 import { downloadMillKhataPdf } from "../utils/millKhataPdf.js";
@@ -11,6 +12,7 @@ const getToday = () => new Date().toISOString().slice(0, 10);
 
 export default function MillKhata() {
   const today = getToday();
+  const { isAdmin } = useAuth();
   const [filters, setFilters] = useState({ dateFrom: today, dateTo: today });
   const [list, setList] = useState([]);
   const [summary, setSummary] = useState({ total: 0, accountBalance: 0 });
@@ -28,12 +30,11 @@ export default function MillKhata() {
     setLoading(true);
     setError("");
     try {
-      const params = { limit: 1000 };
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-      const res = await fetch(`${API_BASE_URL}/mill-expenses?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch daybook");
+      const data = await apiGet("/mill-expenses", {
+        limit: 1000,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      });
       setList(data.data || []);
       setSummary(data.summary || { total: 0, accountBalance: 0 });
       setAccount(data.account || null);
@@ -118,9 +119,11 @@ export default function MillKhata() {
           <button type="button" onClick={handleDownloadPdf} disabled={list.length === 0} className="btn-secondary flex items-center gap-2">
             <FaFilePdf className="text-red-500" /> <span className="hidden sm:inline">Download</span> PDF
           </button>
-          <button type="button" onClick={handleOpenAdd} className="btn-primary">
-            <FaPlus className="w-4 h-4 mr-1.5" /> <span className="hidden sm:inline">Add Entry</span>
-          </button>
+          {isAdmin && (
+            <button type="button" onClick={handleOpenAdd} className="btn-primary">
+              <FaPlus className="w-4 h-4 mr-1.5" /> <span className="hidden sm:inline">Add Entry</span>
+            </button>
+          )}
         </div>
       </header>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { API_BASE_URL, apiGet, apiPost, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadTransactionsPdf } from "../utils/exportPdf.js";
 import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
@@ -53,23 +53,20 @@ export default function Transactions() {
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/accounts`);
-      const data = await res.json();
-      if (res.ok) setAccounts(data.data || []);
+      const data = await apiGet("/accounts");
+      setAccounts(data.data || []);
     } catch (_) { }
   };
   const fetchSuppliers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/suppliers`);
-      const data = await res.json();
-      if (res.ok) setSuppliers(data.data || []);
+      const data = await apiGet("/suppliers");
+      setSuppliers(data.data || []);
     } catch (_) { }
   };
   const fetchMazdoor = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/mazdoor`);
-      const data = await res.json();
-      if (res.ok) setMazdoor(data.data || []);
+      const data = await apiGet("/mazdoor");
+      setMazdoor(data.data || []);
     } catch (_) { }
   };
   const fetchTaxTypes = async () => {
@@ -89,14 +86,12 @@ export default function Transactions() {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams();
-      params.set("unified", "true");
-      if (filters.accountId) params.set("accountId", filters.accountId);
-      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.set("dateTo", filters.dateTo);
-      const res = await fetch(`${API_BASE_URL}/transactions?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/transactions", {
+        unified: "true",
+        accountId: filters.accountId || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+      });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

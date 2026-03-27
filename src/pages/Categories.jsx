@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaTags, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -22,9 +22,7 @@ export default function Categories() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/categories`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/categories");
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

@@ -65,11 +65,11 @@ export default function DailyCashMemo() {
   const fetchOptions = async () => {
     try {
       const [acc, cust, sup, maz, it] = await Promise.all([
-        fetch(`${API_BASE_URL}/accounts`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/customers`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/suppliers`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/mazdoor`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/items`).then((r) => r.json()),
+        apiGet("/accounts"),
+        apiGet("/customers"),
+        apiGet("/suppliers"),
+        apiGet("/mazdoor"),
+        apiGet("/items"),
       ]);
       if (acc.data) setAccounts(acc.data);
       if (cust.data) setCustomers(cust.data);

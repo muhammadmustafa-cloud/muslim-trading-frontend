@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { API_BASE_URL, apiPost } from '../config/api';
+import { apiGet, apiPost } from '../config/api';
 import Modal from './Modal';
 import { FaMoneyBillWave, FaExclamationCircle } from 'react-icons/fa';
 
@@ -31,9 +31,8 @@ export default function PayBillModal({ entry, open, onClose, onSuccess }) {
 
     const fetchAccounts = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/accounts`);
-            const data = await res.json();
-            if (res.ok) setAccounts(data.data || []);
+            const data = await apiGet("/accounts");
+            setAccounts(data.data || []);
         } catch (err) {
             console.error('Failed to fetch accounts');
         }

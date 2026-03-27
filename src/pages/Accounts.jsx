@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { downloadAccountsPdf } from "../utils/exportPdf.js";
 import { FaWallet, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaExchangeAlt, FaFilePdf, FaMoneyBillWave } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
@@ -28,10 +28,7 @@ export default function Accounts() {
     setLoading(true);
     setError("");
     try {
-      const params = search ? { search } : {};
-      const res = await fetch(`${API_BASE_URL}/accounts?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/accounts", search ? { search } : {});
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

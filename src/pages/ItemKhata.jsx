@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { API_BASE_URL } from "../config/api.js";
+import { API_BASE_URL, apiGet } from "../config/api.js";
 import { FaArrowLeft, FaBox, FaFilePdf } from "react-icons/fa";
 import { downloadKhataPdf } from "../utils/historyPdf.js";
 
@@ -33,13 +33,11 @@ export default function ItemKhata() {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        if (dateFrom) params.set("dateFrom", dateFrom);
-        if (dateTo) params.set("dateTo", dateTo);
-        const res = await fetch(`${API_BASE_URL}/items/${id}/khata?${params}`);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || "Failed to load khata");
-        if (!cancelled) setData(json.data || { name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0 });
+        const data = await apiGet(`/items/${id}/khata`, {
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        });
+        if (!cancelled) setData(data.data || { name: "", purchases: [], sales: [], totalCost: 0, totalRevenue: 0, profit: 0, totalBagsPurchased: 0, totalBagsSold: 0 });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {

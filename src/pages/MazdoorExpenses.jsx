@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiDelete } from "../config/api.js";
 import { downloadMazdoorExpensesPdf } from "../utils/exportPdf.js";
 import {
   FaMoneyBillWave,
@@ -55,13 +55,11 @@ export default function MazdoorExpenses() {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams();
-      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.set("dateTo", filters.dateTo);
-      if (filters.mazdoorId) params.set("mazdoorId", filters.mazdoorId);
-      const res = await fetch(`${API_BASE_URL}/mazdoor-expenses?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/mazdoor-expenses", {
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        mazdoorId: filters.mazdoorId || undefined,
+      });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);
@@ -73,23 +71,20 @@ export default function MazdoorExpenses() {
 
   const fetchMazdoor = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/mazdoor`);
-      const data = await res.json();
-      if (res.ok) setMazdoor(data.data || []);
+      const data = await apiGet("/mazdoor");
+      setMazdoor(data.data || []);
     } catch (_) { }
   };
   const fetchItems = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/mazdoor-items`);
-      const data = await res.json();
-      if (res.ok) setItems(data.data || []);
+      const data = await apiGet("/mazdoor-items");
+      setItems(data.data || []);
     } catch (_) { }
   };
   const fetchAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/accounts`);
-      const data = await res.json();
-      if (res.ok) setAccounts(data.data || []);
+      const data = await apiGet("/accounts");
+      setAccounts(data.data || []);
     } catch (_) { }
   };
 

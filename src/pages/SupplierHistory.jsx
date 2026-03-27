@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { API_BASE_URL } from "../config/api.js";
+import { API_BASE_URL, apiGet } from "../config/api.js";
 import { FaArrowLeft, FaFilePdf, FaTruck } from "react-icons/fa";
 import { downloadSupplierHistoryPdf } from "../utils/historyPdf.js";
 
@@ -33,13 +33,11 @@ export default function SupplierHistory() {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        if (dateFrom) params.set("dateFrom", dateFrom);
-        if (dateTo) params.set("dateTo", dateTo);
-        const res = await fetch(`${API_BASE_URL}/suppliers/${id}/history?${params}`);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || "Failed to load history");
-        if (!cancelled) setData(json.data || { name: "", ledger: [], summary: {} });
+        const data = await apiGet(`/suppliers/${id}/history`, {
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        });
+        if (!cancelled) setData(data.data || { name: "", ledger: [], summary: {} });
       } catch (e) {
         if (!cancelled) setError(e.message);
       } finally {

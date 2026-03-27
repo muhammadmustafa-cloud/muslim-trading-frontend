@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL, apiPost, apiPut, apiDelete, apiPostFormData } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadSalesPdf, downloadSaleInvoicePdf } from "../utils/exportPdf.js";
-import { FaShoppingCart, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaHandHoldingUsd, FaImage } from "react-icons/fa";
+import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
@@ -12,6 +13,7 @@ import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 const today = new Date().toISOString().slice(0, 10);
 
 export default function Sales() {
+  const { isAdmin } = useAuth();
   const [list, setList] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [items, setItems] = useState([]);
@@ -54,47 +56,42 @@ export default function Sales() {
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedCollectEntry, setSelectedCollectEntry] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/customers`);
-      const data = await res.json();
-      if (res.ok) setCustomers(data.data || []);
+      const data = await apiGet("/customers");
+      setCustomers(data.data || []);
     } catch (_) { }
   };
   const fetchItems = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/items`);
-      const data = await res.json();
-      if (res.ok) setItems(data.data || []);
+      const data = await apiGet("/items");
+      setItems(data.data || []);
     } catch (_) { }
   };
   const fetchAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/accounts`);
-      const data = await res.json();
-      if (res.ok) setAccounts(data.data || []);
+      const data = await apiGet("/accounts");
+      setAccounts(data.data || []);
     } catch (_) { }
   };
   const fetchStockData = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/stock/current`);
-      const data = await res.json();
-      if (res.ok) setStockData(data.data || []);
+      const data = await apiGet("/stock/current");
+      setStockData(data.data || []);
     } catch (_) { }
   };
   const fetchList = async () => {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams();
-      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.set("dateTo", filters.dateTo);
-      if (filters.customerId) params.set("customerId", filters.customerId);
-      if (filters.itemId) params.set("itemId", filters.itemId);
-      const res = await fetch(`${API_BASE_URL}/sales?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/sales", {
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        customerId: filters.customerId || undefined,
+        itemId: filters.itemId || undefined,
+      });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);
@@ -120,11 +117,9 @@ export default function Sales() {
       return;
     }
     let cancelled = false;
-    const params = new URLSearchParams({ itemId: form.itemId });
-    fetch(`${API_BASE_URL}/sales/available?${params}`)
-      .then((res) => res.json())
+    apiGet("/sales/available", { itemId: form.itemId })
       .then((data) => {
-        if (!cancelled && data.success && data.data) {
+        if (!cancelled && data.data) {
           setAvailableStock({
             weight: data.data.availableWeight ?? data.data.available,
             kattay: data.data.availableKattay ?? 0
@@ -161,6 +156,8 @@ export default function Sales() {
       dueDate: "",
       image: null,
     });
+    setForm((f) => ({ ...f, image: null })); // reset image specifically
+    setEditingId(null);
     setModalOpen(false);
   };
 
@@ -237,7 +234,42 @@ export default function Sales() {
   const openAddModal = () => {
     resetForm();
     setForm((f) => ({ ...f, date: today }));
+    setEditingId(null);
     setModalOpen(true);
+  };
+
+  const handleEdit = (row) => {
+    setEditingId(row._id);
+    setForm({
+      date: formatDateForInput(row.date),
+      customerId: row.customerId?._id || "",
+      itemId: row.itemId?._id || "",
+      kattay: String(row.kattay || ""),
+      kgPerKata: String(row.kgPerKata || ""),
+      grossWeight: String((row.kattay || 0) * (row.kgPerKata || 0)),
+      quantity: String(row.quantity || ""),
+      shCut: String(row.shCut || ""),
+      rate: String(row.rate || ""),
+      bardanaRate: String(row.bardanaRate || ""),
+      bardanaAmount: String(row.bardanaAmount || ""),
+      mazdori: String(row.mazdori || ""),
+      totalAmount: String(row.totalAmount || ""),
+      truckNumber: row.truckNumber || "",
+      gatePassNo: row.gatePassNo || "",
+      goods: row.goods || "",
+      amountReceived: String(row.amountReceived || ""),
+      accountId: row.accountId?._id || row.accountId || "",
+      notes: row.notes || "",
+      paymentTerms: "custom",
+      dueDate: row.dueDate ? formatDateForInput(row.dueDate) : "",
+      image: null,
+    });
+    setModalOpen(true);
+  };
+
+  const formatDateForInput = (d) => {
+    if (!d) return "";
+    return new Date(d).toISOString().slice(0, 10);
   };
 
   const handleSubmit = async (e) => {
@@ -285,8 +317,12 @@ export default function Sales() {
       if (form.image) {
         formData.append("image", form.image);
       }
-
-      await apiPostFormData("/sales", formData);
+      
+      if (editingId) {
+        await apiPutFormData(`/sales/${editingId}`, formData);
+      } else {
+        await apiPostFormData("/sales", formData);
+      }
       resetForm();
       fetchList();
       fetchStockData(); // Refresh dropdown labels
@@ -637,12 +673,11 @@ export default function Sales() {
                               <FaImage className="w-3.5 h-3.5" /> 
                             </button>
                           )}
-                          {row.paymentStatus !== 'paid' && (
-                            <button type="button" onClick={() => { setSelectedCollectEntry(row); setCollectModalOpen(true); }} className="btn-ghost-primary flex items-center gap-1">
-                              <FaHandHoldingUsd className="w-3.5 h-3.5" /> Collect
+                          {isAdmin && (
+                            <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1">
+                              <FaPlus className="w-3.5 h-3.5" /> Edit
                             </button>
                           )}
-                          {/* Edit removed for data integrity */}
                           <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="btn-ghost-secondary flex items-center gap-1">
                             <FaFilePdf className="w-3.5 h-3.5" /> Invoice
                           </button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../config/api";
+import { apiGet } from "../config/api";
 import { FaHandHoldingUsd, FaFileInvoiceDollar, FaChevronRight, FaHistory, FaCheckCircle, FaExclamationCircle, FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import PayBillModal from "../components/PayBillModal";
@@ -19,10 +19,8 @@ export default function SupplierPayables() {
     const fetchPayables = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/suppliers/payables`);
-            const data = await res.json();
-            if (res.ok) setPayables(data.data || []);
-            else throw new Error(data.message || "Failed to fetch payables");
+            const data = await apiGet("/suppliers/payables");
+            setPayables(data.data || []);
         } catch (err) {
             setError(err.message);
         } finally {

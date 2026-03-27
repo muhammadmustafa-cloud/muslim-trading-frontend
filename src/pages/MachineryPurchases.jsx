@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { API_BASE_URL, apiPost, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiDelete } from "../config/api.js";
 import { downloadMachineryPurchasesPdf } from "../utils/exportPdf.js";
 import { FaTools, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaTrash, FaFilePdf } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
@@ -35,9 +35,9 @@ export default function MachineryPurchases() {
   const fetchData = async () => {
     try {
       const [it, su, ac] = await Promise.all([
-        fetch(`${API_BASE_URL}/machinery-items`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/suppliers`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/accounts`).then(r => r.json())
+        apiGet("/machinery-items"),
+        apiGet("/suppliers"),
+        apiGet("/accounts")
       ]);
       setItems(it.data || []);
       setSuppliers(su.data || []);
@@ -49,14 +49,12 @@ export default function MachineryPurchases() {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams();
-      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.set("dateTo", filters.dateTo);
-      if (filters.machineryItemId) params.set("machineryItemId", filters.machineryItemId);
-      if (filters.supplierId) params.set("supplierId", filters.supplierId);
-      const res = await fetch(`${API_BASE_URL}/machinery-purchases?${params}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/machinery-purchases", {
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        machineryItemId: filters.machineryItemId || undefined,
+        supplierId: filters.supplierId || undefined,
+      });
       setList(data.data || []);
     } catch (e) {
       setError(e.message);

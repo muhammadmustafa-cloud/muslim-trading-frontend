@@ -31,14 +31,26 @@ import TaxLedger from "./pages/TaxLedger";
 import ExpenseTypes from "./pages/ExpenseTypes";
 import ExpenseLedger from "./pages/ExpenseLedger";
 import AuditSummary from "./pages/AuditSummary";
+import Login from "./pages/Login";
+import Users from "./pages/Users";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="dashboard" element={<Dashboard />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
           <Route path="customers" element={<Customers />} />
           <Route path="customers/receivables" element={<CustomerReceivables />} />
           <Route path="customers/:id/history" element={<CustomerHistory />} />
@@ -70,11 +82,13 @@ function App() {
           <Route path="expense-types" element={<ExpenseTypes />} />
           <Route path="expense-types/:id/ledger" element={<ExpenseLedger />} />
           <Route path="audit-summary" element={<AuditSummary />} />
+          <Route path="users" element={<Users />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
-  );
+  </AuthProvider>
+);
 }
 
 export default App;

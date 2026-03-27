@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaTruck, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -26,9 +26,7 @@ export default function Suppliers() {
     setError("");
     try {
       const params = search ? { search } : {};
-      const res = await fetch(`${API_BASE_URL}/suppliers?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/suppliers", params);
       setList(data.data || []);
     } catch (e) {
       setError(e.message);
@@ -40,9 +38,8 @@ export default function Suppliers() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/customers`);
-      const data = await res.json();
-      if (res.ok) setCustomers(data.data || []);
+      const data = await apiGet("/customers");
+      setCustomers(data.data || []);
     } catch (_) { }
   };
 

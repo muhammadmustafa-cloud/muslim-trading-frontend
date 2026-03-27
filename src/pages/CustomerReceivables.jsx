@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../config/api";
+import { apiGet } from "../config/api";
 import { FaHandHoldingUsd, FaFileInvoiceDollar, FaChevronRight, FaHistory, FaCheckCircle, FaExclamationCircle, FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import CollectPaymentModal from "../components/CollectPaymentModal";
@@ -19,10 +19,8 @@ export default function CustomerReceivables() {
     const fetchReceivables = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/customers/receivables`);
-            const data = await res.json();
-            if (res.ok) setReceivables(data.data || []);
-            else throw new Error(data.message || "Failed to fetch receivables");
+            const data = await apiGet("/customers/receivables");
+            setReceivables(data.data || []);
         } catch (err) {
             setError(err.message);
         } finally {

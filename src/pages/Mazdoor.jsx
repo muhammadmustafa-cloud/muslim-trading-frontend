@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, apiPost, apiPut, apiDelete } from "../config/api.js";
+import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaUser, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaMoneyBillWave, FaHistory, FaHandHoldingUsd } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
@@ -9,6 +10,7 @@ const today = new Date().toISOString().slice(0, 10);
 
 export default function Mazdoor() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [list, setList] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
@@ -34,9 +36,7 @@ export default function Mazdoor() {
     setError("");
     try {
       const params = search ? { search } : {};
-      const res = await fetch(`${API_BASE_URL}/mazdoor?${new URLSearchParams(params)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
+      const data = await apiGet("/mazdoor", params);
       setList(data.data || []);
     } catch (e) {
       setError(e.message);
@@ -48,9 +48,8 @@ export default function Mazdoor() {
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/accounts`);
-      const data = await res.json();
-      if (res.ok) setAccounts(data.data || []);
+      const data = await apiGet("/accounts");
+      setAccounts(data.data || []);
     } catch (_) { }
   };
 
@@ -213,7 +212,11 @@ export default function Mazdoor() {
           <h1 className="page-title flex items-center gap-2"><FaUser className="w-7 h-7 text-amber-500" /> Mazdoor</h1>
           <p className="page-subtitle">Workers ko manage karein.</p>
         </div>
-        <button type="button" onClick={openAddModal} className="btn-primary"><FaPlus className="w-4 h-4" /> Add mazdoor</button>
+        {isAdmin && (
+          <button type="button" onClick={openAddModal} className="btn-primary">
+            <FaPlus className="w-4 h-4" /> Add mazdoor
+          </button>
+        )}
       </header>
 
       <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit mazdoor" : "Naya mazdoor add karein"}>
@@ -379,11 +382,17 @@ export default function Mazdoor() {
                       {cols.map(({ key }) => <td key={key} className="table-cell">{key === "name" ? <span className="font-medium">{row[key]}</span> : (row[key] || "—")}</td>)}
                       <td className="table-cell">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <button type="button" onClick={() => openSalaryModal(row)} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 border-emerald-100 hover:bg-emerald-50"><FaPlus className="w-3 h-3" /> Post Salary</button>
-                          <button type="button" onClick={() => openPaymentModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Advance / Salary de</button>
-                          <button type="button" onClick={() => openReceiveModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaHandHoldingUsd className="w-3.5 h-3.5" /> Udhaar wapas lo</button>
+                          {isAdmin && (
+                            <>
+                              <button type="button" onClick={() => openSalaryModal(row)} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 border-emerald-100 hover:bg-emerald-50"><FaPlus className="w-3 h-3" /> Post Salary</button>
+                              <button type="button" onClick={() => openPaymentModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Advance / Salary de</button>
+                              <button type="button" onClick={() => openReceiveModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaHandHoldingUsd className="w-3.5 h-3.5" /> Udhaar wapas lo</button>
+                            </>
+                          )}
                           <button type="button" onClick={() => navigate(`/mazdoor/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History / Khata</button>
-                          <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
+                          {isAdmin && (
+                            <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
+                          )}
                         </div>
                       </td>
                     </tr>
