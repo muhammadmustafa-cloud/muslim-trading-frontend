@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { apiGet, apiPost, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiPostFormData, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadTransactionsPdf } from "../utils/exportPdf.js";
-import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf } from "react-icons/fa";
+import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaImage } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
+import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
@@ -37,7 +38,9 @@ export default function Transactions() {
     mazdoorId: "",
     taxTypeId: "",
     expenseTypeId: "",
+    image: null,
   });
+  const [previewImage, setPreviewImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "" });
   const [sortKey, setSortKey] = useState("date");
@@ -125,6 +128,7 @@ export default function Transactions() {
       mazdoorId: "",
       taxTypeId: "",
       expenseTypeId: "",
+      image: null,
     });
     setModalOpen(false);
   };
@@ -182,20 +186,21 @@ export default function Transactions() {
     }
 
     try {
-      const payload = {
-        date: form.date,
-        type: form.type,
-        fromAccountId: form.fromAccountId || undefined,
-        toAccountId: form.toAccountId || undefined,
-        amount: amt,
-        category: (form.category || "").trim(),
-        note: (form.note || "").trim(),
-        supplierId: form.supplierId || undefined,
-        mazdoorId: form.mazdoorId || undefined,
-        taxTypeId: form.taxTypeId || undefined,
-        expenseTypeId: form.expenseTypeId || undefined,
-      };
-      await apiPost("/transactions", payload);
+      const formData = new FormData();
+      formData.append("date", form.date);
+      formData.append("type", form.type);
+      if (form.fromAccountId) formData.append("fromAccountId", form.fromAccountId);
+      if (form.toAccountId) formData.append("toAccountId", form.toAccountId);
+      formData.append("amount", amt);
+      if (form.category) formData.append("category", form.category.trim());
+      if (form.note) formData.append("note", form.note.trim());
+      if (form.supplierId) formData.append("supplierId", form.supplierId);
+      if (form.mazdoorId) formData.append("mazdoorId", form.mazdoorId);
+      if (form.taxTypeId) formData.append("taxTypeId", form.taxTypeId);
+      if (form.expenseTypeId) formData.append("expenseTypeId", form.expenseTypeId);
+      if (form.image) formData.append("image", form.image);
+
+      await apiPostFormData("/transactions", formData);
       resetForm();
       fetchList();
     } catch (e) {
@@ -415,6 +420,10 @@ export default function Transactions() {
                 placeholder="Select mazdoor"
               />
             </div>
+            <div>
+              <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label>
+              <input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" />
+            </div>
             <div className="sm:col-span-2">
               <label className="input-label">Note</label>
               <input type="text" placeholder="Optional" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field" />
@@ -474,6 +483,7 @@ export default function Transactions() {
                     <th className="table-header px-5 py-3.5 text-right">
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Debit (Out)<SortIcon columnKey="amount" /></button>
                     </th>
+                    <th className="table-header px-5 py-3.5 w-16 text-center">Receipt</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -516,6 +526,13 @@ export default function Transactions() {
                         </td>
                         <td className="table-cell text-right font-bold text-emerald-600">{credit > 0 ? formatMoney(credit) : "—"}</td>
                         <td className="table-cell text-right font-bold text-rose-600">{debit > 0 ? formatMoney(debit) : "—"}</td>
+                        <td className="table-cell text-center">
+                          {row.image && (
+                            <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center justify-center p-1.5 text-indigo-500 hover:text-indigo-700 bg-indigo-50 rounded mx-auto" title="Preview Receipt">
+                              <FaImage className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -538,6 +555,7 @@ export default function Transactions() {
                         <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
                         <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tCredit)}</td>
                         <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tDebit)}</td>
+                        <td className="bg-slate-50/30"></td>
                       </tr>
                     );
                   })()}
@@ -560,6 +578,13 @@ export default function Transactions() {
           )}
         </div>
       </section>
+
+      <ImagePreviewModal
+        open={!!previewImage}
+        onClose={() => setPreviewImage(null)}
+        imageUrl={previewImage}
+        title="Transaction Receipt Preview"
+      />
     </div>
   );
 }

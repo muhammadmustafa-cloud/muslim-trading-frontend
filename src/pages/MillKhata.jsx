@@ -119,11 +119,9 @@ export default function MillKhata() {
           <button type="button" onClick={handleDownloadPdf} disabled={list.length === 0} className="btn-secondary flex items-center gap-2">
             <FaFilePdf className="text-red-500" /> <span className="hidden sm:inline">Download</span> PDF
           </button>
-          {isAdmin && (
-            <button type="button" onClick={handleOpenAdd} className="btn-primary">
-              <FaPlus className="w-4 h-4 mr-1.5" /> <span className="hidden sm:inline">Add Entry</span>
-            </button>
-          )}
+          <button type="button" onClick={handleOpenAdd} className="btn-primary">
+            <FaPlus className="w-4 h-4 mr-1.5" /> <span className="hidden sm:inline">Add Entry</span>
+          </button>
         </div>
       </header>
 

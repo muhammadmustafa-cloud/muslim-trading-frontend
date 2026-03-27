@@ -21,22 +21,25 @@ export default function Sales() {
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [view, setView] = useState("list"); // "list" or "form"
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     date: today,
     customerId: "",
-    itemId: "",
-    kattay: "",
-    kgPerKata: "",
-    grossWeight: "", // NEW: Total weight entered by user or calculated initially
-    quantity: "",    // Net weight result
-    shCut: "",       // Manual S.H Cut
-    rate: "",
-    bardanaRate: "",
-    bardanaAmount: "",
-    mazdori: "",
-    totalAmount: "",
+    totalGrossWeight: "",
+    totalSHCut: "",
+    netWeight: "",
+    items: [{
+      itemId: "",
+      kattay: "",
+      kgPerKata: "",
+      grossWeight: "",
+      rate: "",
+      bardanaRate: "",
+      bardanaAmount: "",
+      mazdori: "",
+      totalAmount: "",
+    }],
     truckNumber: "",
     gatePassNo: "",
     goods: "",
@@ -47,59 +50,19 @@ export default function Sales() {
     dueDate: "",
     image: null,
   });
-  const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", customerId: "", itemId: "" });
+  const [editingId, setEditingId] = useState(null);
+  const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", customerId: "" });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [availableStock, setAvailableStock] = useState(null);
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedCollectEntry, setSelectedCollectEntry] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
-  const [editingId, setEditingId] = useState(null);
 
-  const fetchCustomers = async () => {
-    try {
-      const data = await apiGet("/customers");
-      setCustomers(data.data || []);
-    } catch (_) { }
-  };
-  const fetchItems = async () => {
-    try {
-      const data = await apiGet("/items");
-      setItems(data.data || []);
-    } catch (_) { }
-  };
-  const fetchAccounts = async () => {
-    try {
-      const data = await apiGet("/accounts");
-      setAccounts(data.data || []);
-    } catch (_) { }
-  };
-  const fetchStockData = async () => {
-    try {
-      const data = await apiGet("/stock/current");
-      setStockData(data.data || []);
-    } catch (_) { }
-  };
-  const fetchList = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await apiGet("/sales", {
-        dateFrom: filters.dateFrom || undefined,
-        dateTo: filters.dateTo || undefined,
-        customerId: filters.customerId || undefined,
-        itemId: filters.itemId || undefined,
-      });
-      setList(data.data || []);
-    } catch (e) {
-      setError(e.message);
-      setList([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchList();
+  }, [filters.dateFrom, filters.dateTo, filters.customerId, filters.itemId]);
 
   useEffect(() => {
     fetchCustomers();
@@ -107,45 +70,73 @@ export default function Sales() {
     fetchAccounts();
     fetchStockData();
   }, []);
-  useEffect(() => {
-    fetchList();
-  }, [filters.dateFrom, filters.dateTo, filters.customerId, filters.itemId]);
 
-  useEffect(() => {
-    if (!form.itemId) {
-      setAvailableStock(null);
-      return;
+  const fetchList = async () => {
+    setLoading(true);
+    try {
+      const data = await apiGet("/sales", { 
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        customerId: filters.customerId || undefined,
+        itemId: filters.itemId || undefined
+      });
+      setList(data.data || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
-    let cancelled = false;
-    apiGet("/sales/available", { itemId: form.itemId })
-      .then((data) => {
-        if (!cancelled && data.data) {
-          setAvailableStock({
-            weight: data.data.availableWeight ?? data.data.available,
-            kattay: data.data.availableKattay ?? 0
-          });
-        }
-        else setAvailableStock(null);
-      })
-      .catch(() => { if (!cancelled) setAvailableStock(null); });
-    return () => { cancelled = true; };
-  }, [form.itemId]);
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const data = await apiGet("/customers");
+      setCustomers(data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchItems = async () => {
+    try {
+      const data = await apiGet("/items");
+      setItems(data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchAccounts = async () => {
+    try {
+      const data = await apiGet("/accounts");
+      setAccounts(data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchStockData = async () => {
+    try {
+      const data = await apiGet("/stock");
+      setStockData(data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
+  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
   const resetForm = () => {
     setForm({
       date: today,
       customerId: "",
-      itemId: "",
-      kattay: "",
-      kgPerKata: "",
-      grossWeight: "",
-      quantity: "",
-      shCut: "",
-      rate: "",
-      bardanaRate: "",
-      bardanaAmount: "",
-      mazdori: "",
-      totalAmount: "",
+      totalGrossWeight: "",
+      totalSHCut: "",
+      netWeight: "",
+      items: [{
+        itemId: "",
+        kattay: "",
+        kgPerKata: "",
+        grossWeight: "",
+        rate: "",
+        bardanaRate: "",
+        bardanaAmount: "",
+        mazdori: "",
+        totalAmount: "",
+      }],
       truckNumber: "",
       gatePassNo: "",
       goods: "",
@@ -156,68 +147,88 @@ export default function Sales() {
       dueDate: "",
       image: null,
     });
-    setForm((f) => ({ ...f, image: null })); // reset image specifically
     setEditingId(null);
-    setModalOpen(false);
+    setView("list");
+  };
+
+  const addItemRow = () => {
+    setForm(prev => ({
+      ...prev,
+      items: [...prev.items, {
+        itemId: "",
+        kattay: "",
+        kgPerKata: "",
+        grossWeight: "",
+        rate: "",
+        bardanaRate: "",
+        bardanaAmount: "",
+        mazdori: "",
+        totalAmount: "",
+      }]
+    }));
+  };
+
+  const removeItemRow = (index) => {
+    if (form.items.length <= 1) return;
+    setForm(prev => {
+      const newItems = prev.items.filter((_, i) => i !== index);
+      return { ...prev, items: newItems };
+    });
   };
 
   const updateFormWithAutoCalc = (updates) => {
     setForm((prev) => {
-      const next = { ...prev, ...updates };
+      let next = { ...prev, ...updates };
 
-      const kattay = Number(next.kattay) || 0;
-      const kgPerKata = Number(next.kgPerKata) || 0;
-      const rate = Number(next.rate) || 0;
-      
-      // Manual S.H Cut: No auto-changing now as per user request
-      const shCut = Number(next.shCut) || 0;
+      // 1. Master Weights
+      const totalGross = Number(next.totalGrossWeight) || 0;
+      const totalCut = Number(next.totalSHCut) || 0;
+      next.netWeight = String(Math.max(0, totalGross - totalCut));
 
-      const bardanaRate = Number(next.bardanaRate) || 0;
-      const mazdori = Number(next.mazdori) || 0;
+      // 2. Individual Items
+      let grandTotalAmount = 0;
+      next.items = next.items.map(item => {
+        const k = Number(item.kattay) || 0;
+        const kpk = Number(item.kgPerKata) || 0;
+        
+        // Auto-calc line gross if not manually set
+        let lineGross = Number(item.grossWeight) || (k * kpk);
+        
+        // Proportional S.H Cut
+        const lineSHCut = totalGross > 0 ? (lineGross / totalGross) * totalCut : 0;
+        const lineNet = Math.max(0, lineGross - lineSHCut);
+        
+        const rate = Number(item.rate) || 0;
+        const bRate = Number(item.bardanaRate) || 0;
+        const mazdori = Number(item.mazdori) || 0;
 
-      // Auto-calc Gross Weight if kattay or kgPerKata changed, but user can override it too
-      if ("kattay" in updates || "kgPerKata" in updates) {
-        if (kattay > 0 && kgPerKata > 0) {
-          next.grossWeight = String(kattay * kgPerKata);
-        }
-      }
-
-      const grossWeight = Number(next.grossWeight) || 0;
-
-      // Quantity (Net weight) is ALWAYS grossWeight - shCut now
-      // This satisfies the "agr S.H cut bhi enter krta tw minus kr ke net weight show kare" requirement
-      if (grossWeight > 0 || shCut > 0) {
-        next.quantity = String(Math.max(0, grossWeight - shCut));
-      }
-
-      // Auto-calc Bardana Amount
-      let bardanaAmt = Number(next.bardanaAmount) || 0;
-      if (kattay > 0 && bardanaRate > 0) {
-        bardanaAmt = kattay * bardanaRate;
-        next.bardanaAmount = String(bardanaAmt);
-      }
-
-      // Auto-calc totalAmount
-      // (Quantity / 40) × rate (user rate is per MUN)
-      let calculatedTotalAmount = 0;
-      const qty = Number(next.quantity) || 0;
-      if (qty > 0 && rate > 0) {
-        const mun = qty / 40;
-        calculatedTotalAmount = Math.round(mun * rate) + bardanaAmt + mazdori;
-      }
-      
-      // Only override total amount if we have rate formulas firing or relevant inputs changed
-      if (calculatedTotalAmount > 0 || ("quantity" in updates || "rate" in updates || "bardanaRate" in updates || "mazdori" in updates || "shCut" in updates || "grossWeight" in updates)) {
-          next.totalAmount = calculatedTotalAmount > 0 ? String(calculatedTotalAmount) : "";
-      }
-
-      // Auto calc dueDate if paymentTerms changed or date changed
-      if ("paymentTerms" in updates || "date" in updates) {
-        if (next.paymentTerms === "custom") {
-          // keep existing or manual
-        } else if (next.paymentTerms === "cash") {
-          next.dueDate = next.date;
+        // Auto-calc Bardana Amount
+        let bAmt = Number(item.bardanaAmount) || 0;
+        if (k > 0 && bRate > 0) bAmt = k * bRate;
+        
+        // Line Total: (Net / 40) * Rate + Bardana + Mazdori
+        let lineTotal = 0;
+        if (lineNet > 0 && rate > 0) {
+          lineTotal = Math.round((lineNet / 40) * rate) + bAmt + mazdori;
         } else {
+          lineTotal = (Number(item.totalAmount) || 0) + bAmt + mazdori;
+        }
+
+        grandTotalAmount += lineTotal;
+
+        return {
+          ...item,
+          grossWeight: lineGross ? String(lineGross) : item.grossWeight,
+          bardanaAmount: bAmt ? String(bAmt) : item.bardanaAmount,
+          totalAmount: lineTotal ? String(lineTotal) : item.totalAmount
+        };
+      });
+
+      // 3. Payment Terms & Due Date
+      if ("paymentTerms" in updates || "date" in updates) {
+        if (next.paymentTerms === "cash") {
+          next.dueDate = next.date;
+        } else if (next.paymentTerms !== "custom") {
           const days = parseInt(next.paymentTerms);
           if (!isNaN(days) && next.date) {
             const d = new Date(next.date);
@@ -235,7 +246,7 @@ export default function Sales() {
     resetForm();
     setForm((f) => ({ ...f, date: today }));
     setEditingId(null);
-    setModalOpen(true);
+    setView("form");
   };
 
   const handleEdit = (row) => {
@@ -243,17 +254,30 @@ export default function Sales() {
     setForm({
       date: formatDateForInput(row.date),
       customerId: row.customerId?._id || "",
-      itemId: row.itemId?._id || "",
-      kattay: String(row.kattay || ""),
-      kgPerKata: String(row.kgPerKata || ""),
-      grossWeight: String((row.kattay || 0) * (row.kgPerKata || 0)),
-      quantity: String(row.quantity || ""),
-      shCut: String(row.shCut || ""),
-      rate: String(row.rate || ""),
-      bardanaRate: String(row.bardanaRate || ""),
-      bardanaAmount: String(row.bardanaAmount || ""),
-      mazdori: String(row.mazdori || ""),
-      totalAmount: String(row.totalAmount || ""),
+      totalGrossWeight: String(row.totalGrossWeight || ""),
+      totalSHCut: String(row.totalSHCut || ""),
+      netWeight: String(row.netWeight || ""),
+      items: (row.items && row.items.length > 0) ? row.items.map(item => ({
+        itemId: item.itemId?._id || item.itemId || "",
+        kattay: String(item.kattay || ""),
+        kgPerKata: String(item.kgPerKata || ""),
+        grossWeight: String(item.grossWeight || ""),
+        rate: String(item.rate || ""),
+        bardanaRate: String(item.bardanaRate || ""),
+        bardanaAmount: String(item.bardanaAmount || ""),
+        mazdori: String(item.mazdori || ""),
+        totalAmount: String(item.totalAmount || ""),
+      })) : [{
+        itemId: "",
+        kattay: "",
+        kgPerKata: "",
+        grossWeight: "",
+        rate: "",
+        bardanaRate: "",
+        bardanaAmount: "",
+        mazdori: "",
+        totalAmount: "",
+      }],
       truckNumber: row.truckNumber || "",
       gatePassNo: row.gatePassNo || "",
       goods: row.goods || "",
@@ -264,7 +288,7 @@ export default function Sales() {
       dueDate: row.dueDate ? formatDateForInput(row.dueDate) : "",
       image: null,
     });
-    setModalOpen(true);
+    setView("form");
   };
 
   const formatDateForInput = (d) => {
@@ -274,31 +298,36 @@ export default function Sales() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.customerId || !form.itemId) {
-      setError("Customer aur item select karein.");
+    if (!form.customerId || !form.items || !form.items.length) {
+      setError("Customer aur kam az kam aik item select karein.");
       return;
     }
-    const qty = Number(form.quantity);
-    if (isNaN(qty) || qty < 0) {
-      setError("Valid quantity enter karein.");
+    
+    // Check if all items have an itemId
+    if (form.items.some(i => !i.itemId)) {
+      setError("Tamam items select karein.");
       return;
     }
+
     setError("");
     setSubmitting(true);
     try {
       const payload = {
         date: form.date,
         customerId: form.customerId,
-        itemId: form.itemId,
-        kattay: Number(form.kattay) || 0,
-        kgPerKata: Number(form.kgPerKata) || 0,
-        quantity: qty,
-        shCut: Number(form.shCut) || 0,
-        rate: Number(form.rate) || 0,
-        bardanaRate: Number(form.bardanaRate) || 0,
-        bardanaAmount: Number(form.bardanaAmount) || 0,
-        mazdori: Number(form.mazdori) || 0,
-        totalAmount: Number(form.totalAmount) || 0,
+        totalGrossWeight: Number(form.totalGrossWeight) || 0,
+        totalSHCut: Number(form.totalSHCut) || 0,
+        items: form.items.map(item => ({
+          itemId: item.itemId,
+          kattay: Number(item.kattay) || 0,
+          kgPerKata: Number(item.kgPerKata) || 0,
+          grossWeight: Number(item.grossWeight) || 0,
+          rate: Number(item.rate) || 0,
+          bardanaRate: Number(item.bardanaRate) || 0,
+          bardanaAmount: Number(item.bardanaAmount) || 0,
+          mazdori: Number(item.mazdori) || 0,
+          totalAmount: Number(item.totalAmount) || 0,
+        })),
         truckNumber: (form.truckNumber || "").trim(),
         gatePassNo: (form.gatePassNo || "").trim(),
         goods: (form.goods || "").trim(),
@@ -309,11 +338,15 @@ export default function Sales() {
       };
 
       const formData = new FormData();
+      // Special handling for JSON fields in FormData
       Object.keys(payload).forEach(key => {
-        if (payload[key] !== undefined) {
+        if (key === 'items') {
+          formData.append(key, JSON.stringify(payload[key]));
+        } else if (payload[key] !== undefined) {
           formData.append(key, payload[key]);
         }
       });
+      
       if (form.image) {
         formData.append("image", form.image);
       }
@@ -324,6 +357,7 @@ export default function Sales() {
         await apiPostFormData("/sales", formData);
       }
       resetForm();
+      setView("list");
       fetchList();
       fetchStockData(); // Refresh dropdown labels
     } catch (e) {
@@ -348,6 +382,7 @@ export default function Sales() {
     }
   };
 
+
   const sortedList = useMemo(() => {
     const arr = [...list];
     arr.sort((a, b) => {
@@ -360,16 +395,6 @@ export default function Sales() {
         const va = (a.customerId?.name || "").toLowerCase();
         const vb = (b.customerId?.name || "").toLowerCase();
         return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
-      }
-      if (sortKey === "item") {
-        const va = (a.itemId?.name || "").toLowerCase();
-        const vb = (b.itemId?.name || "").toLowerCase();
-        return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
-      }
-      if (sortKey === "quantity") {
-        const va = Number(a.quantity) || 0;
-        const vb = Number(b.quantity) || 0;
-        return sortDir === "asc" ? va - vb : vb - va;
       }
       if (sortKey === "amount") {
         const va = Number(a.totalAmount) || 0;
@@ -391,8 +416,229 @@ export default function Sales() {
     return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
   };
 
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
-  const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
+
+  if (view === "form") {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <header className="flex items-center justify-between border-b pb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <FaShoppingCart className="text-amber-500" />
+              {editingId ? "Edit Sale Invoice" : "Nayi Multi-Item Sale"}
+            </h1>
+            <p className="text-slate-500 text-sm">Sale details enter karein aur items add karein.</p>
+          </div>
+          <button type="button" onClick={resetForm} className="btn-secondary">
+            Back to List
+          </button>
+        </header>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <section className="card p-6 border-t-4 border-t-amber-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="input-label">Tarikh *</label>
+                <input type="date" value={form.date} onChange={(e) => updateFormWithAutoCalc({ date: e.target.value })} className="input-field" required />
+              </div>
+              <div>
+                <label className="input-label">Customer *</label>
+                <SearchableSelect
+                  options={customers}
+                  value={form.customerId}
+                  onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
+                  placeholder="Select customer"
+                />
+              </div>
+              <div>
+                <label className="input-label">Truck number</label>
+                <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div>
+                <label className="input-label font-bold text-amber-800">Total Gross Weight (Kg)</label>
+                <input type="number" value={form.totalGrossWeight} onChange={(e) => updateFormWithAutoCalc({ totalGrossWeight: e.target.value })} className="input-field border-amber-300 shadow-sm" placeholder="0" />
+              </div>
+              <div>
+                <label className="input-label font-bold text-amber-800">Total S.H Cut (Kg)</label>
+                <input type="number" value={form.totalSHCut} onChange={(e) => updateFormWithAutoCalc({ totalSHCut: e.target.value })} className="input-field border-amber-300 shadow-sm" placeholder="0" />
+              </div>
+              <div>
+                <label className="input-label font-bold text-amber-800">Net Weight (Kg)</label>
+                <div className="bg-amber-100 border border-amber-300 rounded-lg py-2.5 px-3 font-black text-amber-900 text-lg shadow-inner">
+                  {form.netWeight} Kg
+                </div>
+              </div>
+              <div>
+                <label className="input-label">GP# / Remark / Goods</label>
+                <div className="flex gap-2">
+                  <input type="text" placeholder="GP#" value={form.gatePassNo} onChange={(e) => setForm(f => ({ ...f, gatePassNo: e.target.value }))} className="input-field w-1/2 shadow-sm" />
+                  <input type="text" placeholder="Goods" value={form.goods} onChange={(e) => setForm(f => ({ ...f, goods: e.target.value }))} className="input-field w-1/2 shadow-sm" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="card overflow-hidden border-t-4 border-t-indigo-500">
+            <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
+              <h3 className="font-bold text-slate-700">Items List</h3>
+              <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Line items for this truck</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left w-64">Item *</th>
+                    <th className="px-4 py-3 text-left w-24">Bags</th>
+                    <th className="px-4 py-3 text-left w-24">Kg/Bag</th>
+                    <th className="px-4 py-3 text-left w-36">Rate (MUN)</th>
+                    <th className="px-4 py-3 text-left w-24">Brd Rate</th>
+                    <th className="px-4 py-3 text-left w-24">Mazdori</th>
+                    <th className="px-4 py-3 text-right font-bold bg-slate-200/50">Line Total</th>
+                    <th className="px-4 py-3 text-center w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {form.items.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                      <td className="p-3">
+                        <SearchableSelect
+                          options={items.map(i => ({ _id: i._id, name: `${i.name} (${i.quality})` }))}
+                          value={item.itemId}
+                          onChange={(val) => {
+                            const newItems = [...form.items];
+                            newItems[idx].itemId = val;
+                            updateFormWithAutoCalc({ items: newItems });
+                          }}
+                          placeholder="Select Item"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <input type="number" value={item.kattay} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].kattay = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2" placeholder="0" />
+                      </td>
+                      <td className="p-3">
+                        <input type="number" value={item.kgPerKata} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].kgPerKata = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2" placeholder="0" />
+                      </td>
+                      <td className="p-3">
+                        <input type="number" value={item.rate} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].rate = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2 font-bold text-amber-700 bg-amber-50/50" placeholder="0" />
+                      </td>
+                      <td className="p-3">
+                        <input type="number" value={item.bardanaRate} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].bardanaRate = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2" placeholder="0" />
+                      </td>
+                      <td className="p-3">
+                        <input type="number" value={item.mazdori} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].mazdori = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2" placeholder="0" />
+                      </td>
+                      <td className="p-3 text-right font-black text-indigo-700 bg-slate-50/50 text-base">
+                        {formatMoney(item.totalAmount)}
+                      </td>
+                      <td className="p-3 text-center">
+                        {form.items.length > 1 && (
+                          <button type="button" onClick={() => removeItemRow(idx)} className="text-red-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded" title="Remove row">
+                            <FaPlus className="w-4 h-4 rotate-45" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button type="button" onClick={addItemRow} className="w-full py-4 bg-slate-50 text-indigo-600 font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 border-t border-slate-200 group">
+                <FaPlus className="w-4 h-4 group-hover:scale-110" /> Add Another Item to this Invoice
+              </button>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="card p-6 space-y-4 lg:col-span-2">
+              <h3 className="font-bold text-slate-700 border-b pb-2">Payment & Notes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Amount Received / Bank</label>
+                  <div className="flex gap-2">
+                    <input type="number" value={form.amountReceived} onChange={(e) => setForm(f => ({ ...f, amountReceived: e.target.value }))} className="input-field w-1/2" placeholder="0" />
+                    <select value={form.accountId} onChange={(e) => setForm(f => ({ ...f, accountId: e.target.value }))} className="input-field w-1/2">
+                      <option value="">Account —</option>
+                      {accounts.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="input-label">Payment Terms</label>
+                  <select value={form.paymentTerms} onChange={(e) => updateFormWithAutoCalc({ paymentTerms: e.target.value })} className="input-field">
+                    <option value="cash">Full Cash (Aaj)</option>
+                    <option value="15">15 Din baad</option>
+                    <option value="30">30 Din baad</option>
+                    <option value="custom">Custom Date</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label>
+                <input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" />
+              </div>
+              <div>
+                <label className="input-label">Special Notes</label>
+                <textarea value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} className="input-field h-20" placeholder="Koi khaas baat likhni ho tw..." />
+              </div>
+            </div>
+
+            <div className="card p-6 bg-slate-900 text-white flex flex-col justify-between border-t-4 border-t-emerald-500 shadow-xl">
+              <div className="space-y-4">
+                <h3 className="text-slate-400 text-xs font-black uppercase tracking-[0.2em]">Invoice Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-slate-400 text-sm">
+                    <span>Net Weight:</span>
+                    <span className="text-white font-bold">{form.netWeight} Kg</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400 text-sm border-b border-slate-800 pb-2">
+                    <span>Total Items:</span>
+                    <span className="text-white font-bold">{form.items.length}</span>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Total Receivable</p>
+                  <p className="text-4xl font-black">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</p>
+                </div>
+              </div>
+
+              <div className="mt-8 space-y-3">
+                {error && <p className="text-xs text-red-400 font-bold bg-red-400/10 p-2 rounded border border-red-400/20">{error}</p>}
+                <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2" disabled={submitting}>
+                  {submitting ? (
+                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                  ) : (editingId ? "Update Sale" : "Save & Generate Invoice")}
+                </button>
+                <button type="button" onClick={resetForm} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all" disabled={submitting}>
+                  Cancel / Exit
+                </button>
+              </div>
+            </div>
+          </section>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -402,204 +648,60 @@ export default function Sales() {
             <FaShoppingCart className="w-7 h-7 text-amber-500" />
             Sales (Bechai)
           </h1>
-          <p className="page-subtitle">Jis item ki bechai kar rahe ho, customer select karo, kitne katte beche, aik katta kitne kg ka tha aur kitne ka — total auto niklega.</p>
+          <p className="page-subtitle">Multiple items invoice system. Total weight aur S.H cut master level pe enter karein.</p>
         </div>
-        <button type="button" onClick={openAddModal} className="btn-primary">
-          <FaPlus className="w-4 h-4" /> Add sale
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => downloadSalesPdf(list)} className="btn-secondary flex items-center gap-2">
+            <FaFilePdf className="w-4 h-4" /> Reports
+          </button>
+          <button type="button" onClick={() => downloadCsv(buildCsv(list, "Sales Report"), "sales-report.csv")} className="btn-secondary flex items-center gap-2">
+            <FaFileExport className="w-4 h-4" /> CSV
+          </button>
+          <button type="button" onClick={openAddModal} className="btn-primary flex items-center gap-2">
+            <FaPlus className="w-4 h-4" /> Add Multi-Item Sale
+          </button>
+        </div>
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title="Nayi sale add karein">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="input-label">Tarikh *</label>
-              <input type="date" value={form.date} onChange={(e) => updateFormWithAutoCalc({ date: e.target.value })} className="input-field" required />
-            </div>
-            <div>
-              <label className="input-label">Customer *</label>
-              <SearchableSelect
-                options={customers}
-                value={form.customerId}
-                onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
-                placeholder="Select customer"
-              />
-            </div>
-            <div>
-              <label className="input-label">Item *</label>
-              <SearchableSelect
-                options={items
-                  .map((i) => {
-                    const stock = stockData.find(s => s.itemId?.toString() === i._id?.toString());
-                    const availQty = stock?.kattay || 0;
-                    return {
-                      ...i,
-                      displayName: `${i.name}${i.categoryId?.name ? ` (${i.categoryId.name})` : ""} — ${availQty} kattay`,
-                    };
-                  })
-                  .map(i => ({ _id: i._id, name: i.displayName }))
-                }
-                value={form.itemId}
-                onChange={(val) => setForm((f) => ({ ...f, itemId: val }))}
-                placeholder="Select item"
-              />
-            </div>
-            <div>
-              <label className="input-label">Truck number</label>
-              <input type="text" placeholder="e.g. LEA-1234" value={form.truckNumber} onChange={(e) => setForm((f) => ({ ...f, truckNumber: e.target.value }))} className="input-field" />
-            </div>
-            <div>
-              <label className="input-label">Gate Pass No</label>
-              <input type="text" placeholder="e.g. GP-1092" value={form.gatePassNo} onChange={(e) => setForm((f) => ({ ...f, gatePassNo: e.target.value }))} className="input-field" />
-            </div>
-            <div>
-              <label className="input-label">Goods Description</label>
-              <input type="text" placeholder="e.g. Rice, Wheat" value={form.goods} onChange={(e) => setForm((f) => ({ ...f, goods: e.target.value }))} className="input-field" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Upload Image / Receipt (Max 5MB)</label>
-              <input type="file" accept="image/jpeg, image/png, image/jpg, image/webp" onChange={(e) => {
-                const file = e.target.files[0];
-                if (file && file.size > 5 * 1024 * 1024) {
-                  alert("File size exceeds 5MB limit. Please choose a smaller image.");
-                  e.target.value = "";
-                  return;
-                }
-                setForm(f => ({ ...f, image: file }));
-              }} className="input-field cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-              {form.image && (
-                <div className="mt-3 bg-slate-50 p-2 rounded border border-slate-200 text-center">
-                  <p className="text-xs text-slate-500 font-medium mb-2">Selected File Preview:</p>
-                  <img src={URL.createObjectURL(form.image)} alt="Preview" className="max-h-32 object-contain mx-auto rounded shadow-sm" />
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="input-label">Kitne katte beche</label>
-              <input type="number" placeholder="0" value={form.kattay} onChange={(e) => updateFormWithAutoCalc({ kattay: e.target.value })} className="input-field" min="0" step="1" />
-            </div>
-            <div>
-              <label className="input-label">Aik katta kitne kg ka tha</label>
-              <input type="number" placeholder="0" value={form.kgPerKata} onChange={(e) => updateFormWithAutoCalc({ kgPerKata: e.target.value })} className="input-field" min="0" step="any" />
-              <p className="text-xs text-slate-500 mt-0.5">Total weight auto: kattay × kg/katta</p>
-            </div>
-            <div>
-              <label className="input-label">Total Weight / Gross (kg)</label>
-              <input type="number" placeholder="0" value={form.grossWeight} onChange={(e) => updateFormWithAutoCalc({ grossWeight: e.target.value })} className="input-field" min="0" step="any" />
-              <p className="text-xs text-slate-500 mt-0.5">Scale weight enter karein ya uppar se auto lein.</p>
-            </div>
-            <div>
-              <label className="input-label">S.H CUT (kg)</label>
-              <input type="number" placeholder="0" value={form.shCut} onChange={(e) => updateFormWithAutoCalc({ shCut: e.target.value })} className="input-field" min="0" step="any" />
-              <p className="text-xs text-slate-500 mt-0.5">Manual S.H Cut enter karein.</p>
-            </div>
-            <div>
-              <label className="input-label font-bold text-amber-700">Net Weight (kg)</label>
-              <input type="number" placeholder="0" value={form.quantity} onChange={(e) => updateFormWithAutoCalc({ quantity: e.target.value })} className="input-field border-amber-200 bg-amber-50" min="0" step="any" />
-              {availableStock != null && (
-                <p className="text-[10px] text-slate-600 mt-0.5">Avail: <strong>{availableStock.weight} kg</strong>, <strong>{availableStock.kattay} bags</strong>.</p>
-              )}
-            </div>
-            <div>
-              <label className="input-label font-bold text-amber-700">Rate (Per MUN / 40Kg)</label>
-              <input type="number" placeholder="0" value={form.rate} onChange={(e) => updateFormWithAutoCalc({ rate: e.target.value })} className="input-field" min="0" step="any" />
-            </div>
-            <div>
-              <label className="input-label">Aik Bardana Amount (Rate)</label>
-              <input type="number" placeholder="0" value={form.bardanaRate} onChange={(e) => updateFormWithAutoCalc({ bardanaRate: e.target.value })} className="input-field" min="0" />
-            </div>
-            <div>
-              <label className="input-label">Total Bardana Amount</label>
-              <input type="number" placeholder="0" value={form.bardanaAmount} onChange={(e) => updateFormWithAutoCalc({ bardanaAmount: e.target.value })} className="input-field bg-slate-50" min="0" />
-            </div>
-            <div>
-              <label className="input-label">Mazdoori (Rs)</label>
-              <input type="number" placeholder="0" value={form.mazdori} onChange={(e) => updateFormWithAutoCalc({ mazdori: e.target.value })} className="input-field" min="0" />
-            </div>
-            <div>
-              <label className="input-label font-bold text-amber-700">Total Amount</label>
-              <input type="number" placeholder="0" value={form.totalAmount} onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))} className="input-field font-bold text-amber-900 bg-amber-50" min="0" />
-            </div>
-            <div>
-              <label className="input-label">Amount received</label>
-              <input type="number" placeholder="0" value={form.amountReceived} onChange={(e) => setForm((f) => ({ ...f, amountReceived: e.target.value }))} className="input-field" min="0" step="1" />
-            </div>
-            <div>
-              <label className="input-label">Account (jahan paisa aaya)</label>
-              <select value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))} className="input-field">
-                <option value="">—</option>
-                {accounts.map((a) => (
-                  <option key={a._id} value={a._id}>{a.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-            <div>
-              <label className="input-label font-semibold text-amber-700">Payment Terms (Kab paise dene hain?)</label>
-              <select
-                value={form.paymentTerms}
-                onChange={(e) => updateFormWithAutoCalc({ paymentTerms: e.target.value })}
-                className="input-field border-amber-200 bg-amber-50/30"
-              >
-                <option value="cash">Full Cash (Aaj)</option>
-                <option value="10">10 Din baad (10 Days)</option>
-                <option value="15">15 Din baad (15 Days)</option>
-                <option value="30">30 Din baad (30 Days)</option>
-                <option value="custom">Custom Date</option>
-              </select>
-            </div>
-            <div>
-              <label className="input-label">Due Date (Bhugtan ki tareekh)</label>
-              <input
-                type="date"
-                value={form.dueDate}
-                onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value, paymentTerms: 'custom' }))}
-                className="input-field"
-              />
-              <p className="text-xs text-slate-500 mt-1">Audit ke liye yeh tareekh zaroori he.</p>
-            </div>
+      {/* Filters */}
+      <section className="card p-4 relative z-20">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div>
+            <label className="input-label">Date from</label>
+            <input type="date" value={filters.dateFrom} onChange={(e) => setFilters(f => ({ ...f, dateFrom: e.target.value }))} className="input-field" />
           </div>
           <div>
-            <label className="input-label">Notes</label>
-            <input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
+            <label className="input-label">Date to</label>
+            <input type="date" value={filters.dateTo} onChange={(e) => setFilters(f => ({ ...f, dateTo: e.target.value }))} className="input-field" />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-           <div className="flex gap-2">
-            <button type="submit" className="btn-primary flex-1" disabled={submitting}>
-              {submitting ? (
-                 <span className="flex items-center justify-center gap-2">
-                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                   Saving...
-                 </span>
-              ) : "Add sale"}
+          <div>
+            <label className="input-label">Customer</label>
+            <SearchableSelect
+              options={customers}
+              value={filters.customerId}
+              onChange={(val) => setFilters(f => ({ ...f, customerId: val }))}
+              placeholder="All Customers"
+            />
+          </div>
+          <div className="flex gap-2">
+             <div className="flex-1">
+              <label className="input-label">Item</label>
+              <SearchableSelect
+                options={items.map(i => ({ _id: i._id, name: `${i.name} (${i.quality})` }))}
+                value={filters.itemId}
+                onChange={(val) => setFilters(f => ({ ...f, itemId: val }))}
+                placeholder="All Items"
+              />
+            </div>
+            <button type="button" onClick={() => setFilters({ dateFrom: "", dateTo: "", itemId: "", customerId: "" })} className="btn-ghost-secondary h-10 px-3 mt-auto" title="Clear Filters">
+              <FaSearch className="w-4 h-4 rotate-45" />
             </button>
-            <button type="button" onClick={resetForm} className="btn-secondary px-6" disabled={submitting}>Cancel</button>
           </div>
-        </form>
-      </Modal>
-
+        </div>
+      </section>
 
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
-          <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" />
-          <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
-          
-          <SearchableSelect
-            options={customers}
-            value={filters.customerId}
-            onChange={(val) => setFilters((f) => ({ ...f, customerId: val }))}
-            placeholder="All customers"
-            className="w-56"
-          />
-
-          <SearchableSelect
-            options={items}
-            value={filters.itemId}
-            onChange={(val) => setFilters((f) => ({ ...f, itemId: val }))}
-            placeholder="All items"
-            className="w-56"
-          />
 
           <p className="text-sm text-slate-500">{list.length} sale(s)</p>
           <button type="button" onClick={() => downloadSalesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
@@ -619,17 +721,11 @@ export default function Sales() {
                     <th className="table-header px-5 py-3.5">
                       <button type="button" onClick={() => toggleSort("customer")} className="flex items-center hover:text-slate-800">Customer<SortIcon columnKey="customer" /></button>
                     </th>
+                    <th className="table-header px-5 py-3.5">Products</th>
+                    <th className="table-header px-5 py-3.5">Total Qty (Bags)</th>
+                    <th className="table-header px-5 py-3.5">Net Wt (Kg)</th>
                     <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("item")} className="flex items-center hover:text-slate-800">Item<SortIcon columnKey="item" /></button>
-                    </th>
-                    <th className="table-header px-5 py-3.5">Kattay</th>
-                    <th className="table-header px-5 py-3.5">Kg/Katta</th>
-                    <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("quantity")} className="flex items-center hover:text-slate-800">Weight (kg)<SortIcon columnKey="quantity" /></button>
-                    </th>
-                    <th className="table-header px-5 py-3.5">Rate/Katta</th>
-                    <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center hover:text-slate-800">Total<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center hover:text-slate-800">Total Invoice<SortIcon columnKey="amount" /></button>
                     </th>
                     <th className="table-header px-5 py-3.5">Received</th>
                     <th className="table-header px-5 py-3.5">Truck</th>
@@ -639,17 +735,28 @@ export default function Sales() {
                 </thead>
                 <tbody>
                   {paginatedList.map((row) => (
-                    <tr key={row._id} className="table-row-hover">
+                    <tr key={row._id} className="table-row-hover text-sm">
                       <td className="table-cell">{formatDate(row.date)}</td>
-                      <td className="table-cell font-medium">{row.customerId?.name || "—"}</td>
-                      <td className="table-cell">{row.itemName || row.itemId?.name || "—"}</td>
-                      <td className="table-cell">{row.kattay != null && row.kattay > 0 ? row.kattay : "—"}</td>
-                      <td className="table-cell">{row.kgPerKata != null && row.kgPerKata > 0 ? row.kgPerKata : "—"}</td>
-                      <td className="table-cell">{row.quantity != null ? row.quantity : "—"}</td>
-                      <td className="table-cell">{row.ratePerKata != null && row.ratePerKata > 0 ? formatMoney(row.ratePerKata) : "—"}</td>
-                      <td className="table-cell font-medium">{formatMoney(row.totalAmount)}</td>
-                      <td className="table-cell font-medium">{formatMoney(row.amountReceived)}</td>
-                      <td className="table-cell">{row.truckNumber ? row.truckNumber : "—"}</td>
+                      <td className="table-cell font-bold text-slate-900">{row.customerId?.name || "—"}</td>
+                      <td className="table-cell">
+                        <div className="flex flex-col gap-0.5">
+                          {row.items?.slice(0, 2).map((it, idx) => (
+                            <span key={idx} className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 truncate max-w-[120px]">
+                              {it.itemId?.name || "Item"}
+                            </span>
+                          ))}
+                          {(row.items?.length > 2) && <span className="text-[10px] text-slate-500 font-medium">+{row.items.length - 2} more items</span>}
+                        </div>
+                      </td>
+                      <td className="table-cell text-center font-medium">
+                        {row.items?.reduce((sum, it) => sum + (it.kattay || 0), 0) || "—"}
+                      </td>
+                      <td className="table-cell font-bold text-indigo-700">
+                        {row.netWeight || row.totalGrossWeight - row.totalSHCut || "—"}
+                      </td>
+                      <td className="table-cell font-black text-slate-900">{formatMoney(row.totalAmount)}</td>
+                      <td className="table-cell font-bold text-emerald-700">{formatMoney(row.amountReceived)}</td>
+                      <td className="table-cell text-xs uppercase font-medium">{row.truckNumber || "—"}</td>
                       <td className="table-cell">
                         {row.paymentStatus === 'paid' ? (
                           <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">Paid</span>
@@ -671,6 +778,11 @@ export default function Sales() {
                           {row.image && (
                             <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center gap-1 text-indigo-500 hover:text-indigo-700 bg-indigo-50" title="Preview Image">
                               <FaImage className="w-3.5 h-3.5" /> 
+                            </button>
+                          )}
+                          {row.paymentStatus !== 'paid' && (
+                            <button type="button" onClick={() => { setSelectedCollectEntry(row); setCollectModalOpen(true); }} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 hover:text-emerald-700 bg-emerald-50" title="Collect Payment">
+                              <FaHandHoldingUsd className="w-3.5 h-3.5" /> Rec
                             </button>
                           )}
                           {isAdmin && (

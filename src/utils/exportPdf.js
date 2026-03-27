@@ -73,15 +73,13 @@ export function downloadSalesPdf(sales, filters = {}) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Customer", "Item", "Category", "Qty", "Rate", "Total", "Received", "Truck", "Account", "Notes"]],
+    head: [["#", "Date", "Customer", "Items Count", "Net Wt", "Total Bill", "Received", "Truck", "Account", "Notes"]],
     body: sales.map((row, i) => [
       i + 1,
       formatDate(row.date),
       (row.customerId && row.customerId.name) || "—",
-      row.itemName || (row.itemId && row.itemId.name) || "—",
-      row.category || "—",
-      row.quantity != null ? row.quantity : "—",
-      formatMoney(row.rate),
+      row.items?.length || 1,
+      formatMoney(row.netWeight || (row.totalGrossWeight - row.totalSHCut)),
       formatMoney(row.totalAmount),
       formatMoney(row.amountReceived),
       (row.truckNumber || "—").slice(0, 12),
@@ -132,16 +130,16 @@ export function downloadPurchasesPdf(entries, filters = {}) {
 
   autoTable(doc, {
     startY,
-    head: [["#", "Date", "Item", "Supplier", "Weight", "Total", "Paid", "Balance", "Status"]],
+    head: [["#", "Date", "Supplier", "Items Count", "Net Wt", "Total Bill", "Paid", "Balance", "Status"]],
     body: entries.map((row, i) => [
       i + 1,
       formatDate(row.date),
-      (row.itemId && row.itemId.name) || "—",
       (row.supplierId && row.supplierId.name) || "—",
-      row.receivedWeight != null ? row.receivedWeight : "—",
-      formatMoney(row.amount),
+      row.items?.length || 1,
+      formatMoney(row.netWeight || row.receivedWeight),
+      formatMoney(row.totalAmount || row.amount),
       formatMoney(row.amountPaid),
-      formatMoney((row.amount || 0) - (row.amountPaid || 0)),
+      formatMoney((row.totalAmount || row.amount || 0) - (row.amountPaid || 0)),
       (row.paymentStatus || 'pending').toUpperCase() + (row.dueDate && row.paymentStatus !== 'paid' ? `\n(${formatDate(row.dueDate)})` : ""),
     ]),
     ...tableTheme,
@@ -469,35 +467,40 @@ export function downloadSaleInvoicePdf(sale) {
   doc.text("RATE", 155, yPos + 5.5);
   doc.text("NET AMOUNT", 175, yPos + 5.5);
 
-  yPos += 14;
+  yPos += 15;
   doc.setFont("helvetica", "normal");
 
-  const itemName = sale.itemName || sale.itemId?.name || "—";
-  doc.text(itemName, 18, yPos);
-
-  const bags = sale.kattay ? String(sale.kattay) : "—";
-  doc.text(bags, 95, yPos);
-
-  const totalKg = sale.quantity ? Number(sale.quantity) : 0;
-  const mun = totalKg > 0 ? (totalKg / 40).toFixed(3) : "—";
-  doc.text(String(mun), 120, yPos);
-
-  const kgPerMun = "40"; // standard
-  doc.text(kgPerMun, 140, yPos);
-
-  const rateStr = sale.rate ? formatMoney(sale.rate) : "—";
-  doc.text(rateStr, 155, yPos);
-
-  // The base product amount without bardana/mazdori
-  // We use (Quantity / 40) × rate
-  let baseTotal = 0;
-  if (totalKg > 0 && sale.rate > 0) {
-    baseTotal = Math.round((totalKg / 40) * sale.rate);
+  if (sale.items && sale.items.length > 0) {
+    sale.items.forEach((it, idx) => {
+      const itName = it.itemId?.name || "Product";
+      doc.text(itName, 18, yPos);
+      doc.text(String(it.kattay || 0), 95, yPos);
+      
+      const itMun = it.itemNetWeight ? (it.itemNetWeight / 40).toFixed(3) : "0";
+      doc.text(String(itMun), 120, yPos);
+      doc.text("40", 140, yPos);
+      doc.text(formatMoney(it.rate), 155, yPos);
+      doc.text(formatMoney(it.totalAmount), 175, yPos);
+      
+      yPos += 7;
+      
+      // If we are reaching end of page (brief check)
+      if (yPos > 190) {
+          doc.addPage();
+          yPos = 20;
+      }
+    });
   } else {
-    // fallback if no rates found, try to derive from stored totalAmount
-    baseTotal = (sale.totalAmount || 0) - (sale.bardanaAmount || 0) - (sale.mazdori || 0);
+    // Fallback if no items array (old data)
+    doc.text(sale.itemName || "Product", 18, yPos);
+    doc.text(String(sale.kattay || 0), 95, yPos);
+    doc.text((sale.quantity / 40).toFixed(3), 120, yPos);
+    doc.text("40", 140, yPos);
+    doc.text(formatMoney(sale.rate), 155, yPos);
+    doc.text(formatMoney(sale.totalAmount), 175, yPos);
   }
-  doc.text(formatMoney(baseTotal), 175, yPos);
+
+  let baseTotal = sale.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || sale.totalAmount;
 
   // Bottom line for table box (moved below memo)
   yPos = 200; // base y for summary
@@ -509,7 +512,7 @@ export function downloadSaleInvoicePdf(sale) {
 
   // Left calculations
   doc.text("Total Weight", 15, yPos);
-  const grossWeight = totalKg + (sale.shCut || 0);
+  const grossWeight = sale.totalGrossWeight || 0;
   doc.setFont("helvetica", "normal");
   doc.text(formatMoney(grossWeight), 45, yPos);
 
@@ -517,13 +520,13 @@ export function downloadSaleInvoicePdf(sale) {
   doc.setFont("helvetica", "bold");
   doc.text("Total SH.CUT", 15, yPos);
   doc.setFont("helvetica", "normal");
-  doc.text(String(sale.shCut || 0), 45, yPos);
+  doc.text(String(sale.totalSHCut || 0), 45, yPos);
 
   yPos += 7;
   doc.setFont("helvetica", "bold");
   doc.text("Net Weight", 15, yPos);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(totalKg), 45, yPos);
+  doc.text(formatMoney(sale.netWeight || (grossWeight - (sale.totalSHCut || 0))), 45, yPos);
 
   // Right calculations
   let rightY = 200 + 8;
@@ -536,13 +539,15 @@ export function downloadSaleInvoicePdf(sale) {
   doc.setFont("helvetica", "bold");
   doc.text("BARDANA TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(sale.bardanaAmount || 0), 195, rightY, { align: "right" });
+  const bardanaTotal = sale.items?.reduce((sum, i) => sum + (i.bardanaAmount || 0), 0) || sale.bardanaAmount || 0;
+  doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
   doc.text("MAZDOORI TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(sale.mazdori || 0), 195, rightY, { align: "right" });
+  const mazdoriTotal = sale.items?.reduce((sum, i) => sum + (i.mazdori || 0), 0) || sale.mazdori || 0;
+  doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
 
   // Optional: separator line before Net
   doc.setLineWidth(0.1);
@@ -696,26 +701,35 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.text("RATE (MUN)", 155, yPos + 5.5);
   doc.text("NET AMOUNT", 175, yPos + 5.5);
 
-  yPos += 14;
+  yPos += 15;
   doc.setFont("helvetica", "normal");
 
-  const itemName = entry.itemId?.name || "—";
-  doc.text(itemName, 18, yPos);
+  if (entry.items && entry.items.length > 0) {
+    entry.items.forEach((it, idx) => {
+      const itName = it.itemId?.name || "Product";
+      doc.text(itName, 18, yPos);
+      doc.text(String(it.kattay || 0), 95, yPos);
+      
+      const itMun = it.itemNetWeight ? (it.itemNetWeight / 40).toFixed(3) : "0";
+      doc.text(String(itMun), 120, yPos);
+      doc.text("40", 140, yPos);
+      doc.text(formatMoney(it.rate), 155, yPos);
+      doc.text(formatMoney(it.amount), 175, yPos);
+      
+      yPos += 7;
+      if (yPos > 190) { doc.addPage(); yPos = 20; }
+    });
+  } else {
+    // Fallback old data
+    doc.text(entry.itemId?.name || "Product", 18, yPos);
+    doc.text(String(entry.kattay || 0), 95, yPos);
+    doc.text((entry.receivedWeight / 40).toFixed(3), 120, yPos);
+    doc.text("40", 140, yPos);
+    doc.text(formatMoney(entry.rate), 155, yPos);
+    doc.text(formatMoney(entry.amount), 175, yPos);
+  }
 
-  const bags = entry.kattay ? String(entry.kattay) : "—";
-  doc.text(bags, 95, yPos);
-
-  const netKg = entry.receivedWeight ? Number(entry.receivedWeight) : 0;
-  const mun = netKg > 0 ? (netKg / 40).toFixed(3) : "—";
-  doc.text(String(mun), 120, yPos);
-
-  doc.text("40", 140, yPos);
-
-  const rateStr = entry.rate ? formatMoney(entry.rate) : "—";
-  doc.text(rateStr, 155, yPos);
-
-  const baseTotal = netKg > 0 && entry.rate ? Math.round((netKg / 40) * entry.rate) : 0;
-  doc.text(formatMoney(baseTotal), 175, yPos);
+  const baseTotal = entry.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || entry.amount;
 
   yPos = 200; // base y for summary
 
@@ -725,7 +739,7 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFont("helvetica", "bold");
 
   doc.text("Total Weight (Gross)", 15, yPos);
-  const grossWeight = netKg + (entry.shCut || 0);
+  const grossWeight = entry.totalGrossWeight || 0;
   doc.setFont("helvetica", "normal");
   doc.text(formatMoney(grossWeight), 50, yPos);
 
@@ -733,13 +747,13 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFont("helvetica", "bold");
   doc.text("S.H Cut (250g/Mun)", 15, yPos);
   doc.setFont("helvetica", "normal");
-  doc.text(String(entry.shCut || 0), 50, yPos);
+  doc.text(String(entry.totalSHCut || 0), 50, yPos);
 
   yPos += 7;
   doc.setFont("helvetica", "bold");
   doc.text("Net Weight", 15, yPos);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(netKg), 50, yPos);
+  doc.text(formatMoney(entry.netWeight || (grossWeight - (entry.totalSHCut || 0))), 50, yPos);
 
   // Right calculations
   let rightY = 200 + 8;
@@ -752,7 +766,8 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFont("helvetica", "bold");
   doc.text("BARDANA TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(entry.bardanaAmount || 0), 195, rightY, { align: "right" });
+  const bardanaTotal = entry.items?.reduce((sum, i) => sum + (i.bardanaAmount || 0), 0) || entry.bardanaAmount || 0;
+  doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
 
   doc.setLineWidth(0.1);
   doc.line(130, rightY + 2, 195, rightY + 2);
@@ -761,7 +776,7 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.setFont("helvetica", "bold");
   doc.text("NET AMOUNT:", 130, rightY);
   doc.setFontSize(11);
-  doc.text(formatMoney(entry.amount), 195, rightY, { align: "right" });
+  doc.text(formatMoney(entry.totalAmount || entry.amount), 195, rightY, { align: "right" });
   doc.setFontSize(9);
 
   // --- MEMO SECTION ---

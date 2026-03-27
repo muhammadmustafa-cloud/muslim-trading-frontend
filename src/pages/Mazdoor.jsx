@@ -212,11 +212,9 @@ export default function Mazdoor() {
           <h1 className="page-title flex items-center gap-2"><FaUser className="w-7 h-7 text-amber-500" /> Mazdoor</h1>
           <p className="page-subtitle">Workers ko manage karein.</p>
         </div>
-        {isAdmin && (
-          <button type="button" onClick={openAddModal} className="btn-primary">
-            <FaPlus className="w-4 h-4" /> Add mazdoor
-          </button>
-        )}
+        <button type="button" onClick={openAddModal} className="btn-primary">
+          <FaPlus className="w-4 h-4" /> Add mazdoor
+        </button>
       </header>
 
       <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit mazdoor" : "Naya mazdoor add karein"}>
@@ -382,13 +380,9 @@ export default function Mazdoor() {
                       {cols.map(({ key }) => <td key={key} className="table-cell">{key === "name" ? <span className="font-medium">{row[key]}</span> : (row[key] || "—")}</td>)}
                       <td className="table-cell">
                         <div className="flex items-center gap-1 flex-wrap">
-                          {isAdmin && (
-                            <>
-                              <button type="button" onClick={() => openSalaryModal(row)} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 border-emerald-100 hover:bg-emerald-50"><FaPlus className="w-3 h-3" /> Post Salary</button>
-                              <button type="button" onClick={() => openPaymentModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Advance / Salary de</button>
-                              <button type="button" onClick={() => openReceiveModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaHandHoldingUsd className="w-3.5 h-3.5" /> Udhaar wapas lo</button>
-                            </>
-                          )}
+                          <button type="button" onClick={() => openSalaryModal(row)} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 border-emerald-100 hover:bg-emerald-50"><FaPlus className="w-3 h-3" /> Post Salary</button>
+                          <button type="button" onClick={() => openPaymentModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaMoneyBillWave className="w-3.5 h-3.5" /> Advance / Salary de</button>
+                          <button type="button" onClick={() => openReceiveModal(row)} className="btn-ghost-primary flex items-center gap-1"><FaHandHoldingUsd className="w-3.5 h-3.5" /> Udhaar wapas lo</button>
                           <button type="button" onClick={() => navigate(`/mazdoor/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History / Khata</button>
                           {isAdmin && (
                             <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
