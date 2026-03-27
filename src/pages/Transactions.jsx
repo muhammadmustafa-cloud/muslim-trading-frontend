@@ -19,6 +19,7 @@ export default function Transactions() {
 
   const [list, setList] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [mazdoor, setMazdoor] = useState([]);
   const [taxTypes, setTaxTypes] = useState([]);
@@ -34,6 +35,7 @@ export default function Transactions() {
     amount: "",
     category: "",
     note: "",
+    customerId: "",
     supplierId: "",
     mazdoorId: "",
     taxTypeId: "",
@@ -64,6 +66,12 @@ export default function Transactions() {
     try {
       const data = await apiGet("/suppliers");
       setSuppliers(data.data || []);
+    } catch (_) { }
+  };
+  const fetchCustomers = async () => {
+    try {
+      const data = await apiGet("/customers");
+      setCustomers(data.data || []);
     } catch (_) { }
   };
   const fetchMazdoor = async () => {
@@ -106,6 +114,7 @@ export default function Transactions() {
 
   useEffect(() => {
     fetchAccounts();
+    fetchCustomers();
     fetchSuppliers();
     fetchMazdoor();
     fetchTaxTypes();
@@ -124,6 +133,7 @@ export default function Transactions() {
       amount: "",
       category: "",
       note: "",
+      customerId: "",
       supplierId: "",
       mazdoorId: "",
       taxTypeId: "",
@@ -191,9 +201,10 @@ export default function Transactions() {
       formData.append("type", form.type);
       if (form.fromAccountId) formData.append("fromAccountId", form.fromAccountId);
       if (form.toAccountId) formData.append("toAccountId", form.toAccountId);
-      formData.append("amount", amt);
+      if (form.amount) formData.append("amount", amt);
       if (form.category) formData.append("category", form.category.trim());
       if (form.note) formData.append("note", form.note.trim());
+      if (form.customerId) formData.append("customerId", form.customerId);
       if (form.supplierId) formData.append("supplierId", form.supplierId);
       if (form.mazdoorId) formData.append("mazdoorId", form.mazdoorId);
       if (form.taxTypeId) formData.append("taxTypeId", form.taxTypeId);
@@ -403,7 +414,16 @@ export default function Transactions() {
               <input type="text" placeholder="e.g. Salary, Rent" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="input-field" />
             </div>
             <div>
-              <label className="input-label">Supplier (optional)</label>
+              <label className="input-label">Customer/Sale (optional)</label>
+              <SearchableSelect
+                options={customers}
+                value={form.customerId}
+                onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
+                placeholder="Select customer"
+              />
+            </div>
+            <div>
+              <label className="input-label">Supplier/Purchase (optional)</label>
               <SearchableSelect
                 options={suppliers}
                 value={form.supplierId}
