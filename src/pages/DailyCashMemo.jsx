@@ -236,11 +236,11 @@ export default function DailyCashMemo() {
       {/* Summary */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <p className="text-sm text-emerald-700 font-medium">Total In</p>
+          <p className="text-sm text-emerald-700 font-medium">Total Credit (In)</p>
           <p className="text-2xl font-bold text-emerald-800">{formatMoney(totalIn)}</p>
         </div>
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-          <p className="text-sm text-rose-700 font-medium">Total Out</p>
+          <p className="text-sm text-rose-700 font-medium">Total Debit (Out)</p>
           <p className="text-2xl font-bold text-rose-800">{formatMoney(totalOut)}</p>
         </div>
       </div>
@@ -252,70 +252,90 @@ export default function DailyCashMemo() {
         ) : list.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No records for selected date/filters.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Date / Time</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Type</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Description</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Account</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Party / Item</th>
-                  <th className="text-right py-3 px-4 font-semibold text-slate-600">In</th>
-                  <th className="text-right py-3 px-4 font-semibold text-slate-600">Out</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Previous Balance Row (Opening) */}
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <td className="py-2.5 px-4 text-slate-400 font-bold">—</td>
-                  <td className="py-2.5 px-4 font-bold">
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-slate-200 text-slate-700 uppercase">Opening</span>
-                  </td>
-                  <td className="py-2.5 px-4 text-slate-800 font-bold italic">Previous Balance (Opening Balance)</td>
-                  <td className="py-2.5 px-4 text-slate-400">—</td>
-                  <td className="py-2.5 px-4 text-slate-400">—</td>
-                  <td className="py-2.5 px-4 text-right font-black text-emerald-700 bg-emerald-50/20">
-                    {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : ""}
-                  </td>
-                  <td className="py-2.5 px-4 text-right font-black text-rose-700 bg-rose-50/20">
-                    {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : ""}
-                  </td>
-                </tr>
+          <div className="flex flex-col lg:flex-row">
+            {/* LEFT SIDE: IN (Credit) */}
+            <div className="flex-1 w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-200">
+              <div className="bg-emerald-50 py-3 px-4 border-b border-emerald-100 flex justify-between items-center">
+                <h3 className="font-bold text-emerald-800">Aamad / In (Credit)</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Time</th>
+                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Account (Kahan)</th>
+                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Party (Kisko)</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-600">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.openingBalance > 0 && (
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <td className="py-2.5 px-3 text-slate-400 font-bold">—</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-800 italic" colSpan={2}>Previous Balance (Opening)</td>
+                        <td className="py-2.5 px-3 text-right font-black text-emerald-700 bg-emerald-50/20">{formatMoney(summary.openingBalance)}</td>
+                      </tr>
+                    )}
+                    {list.filter(r => r.amountType === 'in').map((row, idx) => (
+                      <tr key={`in-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">{formatTime(row.date)}</td>
+                        <td className="py-2.5 px-3">
+                           <div className="font-medium text-slate-700">{row.accountName || "—"}</div>
+                           <div className="text-[10px] uppercase text-emerald-700 font-bold tracking-wider mt-0.5">{TYPE_LABELS[row.type] || row.type}</div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                           <div className="font-bold text-slate-800">{row.name || "—"}</div>
+                           <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[150px] sm:max-w-xs">{row.description}</div>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold text-emerald-600">{formatMoney(row.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-                {list.map((row, idx) => (
-                  <tr key={`${row.type}-${row.referenceId}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 text-slate-700">
-                      {formatDate(row.date)} {formatTime(row.date)}
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          row.type === "sale" || row.type === "deposit"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : row.type === "stock_entry" || row.type === "withdraw"
-                            ? "bg-rose-100 text-rose-800"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {TYPE_LABELS[row.type] || row.type}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-800">{row.description || "—"}</td>
-                    <td className="py-2.5 px-4 text-slate-600">{row.accountName || "—"}</td>
-                    <td className="py-2.5 px-4 text-slate-600">
-                      {row.customerName || row.supplierName || row.mazdoorName || row.itemName || "—"}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-medium text-emerald-700">
-                      {row.amountType === "in" ? formatMoney(row.amount) : "—"}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-medium text-rose-700">
-                      {row.amountType === "out" ? formatMoney(row.amount) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* RIGHT SIDE: OUT (Debit) */}
+            <div className="flex-1 w-full lg:w-1/2">
+              <div className="bg-rose-50 py-3 px-4 border-b border-rose-100 flex justify-between items-center">
+                <h3 className="font-bold text-rose-800">Kharch / Out (Debit)</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Time</th>
+                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Account (Kahan Se)</th>
+                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Party (Kisko)</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-600">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.openingBalance < 0 && (
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <td className="py-2.5 px-3 text-slate-400 font-bold">—</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-800 italic" colSpan={2}>Previous Balance (Opening Neg)</td>
+                        <td className="py-2.5 px-3 text-right font-black text-rose-700 bg-rose-50/20">{formatMoney(Math.abs(summary.openingBalance))}</td>
+                      </tr>
+                    )}
+                    {list.filter(r => r.amountType === 'out').map((row, idx) => (
+                      <tr key={`out-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">{formatTime(row.date)}</td>
+                        <td className="py-2.5 px-3">
+                           <div className="font-medium text-slate-700">{row.accountName || "—"}</div>
+                           <div className="text-[10px] uppercase text-rose-700 font-bold tracking-wider mt-0.5">{TYPE_LABELS[row.type] || row.type}</div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                           <div className="font-bold text-slate-800">{row.name || "—"}</div>
+                           <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[150px] sm:max-w-xs">{row.description}</div>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold text-rose-600">{formatMoney(row.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -325,11 +345,11 @@ export default function DailyCashMemo() {
         <div className="mt-6 bg-slate-800 text-white rounded-xl border border-slate-700 overflow-hidden">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
             <div className="p-5 border-b sm:border-b-0 sm:border-r border-slate-600">
-              <p className="text-slate-400 text-sm font-medium">Total Added</p>
+              <p className="text-slate-400 text-sm font-medium">Total Credit (In)</p>
               <p className="text-xl font-bold text-emerald-400 mt-1">{formatMoney(totalIn)}</p>
             </div>
             <div className="p-5 border-b sm:border-b-0 sm:border-r border-slate-600">
-              <p className="text-slate-400 text-sm font-medium">Total Deducted</p>
+              <p className="text-slate-400 text-sm font-medium">Total Debit (Out)</p>
               <p className="text-xl font-bold text-rose-400 mt-1">{formatMoney(totalOut)}</p>
             </div>
             <div className="p-5">

@@ -19,24 +19,14 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
     const cr = credits[i] || {};
     const dr = debits[i] || {};
     
-    // Credit Side Details
-    const crAcc = cr.accountName || "";
-    const crPart = cr.name || "";
-    let crDisplay = crAcc && crPart ? `${crAcc} -> ${crPart}` : crAcc || crPart || "";
-    if (cr.description) crDisplay += `\n${cr.description}`;
-
-    // Debit Side Details
-    const drAcc = dr.accountName || "";
-    const drPart = dr.name || "";
-    let drDisplay = drAcc && drPart ? `${drAcc} -> ${drPart}` : drAcc || drPart || "";
-    if (dr.description) drDisplay += `\n${dr.description}`;
-
     formattedRows.push([
       cr.date ? formatDate(cr.date) : "",
-      crDisplay,
+      cr.accountName || "",
+      cr.name ? cr.name + (cr.description ? `\n(${cr.description})` : "") : "",
       cr.amount ? formatMoney(cr.amount) : "",
       dr.date ? formatDate(dr.date) : "",
-      drDisplay,
+      dr.accountName || "",
+      dr.name ? dr.name + (dr.description ? `\n(${dr.description})` : "") : "",
       dr.amount ? formatMoney(dr.amount) : "",
     ]);
   }
@@ -45,9 +35,11 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   formattedRows.push([
     "",
     "TOTAL CREDITS",
+    "",
     formatMoney(summary.totalIn),
     "",
     "TOTAL DEBITS",
+    "",
     formatMoney(summary.totalOut),
   ]);
 
@@ -55,7 +47,7 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   formattedRows.push([
     { 
       content: `NET MOVEMENT (BAQAYA): ${formatMoney(summary.net)}`, 
-      colSpan: 6, 
+      colSpan: 8, 
       styles: { halign: 'center', fontStyle: 'bold', fontSize: 10 } 
     }
   ]);
@@ -105,17 +97,19 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Credit (Account -> Participant)", "Amount", "Date", "Debit (Account -> Participant)", "Amount"]],
+    head: [["Date", "Account", "Party / Item", "Amount", "Date", "Account", "Party / Item", "Amount"]],
     body: formattedRows,
-    headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 8, halign: "center" },
+    headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
     columnStyles: {
-      0: { cellWidth: 15 },
-      1: { cellWidth: 55 },
-      2: { cellWidth: 25, halign: "right", fontStyle: "bold" },
-      3: { cellWidth: 15 },
-      4: { cellWidth: 55 },
-      5: { cellWidth: 25, halign: "right", fontStyle: "bold" },
+      0: { cellWidth: 14 },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 36 },
+      3: { cellWidth: 19, halign: "right", fontStyle: "bold" },
+      4: { cellWidth: 14 },
+      5: { cellWidth: 22 },
+      6: { cellWidth: 36 },
+      7: { cellWidth: 19, halign: "right", fontStyle: "bold" },
     },
     didParseCell: function (data) {
       // Styling summary rows (Totals and Net)
