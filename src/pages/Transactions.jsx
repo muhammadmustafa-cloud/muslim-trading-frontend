@@ -41,6 +41,9 @@ export default function Transactions() {
     taxTypeId: "",
     expenseTypeId: "",
     image: null,
+    paymentMethod: "cash",
+    chequeNumber: "",
+    chequeDate: "",
   });
   const [previewImage, setPreviewImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -139,6 +142,9 @@ export default function Transactions() {
       taxTypeId: "",
       expenseTypeId: "",
       image: null,
+      paymentMethod: "cash",
+      chequeNumber: "",
+      chequeDate: "",
     });
     setModalOpen(false);
   };
@@ -210,6 +216,16 @@ export default function Transactions() {
       if (form.taxTypeId) formData.append("taxTypeId", form.taxTypeId);
       if (form.expenseTypeId) formData.append("expenseTypeId", form.expenseTypeId);
       if (form.image) formData.append("image", form.image);
+      if (form.paymentMethod) formData.append("paymentMethod", form.paymentMethod);
+      if (form.paymentMethod === "cheque") {
+        if (!form.chequeNumber.trim()) {
+          setError("Cheque number zaroori hai.");
+          setSubmitting(false);
+          return;
+        }
+        formData.append("chequeNumber", form.chequeNumber.trim());
+        if (form.chequeDate) formData.append("chequeDate", form.chequeDate);
+      }
 
       await apiPostFormData("/transactions", formData);
       resetForm();
@@ -444,6 +460,28 @@ export default function Transactions() {
               <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label>
               <input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" />
             </div>
+            {form.type !== "transfer" && (
+              <div>
+                <label className="input-label font-bold text-indigo-600">Payment Method</label>
+                <select value={form.paymentMethod} onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value }))} className="input-field border-indigo-200 bg-indigo-50/30">
+                  <option value="cash">Cash</option>
+                  <option value="online">Online Transfer</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+            )}
+            {form.paymentMethod === "cheque" && form.type !== "transfer" && (
+              <>
+                <div>
+                  <label className="input-label font-bold text-indigo-700">Cheque Number *</label>
+                  <input type="text" placeholder="e.g. 521456" value={form.chequeNumber} onChange={(e) => setForm((f) => ({ ...f, chequeNumber: e.target.value }))} className="input-field border-indigo-200 bg-indigo-50/30" required />
+                </div>
+                <div>
+                  <label className="input-label font-bold text-indigo-700">Cheque Date</label>
+                  <input type="date" value={form.chequeDate} onChange={(e) => setForm((f) => ({ ...f, chequeDate: e.target.value }))} className="input-field border-indigo-200 bg-indigo-50/30" />
+                </div>
+              </>
+            )}
             <div className="sm:col-span-2">
               <label className="input-label">Note</label>
               <input type="text" placeholder="Optional" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field" />
