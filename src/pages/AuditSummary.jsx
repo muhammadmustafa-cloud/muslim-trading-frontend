@@ -291,13 +291,13 @@ export default function AuditSummary() {
                            <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase">{c.name}</div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                           {c.balance < 0 ? (
+                           {c.balance > 0 ? (
                              <span className="text-sm font-black text-emerald-600">Rs. {formatMoney(c.balance)}</span>
                            ) : <span className="text-slate-200">—</span>}
                         </td>
                         <td className="px-6 py-4 text-right">
-                           {c.balance > 0 ? (
-                             <span className="text-sm font-black text-red-600">Rs. {formatMoney(c.balance)}</span>
+                           {c.balance < 0 ? (
+                             <span className="text-sm font-black text-red-600">Rs. {formatMoney(Math.abs(c.balance))}</span>
                            ) : <span className="text-slate-200">—</span>}
                         </td>
                         <td className={`px-6 py-4 text-right font-black ${c.balance >=0 ? 'text-red-700 bg-red-50/20' : 'text-emerald-700 bg-emerald-50/20'}`}>
@@ -310,8 +310,8 @@ export default function AuditSummary() {
                  <tfoot className="bg-slate-900 text-white font-black uppercase tracking-tighter">
                     <tr>
                       <td className="px-6 py-5 text-xs">Category Totals</td>
-                      <td className="px-6 py-5 text-right text-base text-emerald-400">Rs. {formatMoney(data.customers.filter(c => c.balance < 0).reduce((s,c) => s+Math.abs(Number(c.balance)), 0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.customers.filter(c => c.balance > 0).reduce((s,c) => s+Number(c.balance), 0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-400">Rs. {formatMoney(data.customers.filter(c => c.balance > 0).reduce((s,c) => s+Number(c.balance), 0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.customers.filter(c => c.balance < 0).reduce((s,c) => s+Math.abs(Number(c.balance)), 0))}</td>
                       <td className="px-6 py-5 text-right text-lg text-amber-500">Rs. {formatMoney(data.totalReceivables)}</td>
                     </tr>
                  </tfoot>
@@ -340,10 +340,10 @@ export default function AuditSummary() {
                       <tr key={i} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-6 py-4 font-bold uppercase text-slate-700">{s.name}</td>
                         <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10 text-sm">
-                           {s.balance < 0 ? `Rs. ${formatMoney(Math.abs(s.balance))}` : <span className="text-slate-200">—</span>}
+                           {s.balance > 0 ? `Rs. ${formatMoney(Math.abs(s.balance))}` : <span className="text-slate-200">—</span>}
                         </td>
                         <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10 text-sm">
-                           {s.balance > 0 ? `Rs. ${formatMoney(s.balance)}` : <span className="text-slate-200">—</span>}
+                           {s.balance < 0 ? `Rs. ${formatMoney(Math.abs(s.balance))}` : <span className="text-slate-200">—</span>}
                         </td>
                         <td className={`px-6 py-4 text-right font-black ${s.balance <= 0 ? 'text-emerald-700 bg-emerald-50/20' : 'text-rose-700 bg-rose-50/20'}`}>
                            Rs. {formatMoney(Math.abs(s.balance))}
@@ -355,8 +355,8 @@ export default function AuditSummary() {
                  <tfoot className="bg-slate-800 text-white font-black uppercase tracking-tighter">
                     <tr>
                       <td className="px-6 py-5 text-xs text-slate-400 tracking-[0.2em]">Supplier Pool Totals</td>
-                      <td className="px-6 py-5 text-right text-base text-emerald-400 italic">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-400 italic">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+Number(s.balance),0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-400 italic">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-400 italic">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
                       <td className="px-6 py-5 text-right text-lg text-amber-500 font-black">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
                     </tr>
                  </tfoot>
