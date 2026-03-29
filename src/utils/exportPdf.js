@@ -476,11 +476,12 @@ export function downloadSaleInvoicePdf(sale) {
       doc.text(itName, 18, yPos);
       doc.text(String(it.kattay || 0), 95, yPos);
       
-      const itMun = it.itemNetWeight ? (it.itemNetWeight / 40).toFixed(3) : "0";
+      const itMun = it.quantity ? (it.quantity / 40).toFixed(3) : "0.000";
       doc.text(String(itMun), 120, yPos);
-      doc.text("40", 140, yPos);
+      doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
-      doc.text(formatMoney(it.totalAmount), 175, yPos);
+      const baseAmt = it.quantity && it.rate ? Math.round((it.quantity / 40) * it.rate) : 0;
+      doc.text(formatMoney(baseAmt), 175, yPos);
       
       yPos += 7;
       
@@ -500,7 +501,7 @@ export function downloadSaleInvoicePdf(sale) {
     doc.text(formatMoney(sale.totalAmount), 175, yPos);
   }
 
-  let baseTotal = sale.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || sale.totalAmount;
+  let grossSum = sale.items?.reduce((sum, i) => sum + Math.round(((i.quantity || 0) / 40) * (i.rate || 0)), 0) || 0;
 
   // Bottom line for table box (moved below memo)
   yPos = 200; // base y for summary
@@ -533,7 +534,7 @@ export function downloadSaleInvoicePdf(sale) {
   doc.setFont("helvetica", "bold");
   doc.text("GROSS AMOUNT:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(baseTotal), 195, rightY, { align: "right" });
+  doc.text(formatMoney(grossSum), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
@@ -712,7 +713,7 @@ export function downloadPurchaseInvoicePdf(entry) {
       
       const itMun = it.itemNetWeight ? (it.itemNetWeight / 40).toFixed(3) : "0";
       doc.text(String(itMun), 120, yPos);
-      doc.text("40", 140, yPos);
+      doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
       doc.text(formatMoney(it.amount), 175, yPos);
       
@@ -1252,6 +1253,62 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       // Add standard header on new pages if needed
     }
   });
+
+  // 7. TRANSACTION AUDIT TRAIL (Len Den Detail)
+  if (data.periodTransactions && data.periodTransactions.length > 0) {
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.setFont(undefined, "bold");
+    doc.text("TRANSACTION AUDIT TRAIL (Len Den Detail)", MARGIN, 20);
+
+    const movementRows = data.periodTransactions.map((row) => {
+      let credit = 0;
+      let debit = 0;
+
+      // Logic for Credit/Debit based on type
+      if (row.type === "deposit" || row.type === "sale") {
+        credit = row.amount;
+      } else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") {
+        debit = row.amount;
+      } else if (row.type === "transfer") {
+        debit = row.amount; // Treat transfer as a debit from source in this context
+      }
+
+      // Identify the Party or Account
+      const party = row.customerId?.name || row.supplierId?.name || row.mazdoorId?.name || row.fromAccountId?.name || row.toAccountId?.name || "Manual";
+      
+      // Description
+      let activity = row.type.toUpperCase();
+      if (row.type === "transfer") activity = `Transfer: ${row.fromAccountId?.name} -> ${row.toAccountId?.name}`;
+      else if (row.type === "sale") activity = "Sale Receipt";
+      else if (row.type === "purchase") activity = "Purchase Payment";
+      
+      const detail = `${activity} ${row.category ? `[${row.category}]` : ""} ${row.note ? `(${row.note})` : ""}`;
+
+      return [
+        formatDate(row.date),
+        party.slice(0, 35),
+        detail.slice(0, 60),
+        debit > 0 ? formatMoney(debit) : "-",
+        credit > 0 ? formatMoney(credit) : "-"
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 25,
+      head: [["Date", "Party / Account", "Description of Activity", "Debit (Gaya)", "Credit (Aya)"]],
+      body: movementRows,
+      ...tableTheme,
+      headStyles: { ...tableTheme.headStyles, fillColor: [51, 65, 85] },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 70 },
+        3: { cellWidth: 25, halign: "right" },
+        4: { cellWidth: 25, halign: "right" }
+      }
+    });
+  }
 
   addPageNumbers(doc);
   doc.save(`Master_Trial_Balance_${filters.dateTo || "Export"}.pdf`);
