@@ -79,88 +79,110 @@ export default function SupplierHistory() {
 
       {error && <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">{error}</div>}
 
-      <section className="card p-4">
+      <section className="card p-5 bg-white shadow-soft border-l-4 border-l-amber-500">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-3">
-            <h3 className="font-semibold text-slate-800 mb-3">Filter by Date</h3>
+          <div className="md:col-span-2">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Filter by Date Range</h3>
             <div className="flex flex-wrap items-center gap-4">
               <div>
-                <label className="input-label text-xs">Date from</label>
-                <input type="date" value={dateFrom} onChange={(e) => setFilters({ dateFrom: e.target.value })} className="input-field w-40" />
+                <label className="block text-[10px] font-bold text-slate-500 mb-1 italic">Shuruat (From)</label>
+                <input type="date" value={dateFrom} onChange={(e) => setFilters({ dateFrom: e.target.value })} className="input-field border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
               </div>
               <div>
-                <label className="input-label text-xs">Date to</label>
-                <input type="date" value={dateTo} onChange={(e) => setFilters({ dateTo: e.target.value })} className="input-field w-40" />
+                <label className="block text-[10px] font-bold text-slate-500 mb-1 italic">Ikhtatam (To)</label>
+                <input type="date" value={dateTo} onChange={(e) => setFilters({ dateTo: e.target.value })} className="input-field border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
               </div>
-              <button type="button" onClick={() => setSearchParams({})} className="btn-secondary mt-6">Clear filters</button>
+              <button type="button" onClick={() => setSearchParams({})} className="btn border border-rose-200 text-rose-600 hover:bg-rose-50 px-4 py-2 mt-4 rounded-lg text-xs font-black uppercase transition-colors">Clear</button>
             </div>
           </div>
           
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Current Balance</h3>
-            <div className={`text-2xl font-black ${data.summary?.finalBalance >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
-              Rs. {formatMoney(Math.abs(data.summary?.finalBalance || 0))}
-              <span className="text-xs ml-1 font-bold">
-                {data.summary?.finalBalance < 0 ? '(Payable)' : data.summary?.finalBalance > 0 ? '(Receivable)' : ''}
-              </span>
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-center">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-tighter">Pichli Wasooli (Opening)</h3>
+            <div className={`text-xl font-black ${data.summary?.openingBalance >= 0 ? 'text-slate-700' : 'text-slate-700'}`}>
+              Rs. {formatMoney(Math.abs(data.summary?.openingBalance || data.ledger.find(l=>l.type==='opening')?.balance || 0))}
             </div>
+            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 italic">Balance brought forward</p>
+          </div>
+
+          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-xl flex flex-col justify-center transform hover:scale-[1.02] transition-transform">
+            <h3 className="text-[10px] font-black text-amber-500 uppercase mb-1 tracking-widest">NET PAYABLE (Closing)</h3>
+            <div className={`text-2xl font-black ${data.summary?.finalBalance <= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              Rs. {formatMoney(Math.abs(data.summary?.finalBalance || 0))}
+            </div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+               {data.summary?.finalBalance < 0 ? 'Mill Khata (Payable)' : data.summary?.finalBalance > 0 ? 'Customer Khata (Receivable)' : 'Pura Hisaab (Settled)'}
+            </p>
           </div>
         </div>
       </section>
 
       {loading ? (
-        <div className="card p-12 flex justify-center"><div className="loading-spinner" /></div>
+        <div className="card p-12 flex justify-center bg-white border border-slate-200 rounded-2xl shadow-soft">
+           <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        </div>
       ) : (
-        <section className="card overflow-hidden">
+        <section className="card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-soft">
           <div className="overflow-x-auto">
             {!data.ledger?.length ? (
-              <p className="p-12 text-center text-slate-500">Koi transaction nahi mili.</p>
+              <div className="p-20 text-center text-slate-400">
+                 <FaTruck className="w-16 h-16 mx-auto mb-4 opacity-10" />
+                 <p className="font-bold tracking-widest uppercase text-xs">No entries found for this supplier.</p>
+              </div>
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="table-header px-4 py-3 text-left">Date</th>
-                    <th className="table-header px-4 py-3 text-left">Description</th>
-                    <th className="table-header px-4 py-3 text-center">Bags</th>
-                    <th className="table-header px-4 py-3 text-right">Debit (Dr)</th>
-                    <th className="table-header px-4 py-3 text-right">Credit (Cr)</th>
-                    <th className="table-header px-4 py-3 text-right bg-amber-50">Balance</th>
+                  <tr className="bg-slate-800 text-white border-b border-slate-700">
+                    <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Date</th>
+                    <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Description</th>
+                    <th className="py-4 px-4 text-center text-[10px] font-black uppercase tracking-widest">Bags</th>
+                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-emerald-900/30">Credit (Aamne)</th>
+                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-rose-900/30">Debit (Payments)</th>
+                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-slate-700 font-black">Balance</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 italic font-medium">
                   {data.ledger.map((item, idx) => (
-                    <tr key={idx} className="table-row-hover border-b border-slate-100">
-                      <td className="table-cell py-3 whitespace-nowrap text-xs">{formatDate(item.date)}</td>
-                      <td className="table-cell text-sm font-medium">
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                      <td className="py-4 px-4 whitespace-nowrap text-[11px] font-bold text-slate-400">{formatDate(item.date)}</td>
+                      <td className="py-4 px-4">
                         <div className="flex flex-col">
-                          <span>{item.description}</span>
-                          {item.type === 'payment' && <span className="text-[10px] text-slate-500 uppercase">{item.type}</span>}
+                          <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.description}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{item.type || 'entry'}</span>
                         </div>
                       </td>
-                      <td className="table-cell text-center font-bold text-slate-600">
-                        {item.bags > 0 ? item.bags : '—'}
+                      <td className="py-4 px-4 text-center">
+                        <span className={`px-2 py-1 rounded-md text-xs font-black ${item.bags > 0 ? 'bg-amber-100 text-amber-700' : 'text-slate-300'}`}>
+                           {item.bags > 0 ? item.bags : '—'}
+                        </span>
                       </td>
-                      <td className="table-cell text-right font-semibold text-blue-700">
-                        {item.debit > 0 ? formatMoney(item.debit) : '—'}
-                      </td>
-                      <td className="table-cell text-right font-semibold text-emerald-700">
+                      {/* Swapped: Credit First */}
+                      <td className="py-4 px-4 text-right font-black text-emerald-700 bg-emerald-50/10 text-base">
                         {item.credit > 0 ? formatMoney(item.credit) : '—'}
                       </td>
-                      <td className={`table-cell text-right font-bold bg-slate-50/50 ${item.balance >= 0 ? 'text-red-800' : 'text-blue-800'}`}>
+                      {/* Swapped: Debit Second */}
+                      <td className="py-4 px-4 text-right font-black text-rose-700 bg-rose-50/10 text-base">
+                        {item.debit > 0 ? formatMoney(item.debit) : '—'}
+                      </td>
+                      <td className={`py-4 px-4 text-right font-black text-base shadow-inner ${item.balance <= 0 ? 'text-emerald-800 bg-emerald-50/30' : 'text-rose-800 bg-rose-50/30'}`}>
                         {formatMoney(Math.abs(item.balance))}
-                        <span className="text-[9px] ml-1">{item.balance >= 0 ? 'Dr' : 'Cr'}</span>
+                        <span className="text-[10px] ml-1 uppercase">{item.balance <= 0 ? 'Cr' : 'Dr'}</span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-slate-100 font-bold">
+                <tfoot className="bg-slate-800 text-white font-black">
                   <tr>
-                    <td colSpan="3" className="px-4 py-3 text-right text-slate-700">TOTALS:</td>
-                    <td className="px-4 py-3 text-right text-blue-700 border-t-2 border-slate-300">{formatMoney(data.summary?.totalDebit)}</td>
-                    <td className="px-4 py-3 text-right text-emerald-700 border-t-2 border-slate-300">{formatMoney(data.summary?.totalCredit)}</td>
-                    <td className="px-4 py-3 text-right bg-amber-100 text-amber-900 border-t-2 border-amber-300">
+                    <td colSpan="3" className="py-6 px-4 text-right text-[10px] uppercase tracking-[0.2em] text-slate-400">Grand Ledger Totals:</td>
+                    {/* Swapped Footers */}
+                    <td className="py-6 px-4 text-right text-emerald-400 border-t-4 border-emerald-500/50 text-lg decoration-double underline underline-offset-8">
+                       {formatMoney(Number(data.summary?.totalCredit || 0))}
+                    </td>
+                    <td className="py-6 px-4 text-right text-rose-400 border-t-4 border-rose-500/50 text-lg decoration-double underline underline-offset-8">
+                       {formatMoney(Number(data.summary?.totalDebit || 0))}
+                    </td>
+                    <td className="py-6 px-4 text-right bg-slate-900 border-t-4 border-amber-500 text-xl font-black">
                       {formatMoney(Math.abs(data.summary?.finalBalance || 0))} 
-                      <span className="text-[10px] ml-1">{data.summary?.finalBalance >= 0 ? 'Dr' : 'Cr'}</span>
+                      <span className="text-[11px] ml-2 text-slate-400 uppercase tracking-widest">{data.summary?.finalBalance <= 0 ? 'Payable (Cr)' : 'Receivable (Dr)'}</span>
                     </td>
                   </tr>
                 </tfoot>

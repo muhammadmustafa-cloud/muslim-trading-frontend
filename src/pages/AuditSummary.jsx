@@ -274,38 +274,41 @@ export default function AuditSummary() {
                  <thead className="bg-slate-50">
                     <tr>
                       <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Customer Name</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Debit (Due)</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Credit (Advance)</th>
+                      {/* Swapped Columns */}
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">Credit (Payments)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">Debit (Due)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Closing Balance</th>
                     </tr>
                  </thead>
                  <tbody className="bg-white divide-y divide-slate-50">
                     {filteredItems(data.customers).map((c, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-6 py-4">
-                           <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{c.name}</div>
-                           <div className="text-[10px] text-slate-400 font-medium">{c.phone || 'No Phone'}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                           {c.balance > 0 ? (
-                             <span className="text-sm font-black text-red-600">Rs. {formatMoney(c.balance)}</span>
-                           ) : <span className="text-slate-200">—</span>}
+                           <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors uppercase">{c.name}</div>
                         </td>
                         <td className="px-6 py-4 text-right">
                            {c.balance < 0 ? (
                              <span className="text-sm font-black text-emerald-600">Rs. {formatMoney(c.balance)}</span>
                            ) : <span className="text-slate-200">—</span>}
                         </td>
+                        <td className="px-6 py-4 text-right">
+                           {c.balance > 0 ? (
+                             <span className="text-sm font-black text-red-600">Rs. {formatMoney(c.balance)}</span>
+                           ) : <span className="text-slate-200">—</span>}
+                        </td>
+                        <td className={`px-6 py-4 text-right font-black ${c.balance >=0 ? 'text-red-700 bg-red-50/20' : 'text-emerald-700 bg-emerald-50/20'}`}>
+                           Rs. {formatMoney(Math.abs(c.balance))}
+                           <span className="text-[10px] ml-1">{c.balance >= 0 ? 'Dr' : 'Cr'}</span>
+                        </td>
                       </tr>
                     ))}
-                    {filteredItems(data.customers).length === 0 && (
-                      <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-400 italic">No customers found matching "{searchTerm}"</td></tr>
-                    )}
                  </tbody>
                  <tfoot className="bg-slate-900 text-white font-black">
                     <tr>
-                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Grand Total</td>
-                      <td className="px-6 py-5 text-right text-base">Rs. {formatMoney(data.customers.filter(c => c.balance > 0).reduce((s,c) => s+c.balance, 0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-emerald-400">Rs. {formatMoney(data.customers.filter(c => c.balance < 0).reduce((s,c) => s+c.balance, 0))}</td>
+                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Grand Total Receivables</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-400">Rs. {formatMoney(data.customers.filter(c => c.balance < 0).reduce((s,c) => s+Math.abs(c.balance), 0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.customers.filter(c => c.balance > 0).reduce((s,c) => s+c.balance, 0))}</td>
+                      <td className="px-6 py-5 text-right text-lg text-amber-500">Rs. {formatMoney(data.totalReceivables)}</td>
                     </tr>
                  </tfoot>
                </table>
@@ -317,42 +320,41 @@ export default function AuditSummary() {
           <div className="animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Supplier Payables Breakdown</h3>
-                <div className="text-xs font-bold text-slate-400">Total {data.suppliers.length} Entries</div>
              </div>
              <div className="card p-0 overflow-hidden border-none shadow-xl">
                <table className="w-full border-collapse">
                  <thead className="bg-slate-50">
                     <tr>
                       <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Supplier Name</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Payable Amount</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Advance Paid</th>
+                      {/* Swapped Columns */}
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">Credit (Aamad)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">Debit (Payments)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Closing Payable</th>
                     </tr>
                  </thead>
                  <tbody className="bg-white divide-y divide-slate-50">
                     {filteredItems(data.suppliers).map((s, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors group">
-                        <td className="px-6 py-4">
-                           <div className="text-sm font-bold text-slate-700 group-hover:text-amber-600 transition-colors">{s.name}</div>
-                           <div className="text-[10px] text-slate-400 font-medium">{s.phone || 'No Phone'}</div>
+                        <td className="px-6 py-4 font-bold uppercase text-slate-700">{s.name}</td>
+                        <td className="px-6 py-4 text-right">
+                           {s.balance < 0 ? <span className="text-sm font-black text-rose-600 font-mono">Rs. {formatMoney(s.balance)}</span> : <span className="text-slate-200">—</span>}
                         </td>
                         <td className="px-6 py-4 text-right">
-                           {s.balance < 0 ? (
-                             <span className="text-sm font-black text-rose-600 font-mono">Rs. {formatMoney(s.balance)}</span>
-                           ) : <span className="text-slate-200">—</span>}
+                           {s.balance > 0 ? <span className="text-sm font-black text-indigo-600 font-mono">Rs. {formatMoney(s.balance)}</span> : <span className="text-slate-200">—</span>}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                           {s.balance > 0 ? (
-                             <span className="text-sm font-black text-indigo-600 font-mono">Rs. {formatMoney(s.balance)}</span>
-                           ) : <span className="text-slate-200">—</span>}
+                        <td className="px-6 py-4 text-right font-black text-slate-800">
+                           Rs. {formatMoney(Math.abs(s.balance))}
+                           <span className="text-[10px] ml-1 uppercase">{s.balance <= 0 ? 'Cr' : 'Dr'}</span>
                         </td>
                       </tr>
                     ))}
                  </tbody>
-                 <tfoot className="bg-rose-950 text-white font-black">
+                 <tfoot className="bg-slate-900 text-white font-black">
                     <tr>
-                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Payables</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(s.balance),0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-indigo-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+s.balance,0))}</td>
+                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Payables Pool</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-indigo-400">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+Number(s.balance),0))}</td>
+                      <td className="px-6 py-5 text-right text-lg text-amber-500">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
                     </tr>
                  </tfoot>
                </table>
@@ -364,40 +366,31 @@ export default function AuditSummary() {
           <div className="animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Item-Wise Trading Scenario</h3>
-                <div className="text-xs font-bold text-slate-400">Total {data.items.length} Active Items</div>
              </div>
              <div className="card p-0 overflow-hidden border-none shadow-xl">
                <table className="w-full border-collapse">
                  <thead className="bg-slate-50">
                     <tr>
                       <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Item Name</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Total Purchased (Dr)</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Total Sold (Cr)</th>
+                      {/* Swapped Columns */}
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">Credit (Sale Value)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">Debit (Purchase)</th>
                     </tr>
                  </thead>
                  <tbody className="bg-white divide-y divide-slate-50">
                     {filteredItems(data.items).map((item, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors group">
-                        <td className="px-6 py-4">
-                           <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{item.name}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                           <span className="text-sm font-black text-rose-600">Rs. {formatMoney(item.purchaseVolume)}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                           <span className="text-sm font-black text-emerald-600">Rs. {formatMoney(item.saleVolume)}</span>
-                        </td>
+                        <td className="px-6 py-4 text-sm font-black text-slate-700 uppercase">{item.name}</td>
+                        <td className="px-6 py-4 text-right text-sm font-black text-emerald-600">Rs. {formatMoney(Number(item.saleVolume))}</td>
+                        <td className="px-6 py-4 text-right text-sm font-black text-rose-600">Rs. {formatMoney(Number(item.purchaseVolume))}</td>
                       </tr>
                     ))}
-                    {filteredItems(data.items).length === 0 && (
-                      <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-400 italic">No trading activity found for items matching "{searchTerm}"</td></tr>
-                    )}
                  </tbody>
                  <tfoot className="bg-slate-900 text-white font-black">
                     <tr>
-                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Grand Total Trading</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.items.reduce((s,i) => s+i.purchaseVolume, 0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-emerald-300">Rs. {formatMoney(data.items.reduce((s,i) => s+i.saleVolume, 0))}</td>
+                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Asset Movement</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-300">Rs. {formatMoney(data.items.reduce((s,i) => s+Number(i.saleVolume), 0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.items.reduce((s,i) => s+Number(i.purchaseVolume), 0))}</td>
                     </tr>
                  </tfoot>
                </table>
@@ -422,12 +415,12 @@ export default function AuditSummary() {
                     {filteredItems(data.mazdoors).map((m, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4">
-                           <div className="text-sm font-bold text-slate-700">{m.name}</div>
-                           <div className="text-[10px] text-slate-400 font-medium">{m.contact || 'No Contact'}</div>
+                           <div className="text-sm font-bold text-slate-700 uppercase">{m.name}</div>
                         </td>
                         <td className="px-6 py-4 text-right">
                            <span className={`text-sm font-black ${m.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                             Rs. {formatMoney(m.balance)}
+                             Rs. {formatMoney(Math.abs(Number(m.balance)))}
+                             <span className="text-[10px] ml-1">{m.balance > 0 ? 'Dr' : 'Cr'}</span>
                            </span>
                         </td>
                       </tr>
@@ -437,7 +430,7 @@ export default function AuditSummary() {
                     <tr>
                       <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Outstanding Owed</td>
                       <td className="px-6 py-5 text-right text-lg text-rose-400">
-                         Rs. {formatMoney(data.mazdoors.filter(m => m.balance > 0).reduce((s,m) => s+m.balance, 0))}
+                         Rs. {formatMoney(data.mazdoors.filter(m => m.balance > 0).reduce((s,m) => s+Number(m.balance), 0))}
                       </td>
                     </tr>
                  </tfoot>
@@ -457,7 +450,7 @@ export default function AuditSummary() {
                    <thead className="bg-slate-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Item Name</th>
-                        <th className="px-6 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Weight</th>
+                        <th className="px-6 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Weight (Mun)</th>
                         <th className="px-6 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Kattay</th>
                         <th className="px-6 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Avg Rate</th>
                         <th className="px-6 py-3 text-right text-[10px] font-black text-slate-400 uppercase text-indigo-600">Total Value</th>
@@ -467,12 +460,12 @@ export default function AuditSummary() {
                       {filteredItems(data.stock).map((item, i) => (
                         <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                            <td className="px-6 py-4">
-                              <div className="text-sm font-bold text-slate-700">{item.itemName}</div>
-                              <div className="text-[10px] text-slate-400 font-bold uppercase">{item.category} | {item.quality}</div>
+                              <div className="text-sm font-bold text-slate-700 uppercase">{item.itemName}</div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase">{item.category}</div>
                            </td>
-                           <td className="px-6 py-4 text-right text-sm font-medium text-slate-600">{item.quantity.toLocaleString()} kg</td>
+                           <td className="px-6 py-4 text-right text-sm font-medium text-slate-600">{(item.quantity / 40).toFixed(2)} Mun</td>
                            <td className="px-6 py-4 text-right text-sm font-medium text-slate-600">{item.kattay}</td>
-                           <td className="px-6 py-4 text-right text-sm font-black text-slate-400">Rs. {formatMoney(item.value / item.quantity)}</td>
+                           <td className="px-6 py-4 text-right text-sm font-black text-slate-400">Rs. {formatMoney(item.value / item.quantity * 40)} / Mun</td>
                            <td className="px-6 py-4 text-right text-sm font-black text-indigo-600">Rs. {formatMoney(item.value)}</td>
                         </tr>
                       ))}
@@ -503,9 +496,9 @@ export default function AuditSummary() {
                    <tbody className="divide-y divide-slate-100">
                       {data.machinery.map((m, i) => (
                         <tr key={i} className="hover:bg-slate-50/50">
-                           <td className="px-6 py-4 text-xs font-bold text-slate-500 whitespace-nowrap">{formatDate(m.date)}</td>
-                           <td className="px-6 py-4 text-sm font-bold text-slate-700">{m.machineryItemId?.name}</td>
-                           <td className="px-6 py-4 text-sm font-medium text-slate-500">{m.supplierId?.name}</td>
+                           <td className="px-6 py-4 text-xs font-bold text-slate-400 whitespace-nowrap">{formatDate(m.date)}</td>
+                           <td className="px-6 py-4 text-sm font-bold text-slate-700 uppercase">{m.machineryItemId?.name}</td>
+                           <td className="px-6 py-4 text-sm font-medium text-slate-500 uppercase">{m.supplierId?.name}</td>
                            <td className="px-6 py-4 text-right text-sm font-black text-slate-800">Rs. {formatMoney(m.amount)}</td>
                         </tr>
                       ))}
@@ -527,7 +520,7 @@ export default function AuditSummary() {
                 {/* Expenses Table */}
                 <div className="card p-0 overflow-hidden border-none shadow-lg">
                   <div className="px-6 py-4 bg-orange-50 border-b border-orange-100">
-                    <h3 className="text-sm font-black text-orange-900 uppercase tracking-widest italic">General Expenses</h3>
+                    <h3 className="text-sm font-black text-orange-900 uppercase tracking-widest italic">General Expenses (Mill Outflow)</h3>
                   </div>
                   <table className="w-full">
                     <thead className="bg-slate-50">
@@ -541,15 +534,15 @@ export default function AuditSummary() {
                        {data.expenses.map((e, i) => (
                          <tr key={i} className="hover:bg-slate-50/70">
                             <td className="px-6 py-4 text-xs font-bold text-slate-400">{formatDate(e.date)}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-700">{e.expenseTypeId?.name || e.category}</td>
-                            <td className="px-6 py-4 text-right text-sm font-black text-orange-600">Rs. {formatMoney(e.amount)}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-700 uppercase">{e.expenseTypeId?.name || e.category}</td>
+                            <td className="px-6 py-4 text-right text-sm font-black text-orange-600">Rs. {formatMoney(Number(e.amount))}</td>
                          </tr>
                        ))}
                     </tbody>
                     <tfoot className="bg-orange-600 text-white font-black border-none">
                        <tr>
                           <td colSpan="2" className="px-6 py-4 text-xs tracking-widest uppercase">Total Expenses</td>
-                          <td className="px-6 py-4 text-right text-lg">Rs. {formatMoney(data.expenses.reduce((s,e) => s+e.amount,0))}</td>
+                          <td className="px-6 py-4 text-right text-lg">Rs. {formatMoney(data.expenses.reduce((s,e) => s+Number(e.amount),0))}</td>
                        </tr>
                     </tfoot>
                   </table>
@@ -558,7 +551,7 @@ export default function AuditSummary() {
                 {/* Taxes Table */}
                 <div className="card p-0 overflow-hidden border-none shadow-lg">
                   <div className="px-6 py-4 bg-rose-50 border-b border-rose-100">
-                    <h3 className="text-sm font-black text-rose-900 uppercase tracking-widest italic">Tax Payments</h3>
+                    <h3 className="text-sm font-black text-rose-900 uppercase tracking-widest italic">Taxation Audit</h3>
                   </div>
                   <table className="w-full">
                     <thead className="bg-slate-50">
@@ -572,15 +565,15 @@ export default function AuditSummary() {
                        {data.taxes.map((t, i) => (
                          <tr key={i} className="hover:bg-slate-50/70">
                             <td className="px-6 py-4 text-xs font-bold text-slate-400">{formatDate(t.date)}</td>
-                            <td className="px-6 py-4 text-sm font-bold text-slate-700">{t.taxTypeId?.name || 'General Tax'}</td>
-                            <td className="px-6 py-4 text-right text-sm font-black text-rose-600">Rs. {formatMoney(t.amount)}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-slate-700 uppercase">{t.taxTypeId?.name || 'General Tax'}</td>
+                            <td className="px-6 py-4 text-right text-sm font-black text-rose-600">Rs. {formatMoney(Number(t.amount))}</td>
                          </tr>
                        ))}
                     </tbody>
                     <tfoot className="bg-rose-600 text-white font-black border-none">
                        <tr>
                           <td colSpan="2" className="px-6 py-4 text-xs tracking-widest uppercase">Total Taxes</td>
-                          <td className="px-6 py-4 text-right text-lg">Rs. {formatMoney(data.taxes.reduce((s,t) => s+t.amount,0))}</td>
+                          <td className="px-6 py-4 text-right text-lg">Rs. {formatMoney(data.taxes.reduce((s,t) => s+Number(t.amount),0))}</td>
                        </tr>
                     </tfoot>
                   </table>
@@ -588,38 +581,84 @@ export default function AuditSummary() {
              </div>
           </div>
         )}
-         {activeTab === 'accounts' && (
+
+        {activeTab === 'accounts' && (
           <div className="animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex items-center justify-between mb-4 px-2">
-                <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Cash & Bank Balances Detail</h3>
+                <h1 className="text-lg font-black text-slate-800 uppercase tracking-widest italic">Accounts Audit <span className="text-indigo-600">(Aamne-Samne)</span></h1>
+                <p className="text-[10px] text-slate-400 font-black uppercase italic">Excluding Mill/Daily Accounts as requested</p>
              </div>
-             <div className="card p-0 overflow-hidden border-none shadow-xl">
-               <table className="w-full border-collapse">
-                 <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Account Name</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Current Balance (Rs)</th>
-                    </tr>
-                 </thead>
-                 <tbody className="bg-white divide-y divide-slate-50">
-                    {filteredItems(data.accounts).map((a, i) => (
-                      <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
-                           <div className="text-sm font-bold text-slate-700">{a.name}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                           <span className="text-sm font-black text-indigo-600 font-mono">Rs. {formatMoney(a.balance)}</span>
-                        </td>
-                      </tr>
-                    ))}
-                 </tbody>
-                 <tfoot className="bg-slate-900 text-white font-black">
-                    <tr>
-                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Liquidity</td>
-                      <td className="px-6 py-5 text-right text-lg text-indigo-400">Rs. {formatMoney(data.totalCash)}</td>
-                    </tr>
-                 </tfoot>
-               </table>
+             
+             <div className="grid grid-cols-1 gap-8">
+               {data.accounts
+                 .filter(acc => !acc.isDailyKhata && !acc.isMillKhata)
+                 .map((acc, i) => (
+                   <div key={i} className="card p-0 overflow-hidden border-2 border-slate-100 shadow-xl transform hover:scale-[1.005] transition-transform">
+                     {/* Account Header */}
+                     <div className="bg-slate-800 text-white p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center">
+                              <FaWallet className="text-white" />
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Commercial Account Audit</p>
+                              <h3 className="text-base font-black uppercase tracking-tight leading-none">{acc.name}</h3>
+                           </div>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-[10px] font-black text-slate-400 uppercase mb-0.5">Closing Balance</p>
+                           <p className="text-xl font-black text-amber-400">Rs. {formatMoney(Number(acc.balance))}</p>
+                        </div>
+                     </div>
+
+                     {/* Aamne-Samne T-Account View */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+                        {/* LEFT: CREDIT (INFLOW) */}
+                        <div className="p-6 bg-emerald-50/20">
+                           <div className="flex items-center justify-between mb-6">
+                              <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2 italic">
+                                 <FaArrowUp className="text-emerald-500" /> Credit (Aamne / Inflow)
+                              </h4>
+                              <div className="bg-emerald-100 px-3 py-1 rounded-full text-[10px] font-black text-emerald-700 uppercase">Received</div>
+                           </div>
+                           <div className="flex flex-col items-center justify-center min-h-[100px]">
+                              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Total Amount Received in this period</p>
+                              <p className="text-4xl font-black text-emerald-600 font-mono tracking-tighter">
+                                 Rs. {formatMoney(Number(acc.totalIn || 0))}
+                              </p>
+                           </div>
+                        </div>
+
+                        {/* RIGHT: DEBIT (OUTFLOW) */}
+                        <div className="p-6 bg-rose-50/20">
+                           <div className="flex items-center justify-between mb-6">
+                              <h4 className="text-xs font-black text-rose-800 uppercase tracking-widest flex items-center gap-2 italic">
+                                 <FaArrowDown className="text-rose-500" /> Debit (Kharch / Outflow)
+                              </h4>
+                              <div className="bg-rose-100 px-3 py-1 rounded-full text-[10px] font-black text-rose-700 uppercase">Paid Out</div>
+                           </div>
+                           <div className="flex flex-col items-center justify-center min-h-[100px]">
+                              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Total Amount Paid from this account</p>
+                              <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">
+                                 Rs. {formatMoney(Number(acc.totalOut || 0))}
+                              </p>
+                           </div>
+                        </div>
+                     </div>
+
+                     {/* Movement Status Bar */}
+                     <div className="bg-slate-50 px-6 py-3 flex items-center justify-between border-t border-slate-100">
+                        <div className="text-[10px] font-black text-slate-400 uppercase italic">
+                           Net Periodic Movement: 
+                           <span className={`ml-2 ${Number(acc.totalIn) >= Number(acc.totalOut) ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              Rs. {formatMoney(Math.abs(Number(acc.totalIn || 0) - Number(acc.totalOut || 0)))} 
+                              {Number(acc.totalIn) >= Number(acc.totalOut) ? ' (Surplus)' : ' (Deficit)'}
+                           </span>
+                        </div>
+                        <div className="text-[10px] font-black text-indigo-400 uppercase italic">Detailed Ledger Audited ✅</div>
+                     </div>
+                   </div>
+                 ))}
              </div>
           </div>
         )}

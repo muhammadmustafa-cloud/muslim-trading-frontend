@@ -1151,132 +1151,152 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   }
   
   const isPeriodAudit = !!(filters.dateFrom || filters.dateTo);
-  const reportTitle = isPeriodAudit ? "Daily Audit Scenario (Submail)" : "Master Trial Balance (Submail Report)";
+  const reportTitle = isPeriodAudit ? "Professional Audit Scenario (Submail)" : "Master Balance Sheet (Audit Report)";
 
   addReportHeader(doc, reportTitle, subtitleLines);
 
   const tableRows = [];
 
-  // Helper to push header row
   const addGroupHeader = (title) => {
-    tableRows.push([{ content: title, colSpan: 3, styles: { fontStyle: "bold", fillColor: [240, 240, 240] } }]);
+    tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
   };
 
-  // 1. Bank & Cash Accounts
-  const cashAccounts = data.accounts.filter(a => a.balance !== 0);
+  // 1. Bank & Cash Accounts (Aamne-Samne)
+  const cashAccounts = data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata);
   if (cashAccounts.length > 0) {
-    addGroupHeader(isPeriodAudit ? "1. CASH & BANK MOVEMENT (Net Change)" : "1. CASH & BANK ACCOUNTS");
+    tableRows.push([{ content: "1. BANK & CASH ACCOUNTS (INFLOW VS OUTFLOW AUDIT)", colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }]);
+    tableRows.push([
+      { content: "Account Name", styles: { fontStyle: "bold" } }, 
+      { content: "Credit (Inflow)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Debit (Outflow)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Closing", styles: { fontStyle: "bold", halign: "right" } }
+    ]);
     cashAccounts.forEach(a => {
       tableRows.push([
-        a.name,
-        a.balance < 0 ? formatMoney(Math.abs(a.balance)) : "-",
-        a.balance > 0 ? formatMoney(a.balance) : "-"
+        a.name.toUpperCase(),
+        formatMoney(Number(a.totalIn || 0)),
+        formatMoney(Number(a.totalOut || 0)),
+        formatMoney(Number(a.balance || 0))
       ]);
     });
   }
 
+  // Divider
+  tableRows.push([{ content: "", colSpan: 4, styles: { cellPadding: 1 } }]);
+
   // 2. Customers
   if (data.customers.length > 0) {
-    addGroupHeader(isPeriodAudit ? "2. CUSTOMER ACTIVITY (Debit/Credit)" : "2. CUSTOMER POSITIONS (Receivables/Advances)");
+    addGroupHeader("2. CUSTOMER BALANCES (RECEIVABLES)");
+    tableRows.push([
+      "Customer Name", 
+      { content: "Credit (Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Debit (Due)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
+    ]);
     data.customers.forEach(c => {
       tableRows.push([
-        c.name,
+        c.name.toUpperCase(),
+        c.balance < 0 ? formatMoney(Math.abs(c.balance)) : "-",
         c.balance > 0 ? formatMoney(c.balance) : "-",
-        c.balance < 0 ? formatMoney(Math.abs(c.balance)) : "-"
+        formatMoney(Math.abs(c.balance)) + (c.balance >= 0 ? " Dr" : " Cr")
       ]);
     });
   }
 
   // 3. Suppliers
   if (data.suppliers.length > 0) {
-    addGroupHeader(isPeriodAudit ? "3. SUPPLIER ACTIVITY (Debit/Credit)" : "3. SUPPLIER POSITIONS (Payables/Advances)");
+    addGroupHeader("3. SUPPLIER BALANCES (PAYABLES)");
+    tableRows.push([
+      "Supplier Name", 
+      { content: "Credit (Bill)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
+    ]);
     data.suppliers.forEach(s => {
       tableRows.push([
-        s.name,
+        s.name.toUpperCase(),
+        s.balance < 0 ? formatMoney(Math.abs(s.balance)) : "-",
         s.balance > 0 ? formatMoney(s.balance) : "-",
-        s.balance < 0 ? formatMoney(Math.abs(s.balance)) : "-"
+        formatMoney(Math.abs(s.balance)) + (s.balance <= 0 ? " Cr" : " Dr")
       ]);
     });
   }
 
   // 4. Mazdoor
   if (data.mazdoors.length > 0) {
-    addGroupHeader(isPeriodAudit ? "4. MAZDOOR ACTIVITY" : "4. MAZDOOR OUTSTANDING WAGES");
+    addGroupHeader("4. MAZDOOR OUTSTANDING WAGES");
     data.mazdoors.forEach(m => {
       tableRows.push([
-        m.name, 
-        m.balance < 0 ? formatMoney(Math.abs(m.balance)) : "-",
-        m.balance > 0 ? formatMoney(m.balance) : "-"
+        m.name.toUpperCase(),
+        "-",
+        formatMoney(Math.abs(Number(m.balance))),
+        formatMoney(Math.abs(Number(m.balance))) + (m.balance > 0 ? " Dr" : " Cr"),
       ]);
     });
   }
 
-  // 5. Items (Trading Movements)
+  // 5. Items (Trading)
   if (data.items && data.items.length > 0) {
-    addGroupHeader(isPeriodAudit ? "5. ITEM-WISE TRADING SCENARIO (Net Trading)" : "5. ITEM-WISE TRADING SUMMARY");
+    addGroupHeader("5. ITEM-WISE TRADING SCENARIO");
+    tableRows.push([
+      "Item Description", 
+      { content: "Credit (Sales)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Debit (Purchase)", styles: { fontStyle: "bold", halign: "right" } }, 
+      "Status"
+    ]);
     data.items.forEach(i => {
       tableRows.push([
-        i.name,
-        i.purchaseVolume > 0 ? formatMoney(i.purchaseVolume) : "-",
-        i.saleVolume > 0 ? formatMoney(i.saleVolume) : "-"
+        i.name.toUpperCase(),
+        formatMoney(Number(i.saleVolume || 0)),
+        formatMoney(Number(i.purchaseVolume || 0)),
+        Number(i.saleVolume) >= Number(i.purchaseVolume) ? "SURPLUS" : "DEFICIT"
       ]);
     });
   }
 
-  // 6. Assets (Stock & Machinery)
-  // For period audit, we only show machinery additions and stock value as context
-  addGroupHeader(isPeriodAudit ? "6. ASSET ADDITIONS & STOCK" : "6. STOCK & FIXED ASSETS");
-  tableRows.push(["Current Inventory Value", formatMoney(data.totalStockValue), "-"]);
-  tableRows.push(["Machinery & Equipment", formatMoney(data.totalMachineryValue), "-"]);
+  // 6. Valuation
+  addGroupHeader("6. VALUATION & EXPENSES");
+  tableRows.push(["Current Inventory Value", formatMoney(Number(data.totalStockValue)), "-", "ASSET"]);
+  tableRows.push(["Machinery & Equipment", formatMoney(Number(data.totalMachineryValue)), "-", "ASSET"]);
+  const totalExp = data.expenses.reduce((s,e) => s + Number(e.amount), 0);
+  const totalTax = data.taxes.reduce((s,t) => s + Number(t.amount), 0);
+  tableRows.push(["Total Operating Expenses", "-", formatMoney(totalExp), "OUTFLOW"]);
+  tableRows.push(["Total Period Taxes", "-", formatMoney(totalTax), "OUTFLOW"]);
 
-  // 6. Operating Expenses & Taxes
-  addGroupHeader("6. PERIOD EXPENSES & TAXES");
-  const totalExp = data.expenses.reduce((s,e) => s+e.amount, 0);
-  const totalTax = data.taxes.reduce((s,t) => s+t.amount, 0);
-  tableRows.push(["Total Operating Expenses", formatMoney(totalExp), "-"]);
-  tableRows.push(["Total Period Taxes Paid", formatMoney(totalTax), "-"]);
-
-  // Calculate Column Totals from the displayed data
-  const accountsDebit = data.accounts.filter(a => a.balance < 0).reduce((s, a) => s + Math.abs(a.balance), 0);
-  const accountsCredit = data.accounts.filter(a => a.balance > 0).reduce((s, a) => s + a.balance, 0);
-
-  const totalDebit = accountsDebit + 
-                     data.customers.filter(c => c.balance > 0).reduce((s,c)=>s+c.balance, 0) +
-                     data.suppliers.filter(s => s.balance > 0).reduce((s,s1)=>s+s1.balance, 0) +
-                     data.mazdoors.filter(m => m.balance < 0).reduce((s,m)=>s+Math.abs(m.balance), 0) +
-                     data.totalStockValue + data.totalMachineryValue + totalExp + totalTax;
-
-  const totalCredit = accountsCredit +
-                      data.customers.filter(c => c.balance < 0).reduce((s,c)=>s+Math.abs(c.balance), 0) +
-                      data.suppliers.filter(s => s.balance < 0).reduce((s,s1)=>s+Math.abs(s1.balance), 0) +
-                      data.mazdoors.filter(m => m.balance > 0).reduce((s,m)=>s+m.balance, 0);
-
-  const netPosition = totalDebit - totalCredit;
+  // Calculate Column Totals
+  const totalReceivables = Number(data.totalReceivables || 0);
+  const totalPayables = Number(data.totalPayables || 0);
+  const totalAssets = Number(data.totalCash || 0) + totalReceivables + Number(data.totalStockValue || 0) + Number(data.totalMachineryValue || 0);
+  const netPosition = totalAssets - totalPayables;
 
   autoTable(doc, {
     startY: 40,
-    head: [["Particulars / Account Name", "Debit (Lene Wale)", "Credit (Dene Wale)"]],
+    head: [["ACCOUNT CLASSIFICATION", "CREDIT (AAMNE)", "DEBIT (KHARCH)", "NET POSITION"]],
     body: tableRows,
     foot: [
       [
-        { content: isPeriodAudit ? "AUDIT SCENARIO TOTALS" : "GRAND TOTAL BALANCES", styles: { fontStyle: "bold" } },
-        { content: formatMoney(totalDebit), styles: { halign: "right", fontStyle: "bold" } },
-        { content: formatMoney(totalCredit), styles: { halign: "right", fontStyle: "bold" } }
+        { content: "GRAND TOTAL ASSETS", styles: { fontStyle: "bold" } },
+        { content: "Rs. " + formatMoney(totalAssets), colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }
       ],
       [
-        { content: isPeriodAudit ? "NET PERFORMANCE (Profit/Loss)" : `NET FINANCIAL POSITION (${netPosition >= 0 ? "SURPLUS / PROFIT" : "DEFICIT / LOSS"})`, styles: { fontStyle: "bold" } },
-        { content: `Rs. ${formatMoney(netPosition)}`, colSpan: 2, styles: { halign: "center", fontStyle: "bold", fillColor: [44, 62, 80], textColor: [255, 255, 255] } }
+        { content: "GRAND TOTAL PAYABLES", styles: { fontStyle: "bold" } },
+        { content: "Rs. " + formatMoney(totalPayables), colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242], textColor: [153, 27, 27] } }
+      ],
+      [
+        { content: reportTitle.toUpperCase(), styles: { fontStyle: "bold" } },
+        { content: `Rs. ${formatMoney(netPosition)}`, colSpan: 3, styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 11 } }
       ]
     ],
     ...tableTheme,
     margin: { left: MARGIN, right: MARGIN, top: 20 },
     columnStyles: {
-      0: { cellWidth: 100 },
-      1: { cellWidth: 40, halign: "right" },
-      2: { cellWidth: 40, halign: "right" }
+      0: { cellWidth: 70 },
+      1: { cellWidth: 35, halign: "right" },
+      2: { cellWidth: 35, halign: "right" },
+      3: { cellWidth: 40, halign: "right" }
     }
   });
 
   addPageNumbers(doc);
-  doc.save(`Audit_Scenario_${filters.dateTo || "Export"}.pdf`);
+  doc.save(`Audit_Summary_${new Date().toISOString().slice(0,10)}.pdf`);
 }

@@ -367,8 +367,8 @@ export default function Transactions() {
             <div>
               <label className="input-label">Type *</label>
               <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className="input-field" required>
-                <option value="deposit">Deposit</option>
-                <option value="withdraw">Withdraw</option>
+                <option value="deposit">Debit</option>
+                <option value="withdraw">Credit</option>
                 <option value="tax">Tax Payment (Audit)</option>
                 <option value="expense">General Expense (Kharcha)</option>
                 <option value="salary">Salary (Payment)</option>
