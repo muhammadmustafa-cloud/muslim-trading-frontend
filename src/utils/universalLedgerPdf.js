@@ -101,7 +101,7 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Party", "Description", "Amount", "Date", "Party", "Description", "Amount"]],
+    head: [["Date", "Party / Ledger", "Description", "Amount", "Date", "Party / Ledger", "Description", "Amount"]],
     body: formattedRows,
     headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
