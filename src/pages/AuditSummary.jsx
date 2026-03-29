@@ -45,7 +45,7 @@ export default function AuditSummary() {
 
   useEffect(() => {
     fetchSummary();
-  }, [filters.dateFrom, filters.dateTo]);
+  }, []); // Only run once on mount, as requested (manual search button added below)
 
   const handlePdf = () => {
     if (data) {
@@ -78,6 +78,7 @@ export default function AuditSummary() {
     { id: 'overview', label: 'Overview', icon: FaFileContract },
     { id: 'customers', label: 'Customers (Receivables)', icon: FaUsers },
     { id: 'suppliers', label: 'Suppliers (Payables)', icon: FaIndustry },
+    { id: 'items', label: 'Items Activity', icon: FaBoxes },
     { id: 'mazdoors', label: 'Mazdoor Outstanding', icon: FaTruckLoading },
     { id: 'inventory', label: 'Inventory & Assets', icon: FaBoxes },
     { id: 'expenses', label: 'Expenses & Taxes', icon: FaMoneyBillWave },
@@ -142,6 +143,12 @@ export default function AuditSummary() {
               className="btn-secondary text-[10px] uppercase font-bold py-2 mb-0.5"
             >
               Today
+            </button>
+            <button 
+              onClick={fetchSummary}
+              className="btn-primary text-[10px] uppercase font-bold py-2 px-6 mb-0.5 flex items-center gap-2"
+            >
+              <FaSearch /> Search Audit
             </button>
           </div>
 
@@ -346,6 +353,51 @@ export default function AuditSummary() {
                       <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Payables</td>
                       <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(s.balance),0))}</td>
                       <td className="px-6 py-5 text-right text-base text-indigo-300">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+s.balance,0))}</td>
+                    </tr>
+                 </tfoot>
+               </table>
+             </div>
+          </div>
+        )}
+
+        {activeTab === 'items' && (
+          <div className="animate-in slide-in-from-bottom-4 duration-300">
+             <div className="flex items-center justify-between mb-4 px-2">
+                <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Item-Wise Trading Scenario</h3>
+                <div className="text-xs font-bold text-slate-400">Total {data.items.length} Active Items</div>
+             </div>
+             <div className="card p-0 overflow-hidden border-none shadow-xl">
+               <table className="w-full border-collapse">
+                 <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Item Name</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Total Purchased (Dr)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Total Sold (Cr)</th>
+                    </tr>
+                 </thead>
+                 <tbody className="bg-white divide-y divide-slate-50">
+                    {filteredItems(data.items).map((item, i) => (
+                      <tr key={i} className="hover:bg-slate-50 transition-colors group">
+                        <td className="px-6 py-4">
+                           <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{item.name}</div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                           <span className="text-sm font-black text-rose-600">Rs. {formatMoney(item.purchaseVolume)}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                           <span className="text-sm font-black text-emerald-600">Rs. {formatMoney(item.saleVolume)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredItems(data.items).length === 0 && (
+                      <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-400 italic">No trading activity found for items matching "{searchTerm}"</td></tr>
+                    )}
+                 </tbody>
+                 <tfoot className="bg-slate-900 text-white font-black">
+                    <tr>
+                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Grand Total Trading</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-300">Rs. {formatMoney(data.items.reduce((s,i) => s+i.purchaseVolume, 0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-300">Rs. {formatMoney(data.items.reduce((s,i) => s+i.saleVolume, 0))}</td>
                     </tr>
                  </tfoot>
                </table>
