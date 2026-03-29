@@ -108,8 +108,8 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
 
   const boxes = [
     { label: "PREV WASOOLI", value: formatMoney(summary.openingBalance), color: [71, 85, 105] },
-    { label: "TOTAL CREDIT", value: formatMoney(grandTotalIn), color: [16, 185, 129] },
-    { label: "TOTAL DEBIT", value: formatMoney(grandTotalOut), color: [239, 68, 68] },
+    { label: "TOTAL DEBIT", value: formatMoney(grandTotalIn), color: [16, 185, 129] },
+    { label: "TOTAL CREDIT", value: formatMoney(grandTotalOut), color: [239, 68, 68] },
     { label: "NET BAQAYA", value: formatMoney(summary.closingBalance), color: [245, 158, 11] },
   ];
 
@@ -129,7 +129,7 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
 
   autoTable(doc, {
     startY: 72,
-    head: [["Date", "Account/Party", "Credit (Amount In)", "Date", "Account/Party", "Debit (Amount Out)"]],
+    head: [["Date", "Account/Party", "Debit (Amount In)", "Date", "Account/Party", "Credit (Amount Out)"]],
     body: formattedRows,
     theme: "grid",
     headStyles: { 

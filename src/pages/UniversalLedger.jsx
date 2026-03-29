@@ -125,14 +125,14 @@ export default function UniversalLedger() {
           <p className="text-[9px] text-slate-400 italic">Yesterday's closing cash</p>
         </div>
         <div className="card p-4 border-l-4 border-l-emerald-500 bg-emerald-50/20">
-          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kul Wasooli (Total Credit)</p>
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kul Wasooli (Total Debit)</p>
           <p className="text-xl font-black text-emerald-700">
             {formatMoney(Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0))}
           </p>
           <p className="text-[9px] text-emerald-500 font-bold">Today: +{formatMoney(summary.totalIn)}</p>
         </div>
         <div className="card p-4 border-l-4 border-l-rose-500 bg-rose-50/20">
-          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Kul Kharch (Total Debit)</p>
+          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Kul Kharch (Total Credit)</p>
           <p className="text-xl font-black text-rose-700">
             {formatMoney(Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0))}
           </p>
@@ -159,8 +159,8 @@ export default function UniversalLedger() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-slate-800 text-white font-bold text-xs uppercase tracking-wider">
-                  <th colSpan="3" className="py-3 px-4 text-center border-r border-slate-700">CREDIT (Payments Received)</th>
-                  <th colSpan="3" className="py-3 px-4 text-center">DEBIT (Payments Made)</th>
+                  <th colSpan="3" className="py-3 px-4 text-center border-r border-slate-700">DEBIT (Payments Received)</th>
+                  <th colSpan="3" className="py-3 px-4 text-center">CREDIT (Payments Made)</th>
                 </tr>
                 <tr className="bg-slate-100 border-b border-slate-200 text-[10px] text-slate-500 uppercase font-bold">
                   <th className="py-2 px-3 text-left w-20">Date</th>
@@ -238,11 +238,11 @@ export default function UniversalLedger() {
               </tbody>
               <tfoot className="bg-slate-50 font-black border-t-2 border-slate-300">
                 <tr>
-                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px] border-r border-slate-200">GRAND TOTAL CREDITS:</td>
+                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px] border-r border-slate-200">GRAND TOTAL DEBITS:</td>
                    <td className="py-4 px-4 text-right text-emerald-700 border-r border-slate-200 text-lg">
                       {formatMoney(Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0))}
                    </td>
-                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px]">GRAND TOTAL DEBITS:</td>
+                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px]">GRAND TOTAL CREDITS:</td>
                    <td className="py-4 px-4 text-right text-rose-700 text-lg">
                       {formatMoney(Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0))}
                    </td>

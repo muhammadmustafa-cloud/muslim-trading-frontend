@@ -536,24 +536,24 @@ export default function Transactions() {
                     </th>
                     <th className="table-header px-5 py-3.5">Description</th>
                     <th className="table-header px-5 py-3.5 text-right">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Credit (In)<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Debit (In / Aamad)<SortIcon columnKey="amount" /></button>
                     </th>
                     <th className="table-header px-5 py-3.5 text-right">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Debit (Out)<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Credit (Out / Kharch)<SortIcon columnKey="amount" /></button>
                     </th>
                     <th className="table-header px-5 py-3.5 w-16 text-center">Receipt</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedList.map((row) => {
-                     let credit = 0;
-                     let debit = 0;
-                     if (row.type === "deposit" || row.type === "sale") credit = row.amount;
-                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") debit = row.amount;
+                     let debitIn = 0;
+                     let creditOut = 0;
+                     if (row.type === "deposit" || row.type === "sale") debitIn = row.amount;
+                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") creditOut = row.amount;
                      else if (row.type === "transfer") {
-                       if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
-                       else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
-                       else debit = row.amount; 
+                       if (filters.accountId && row.toAccountId?._id === filters.accountId) debitIn = row.amount;
+                       else if (filters.accountId && row.fromAccountId?._id === filters.accountId) creditOut = row.amount;
+                       else creditOut = row.amount; 
                      }
 
                      const participant = getParticipant(row);
@@ -582,8 +582,8 @@ export default function Transactions() {
                             </span>
                           </div>
                         </td>
-                        <td className="table-cell text-right font-bold text-emerald-600">{credit > 0 ? formatMoney(credit) : "—"}</td>
-                        <td className="table-cell text-right font-bold text-rose-600">{debit > 0 ? formatMoney(debit) : "—"}</td>
+                        <td className="table-cell text-right font-bold text-emerald-600">{debitIn > 0 ? formatMoney(debitIn) : "—"}</td>
+                        <td className="table-cell text-right font-bold text-rose-600">{creditOut > 0 ? formatMoney(creditOut) : "—"}</td>
                         <td className="table-cell text-center">
                           {row.image && (
                             <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center justify-center p-1.5 text-indigo-500 hover:text-indigo-700 bg-indigo-50 rounded mx-auto" title="Preview Receipt">
@@ -597,22 +597,22 @@ export default function Transactions() {
                 </tbody>
                 <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                   {(() => {
-                    let tCredit = 0;
-                    let tDebit = 0;
+                    let tDebitIn = 0;
+                    let tCreditOut = 0;
                     list.forEach(row => {
-                      if (row.type === "deposit" || row.type === "sale") tCredit += row.amount;
-                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tDebit += row.amount;
+                      if (row.type === "deposit" || row.type === "sale") tDebitIn += row.amount;
+                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tCreditOut += row.amount;
                       else if (row.type === "transfer") {
-                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tCredit += row.amount;
-                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tDebit += row.amount;
-                        else tDebit += row.amount; 
+                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tDebitIn += row.amount;
+                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tCreditOut += row.amount;
+                        else tCreditOut += row.amount; 
                       }
                     });
                     return (
                       <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
                         <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
-                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tCredit)}</td>
-                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tDebit)}</td>
+                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tDebitIn)}</td>
+                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tCreditOut)}</td>
                         <td className="bg-slate-50/30"></td>
                       </tr>
                     );
