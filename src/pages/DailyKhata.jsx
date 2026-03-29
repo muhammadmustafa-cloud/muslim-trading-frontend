@@ -126,7 +126,7 @@ export default function DailyKhata() {
           <p className="text-[10px] text-slate-400 italic font-medium">Yesterday's closing balance</p>
         </div>
         <div className="card p-4 border-l-4 border-l-emerald-500 bg-emerald-50/10 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kul Wasooli (Total Debit)</p>
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kul Wasooli (Total Credit)</p>
           <p className="text-xl font-black text-emerald-700">
             {formatMoney(Number(summary.openingBalance || 0) + Number(summary.totalIn || 0))}
           </p>
@@ -135,7 +135,7 @@ export default function DailyKhata() {
           </p>
         </div>
         <div className="card p-4 border-l-4 border-l-rose-500 bg-rose-50/10 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Kul Kharch (Total Credit)</p>
+          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Kul Kharch (Total Debit)</p>
           <p className="text-xl font-black text-rose-700">
             {formatMoney(Number(summary.totalOut || 0))}
           </p>
@@ -168,8 +168,8 @@ export default function DailyKhata() {
                   <th className="text-left py-4 px-4 font-black">Date</th>
                   <th className="text-left py-4 px-4 font-black">Account → Participant</th>
                   <th className="text-left py-4 px-4 font-black">Description</th>
-                  <th className="text-right py-4 px-4 font-black bg-slate-700/50">Debit (Payments Received)</th>
-                  <th className="text-right py-4 px-4 font-black bg-slate-900/50">Credit (Payments Made)</th>
+                  <th className="text-right py-4 px-4 font-black bg-slate-700/50">Credit (Payments Received)</th>
+                  <th className="text-right py-4 px-4 font-black bg-slate-900/50">Debit (Payments Made)</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,11 +228,11 @@ export default function DailyKhata() {
                     Grand Total Activity:
                   </td>
                   <td className="py-5 px-4 text-right text-xl text-emerald-700 bg-emerald-50/30">
-                    <div className="text-[10px] text-emerald-600 uppercase mb-1 font-black">Total Debits</div>
+                    <div className="text-[10px] text-emerald-600 uppercase mb-1 font-black">Total Credits</div>
                     {formatMoney(Number(summary.openingBalance || 0) + Number(summary.totalIn || 0))}
                   </td>
                   <td className="py-5 px-4 text-right text-xl text-rose-700 bg-rose-50/30">
-                    <div className="text-[10px] text-rose-600 uppercase mb-1 font-black">Total Credits</div>
+                    <div className="text-[10px] text-rose-600 uppercase mb-1 font-black">Total Debits</div>
                     {formatMoney(Number(summary.totalOut || 0))}
                   </td>
                 </tr>

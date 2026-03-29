@@ -135,8 +135,8 @@ export default function CustomerHistory() {
                     <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Date</th>
                     <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Description</th>
                     <th className="py-4 px-4 text-center text-[10px] font-black uppercase tracking-widest">Bags</th>
-                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-emerald-900/30">Credit (Payments)</th>
                     <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-rose-900/30">Debit (Sales)</th>
+                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-emerald-900/30">Credit (Payments)</th>
                     <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-slate-700 font-black">Balance</th>
                   </tr>
                 </thead>
@@ -156,10 +156,10 @@ export default function CustomerHistory() {
                         </span>
                       </td>
                       {/* Swapped layout values */}
-                      <td className="py-4 px-4 text-right font-black text-emerald-700 bg-emerald-50/10 text-base">
+                      <td className="py-4 px-4 text-right font-black text-rose-700 bg-rose-50/10 text-base">
                         {item.debit > 0 ? formatMoney(item.debit) : '—'}
                       </td>
-                      <td className="py-4 px-4 text-right font-black text-rose-700 bg-rose-50/10 text-base">
+                      <td className="py-4 px-4 text-right font-black text-emerald-700 bg-emerald-50/10 text-base">
                         {item.credit > 0 ? formatMoney(item.credit) : '—'}
                       </td>
                       <td className={`py-4 px-4 text-right font-black text-base shadow-inner ${item.balance >= 0 ? 'text-blue-800 bg-blue-50/30' : 'text-rose-800 bg-rose-50/30'}`}>
@@ -173,10 +173,10 @@ export default function CustomerHistory() {
                   <tr>
                     <td colSpan="3" className="py-6 px-4 text-right text-[10px] uppercase tracking-[0.2em] text-slate-400">Grand Ledger Totals:</td>
                     {/* Swapped Footers */}
-                    <td className="py-6 px-4 text-right text-emerald-400 border-t-4 border-emerald-500/50 text-lg decoration-double underline underline-offset-8">
+                    <td className="py-6 px-4 text-right text-rose-400 border-t-4 border-rose-500/50 text-lg decoration-double underline underline-offset-8">
                        {formatMoney(Number(data.summary?.totalDebit || 0))}
                     </td>
-                    <td className="py-6 px-4 text-right text-rose-400 border-t-4 border-rose-500/50 text-lg decoration-double underline underline-offset-8">
+                    <td className="py-6 px-4 text-right text-emerald-400 border-t-4 border-emerald-500/50 text-lg decoration-double underline underline-offset-8">
                        {formatMoney(Number(data.summary?.totalCredit || 0))}
                     </td>
                     <td className="py-6 px-4 text-right bg-slate-900 border-t-4 border-amber-500 text-xl font-black">

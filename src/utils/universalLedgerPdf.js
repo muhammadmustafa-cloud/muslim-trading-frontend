@@ -20,14 +20,14 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
     const dr = debits[i] || {};
     
     formattedRows.push([
-      cr.date ? formatDate(cr.date) : "",
-      cr.accountName || "",
-      cr.name ? cr.name + (cr.description ? `\n(${cr.description})` : "") : "",
-      cr.amount ? formatMoney(cr.amount) : "",
       dr.date ? formatDate(dr.date) : "",
       dr.accountName || "",
       dr.name ? dr.name + (dr.description ? `\n(${dr.description})` : "") : "",
       dr.amount ? formatMoney(dr.amount) : "",
+      cr.date ? formatDate(cr.date) : "",
+      cr.accountName || "",
+      cr.name ? cr.name + (cr.description ? `\n(${cr.description})` : "") : "",
+      cr.amount ? formatMoney(cr.amount) : "",
     ]);
   }
 
@@ -38,13 +38,13 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   formattedRows.push([
     "",
-    "TOTAL CREDITS",
-    "",
-    formatMoney(grandTotalIn),
-    "",
     "TOTAL DEBITS",
     "",
     formatMoney(grandTotalOut),
+    "",
+    "TOTAL CREDITS",
+    "",
+    formatMoney(grandTotalIn),
   ]);
 
   // Net Movement Row (Centered across all columns)
@@ -90,11 +90,11 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   doc.setTextColor(0);
   doc.text("Previous Balance (Opening Balance)", MARGIN + 2, y + 5);
   const balStr = summary.openingBalance !== 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0";
-  if (summary.openingBalance >= 0) {
-    // Credit side — show amount at the end of Credit Amount column (col 0+1+2 = ~95mm from left)
+  if (summary.openingBalance < 0) {
+    // Debit side (New Left)
     doc.text(balStr, MARGIN + 90, y + 5, { align: "right" });
   } else {
-    // Debit side — show amount at the end of Debit Amount column
+    // Credit side (New Right)
     doc.text(balStr, pageWidth - MARGIN - 2, y + 5, { align: "right" });
   }
   y += 7;

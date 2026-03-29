@@ -616,11 +616,11 @@ export default function AuditSummary() {
 
                      {/* Aamne-Samne T-Account View */}
                      <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 bg-white">
-                        {/* LEFT: CREDIT (INFLOW) */}
+                        {/* LEFT: DEBIT (INFLOW) */}
                         <div className="flex-1 w-full md:w-1/2">
                            <div className="bg-emerald-50/50 py-3 px-4 flex items-center justify-between border-b border-emerald-100">
                               <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2 italic">
-                                 <FaArrowUp className="text-emerald-500" /> Credit (Aamne / Inflow)
+                                 <FaArrowUp className="text-emerald-500" /> Debit (Aamne / Inflow)
                               </h4>
                               <div className="bg-emerald-100 px-3 py-1 rounded-full text-[10px] font-black text-emerald-700 uppercase">Received</div>
                            </div>
@@ -645,23 +645,23 @@ export default function AuditSummary() {
                                  </tr>
                                ))}
                                {(!data.periodTransactions || data.periodTransactions.filter(t => t.toAccountId?._id === acc._id || t.toAccountId === acc._id).length === 0) && (
-                                 <tr><td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">No Credits</td></tr>
+                                 <tr><td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">No Debits Recorded</td></tr>
                                )}
                              </tbody>
                              <tfoot className="bg-emerald-50/30 border-t border-emerald-100">
                                <tr>
-                                 <td colSpan="2" className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500">Total Inflow:</td>
+                                 <td colSpan="2" className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500">Total Inflow (Debit):</td>
                                  <td className="py-3 px-3 text-right text-sm font-black text-emerald-700">Rs. {formatMoney(acc.totalIn || 0)}</td>
                                </tr>
                              </tfoot>
                            </table>
                         </div>
 
-                        {/* RIGHT: DEBIT (OUTFLOW) */}
+                        {/* RIGHT: CREDIT (OUTFLOW) */}
                         <div className="flex-1 w-full md:w-1/2">
                            <div className="bg-rose-50/50 py-3 px-4 flex items-center justify-between border-b border-rose-100">
                               <h4 className="text-xs font-black text-rose-800 uppercase tracking-widest flex items-center gap-2 italic">
-                                 <FaArrowDown className="text-rose-500" /> Debit (Kharch / Outflow)
+                                 <FaArrowDown className="text-rose-500" /> Credit (Kharch / Outflow)
                               </h4>
                               <div className="bg-rose-100 px-3 py-1 rounded-full text-[10px] font-black text-rose-700 uppercase">Paid Out</div>
                            </div>
@@ -686,12 +686,12 @@ export default function AuditSummary() {
                                  </tr>
                                ))}
                                {(!data.periodTransactions || data.periodTransactions.filter(t => t.fromAccountId?._id === acc._id || t.fromAccountId === acc._id).length === 0) && (
-                                  <tr><td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">No Debits</td></tr>
+                                  <tr><td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">No Credits Recorded</td></tr>
                                )}
                              </tbody>
                              <tfoot className="bg-rose-50/30 border-t border-rose-100">
                                <tr>
-                                 <td colSpan="2" className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500">Total Outflow:</td>
+                                 <td colSpan="2" className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500">Total Outflow (Credit):</td>
                                  <td className="py-3 px-3 text-right text-sm font-black text-rose-700">Rs. {formatMoney(acc.totalOut || 0)}</td>
                                </tr>
                              </tfoot>

@@ -96,6 +96,13 @@ export default function Transactions() {
     } catch (_) { }
   };
 
+  const activeAccount = useMemo(() => {
+    if (!filters.accountId) return null;
+    return accounts.find(a => a._id === filters.accountId);
+  }, [accounts, filters.accountId]);
+
+  const isTraditional = activeAccount?.isDailyKhata || activeAccount?.isMillKhata;
+
   const fetchList = async () => {
     setLoading(true);
     setError("");
@@ -367,8 +374,8 @@ export default function Transactions() {
             <div>
               <label className="input-label">Type *</label>
               <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className="input-field" required>
-                <option value="deposit">Credit (Aamad / Deposit)</option>
-                <option value="withdraw">Debit (Kharch / Withdraw)</option>
+                <option value="deposit">Credit (In / Deposit)</option>
+                <option value="withdraw">Debit (Out / Withdraw)</option>
                 <option value="tax">Tax Payment (Audit)</option>
                 <option value="expense">General Expense (Kharcha)</option>
                 <option value="salary">Salary (Payment)</option>
@@ -517,7 +524,7 @@ export default function Transactions() {
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
           <p className="text-sm text-slate-500">{list.length} transaction(s)</p>
-          <button type="button" onClick={() => downloadTransactionsPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
+          <button type="button" onClick={() => downloadTransactionsPdf(sortedList, { ...filters, isTraditional })} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
           <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "type", label: "Type" }, { key: "fromAccountId.name", label: "From Account" }, { key: "toAccountId.name", label: "To Account" }, { key: "amount", label: "Amount" }, { key: "category", label: "Category" }, { key: "note", label: "Note" }]); downloadCsv(csv, "transactions.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
         </div>
         <div className="overflow-x-auto">
@@ -536,24 +543,31 @@ export default function Transactions() {
                     </th>
                     <th className="table-header px-5 py-3.5">Description</th>
                     <th className="table-header px-5 py-3.5 text-right">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Debit (In / Aamad)<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">
+                        Credit (Kharch)
+                        <SortIcon columnKey="amount" />
+                      </button>
                     </th>
                     <th className="table-header px-5 py-3.5 text-right">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">Credit (Out / Kharch)<SortIcon columnKey="amount" /></button>
+                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">
+                        Debit (Aamad)
+                        <SortIcon columnKey="amount" />
+                      </button>
                     </th>
                     <th className="table-header px-5 py-3.5 w-16 text-center">Receipt</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedList.map((row) => {
-                     let debitIn = 0;
-                     let creditOut = 0;
-                     if (row.type === "deposit" || row.type === "sale") debitIn = row.amount;
-                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") creditOut = row.amount;
+                     let col1 = 0; // Left Col (Standard Debit / Trad Credit)
+                     let col2 = 0; // Right Col (Standard Credit / Trad Debit)
+                     
+                     if (row.type === "deposit" || row.type === "sale") col2 = row.amount; // Inflow -> 2nd Col (Debit)
+                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") col1 = row.amount; // Outflow -> 1st Col (Credit)
                      else if (row.type === "transfer") {
-                       if (filters.accountId && row.toAccountId?._id === filters.accountId) debitIn = row.amount;
-                       else if (filters.accountId && row.fromAccountId?._id === filters.accountId) creditOut = row.amount;
-                       else creditOut = row.amount; 
+                       if (filters.accountId && row.toAccountId?._id === filters.accountId) col2 = row.amount;
+                       else if (filters.accountId && row.fromAccountId?._id === filters.accountId) col1 = row.amount;
+                       else col1 = row.amount; 
                      }
 
                      const participant = getParticipant(row);
@@ -582,8 +596,8 @@ export default function Transactions() {
                             </span>
                           </div>
                         </td>
-                        <td className="table-cell text-right font-bold text-emerald-600">{debitIn > 0 ? formatMoney(debitIn) : "—"}</td>
-                        <td className="table-cell text-right font-bold text-rose-600">{creditOut > 0 ? formatMoney(creditOut) : "—"}</td>
+                        <td className="table-cell text-right font-black text-rose-600">{col1 > 0 ? formatMoney(col1) : "—"}</td>
+                        <td className="table-cell text-right font-black text-emerald-600">{col2 > 0 ? formatMoney(col2) : "—"}</td>
                         <td className="table-cell text-center">
                           {row.image && (
                             <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center justify-center p-1.5 text-indigo-500 hover:text-indigo-700 bg-indigo-50 rounded mx-auto" title="Preview Receipt">
@@ -597,22 +611,22 @@ export default function Transactions() {
                 </tbody>
                 <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                   {(() => {
-                    let tDebitIn = 0;
-                    let tCreditOut = 0;
+                    let tCol1 = 0;
+                    let tCol2 = 0;
                     list.forEach(row => {
-                      if (row.type === "deposit" || row.type === "sale") tDebitIn += row.amount;
-                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tCreditOut += row.amount;
+                      if (row.type === "deposit" || row.type === "sale") tCol1 += row.amount;
+                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tCol2 += row.amount;
                       else if (row.type === "transfer") {
-                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tDebitIn += row.amount;
-                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tCreditOut += row.amount;
-                        else tCreditOut += row.amount; 
+                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tCol1 += row.amount;
+                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tCol2 += row.amount;
+                        else tCol2 += row.amount; 
                       }
                     });
                     return (
                       <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
                         <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
-                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tDebitIn)}</td>
-                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tCreditOut)}</td>
+                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tCol1)}</td>
+                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tCol2)}</td>
                         <td className="bg-slate-50/30"></td>
                       </tr>
                     );

@@ -194,13 +194,17 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     let debit = 0;
 
     if (row.type === "deposit" || row.type === "sale") {
-      credit = row.amount;
-    } else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax") {
       debit = row.amount;
+    } else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") {
+      credit = row.amount;
     } else if (row.type === "transfer") {
-      if (filters.accountId && row.toAccountId?._id === filters.accountId) credit = row.amount;
-      else if (filters.accountId && row.fromAccountId?._id === filters.accountId) debit = row.amount;
-      else debit = row.amount; 
+      if (filters.accountId && row.toAccountId?._id === filters.accountId) {
+        debit = row.amount;
+      } else if (filters.accountId && row.fromAccountId?._id === filters.accountId) {
+        credit = row.amount;
+      } else {
+        credit = row.amount; 
+      }
     }
 
     totalCredit += credit;
@@ -237,12 +241,12 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     ];
   });
 
-  const netBalance = totalCredit - totalDebit;
-  const balanceStr = `${formatMoney(Math.abs(netBalance))} ${netBalance >= 0 ? "CR" : "DR"}`;
+  const netBalance = totalDebit - totalCredit;
+  const balanceStr = `${formatMoney(Math.abs(netBalance))} ${netBalance >= 0 ? "DR" : "CR"}`;
 
   autoTable(doc, {
     startY,
-    head: [["Date", "Description", "Credit (Aya)", "Debit (Gaya)", "Balance"]],
+    head: [["Date", "Description", "Credit (Kharch)", "Debit (Aamad)", "Balance"]],
     body: formattedRows,
     foot: [[
       { content: "TOTAL ACCOUNT MOVEMENTS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
@@ -912,7 +916,7 @@ export function downloadTaxLedgerPdf(taxType, sessions, totalPaid, filters = {})
   let runningBalance = 0;
   autoTable(doc, {
     startY,
-    head: [["Date", "Description / Account", "Credit (In)", "Debit (Out)", "Balance"]],
+    head: [["Date", "Description / Account", "Debit (Kharch)", "Credit (Aamad)", "Balance"]],
     body: sessions.map((row) => {
       const debit = row.amount || 0;
       const credit = 0;
@@ -1104,7 +1108,7 @@ export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filte
   let runningBalance = 0;
   autoTable(doc, {
     startY,
-    head: [["Date", "Description / Account", "Credit (In)", "Debit (Out)", "Balance"]],
+    head: [["Date", "Description / Account", "Debit (Kharch)", "Credit (Aamad)", "Balance"]],
     body: sessions.map((row) => {
       const debit = row.amount || 0;
       const credit = 0;

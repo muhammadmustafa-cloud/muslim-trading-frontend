@@ -157,10 +157,10 @@ export default function SupplierHistory() {
                       </td>
                       {/* Swapped layout values */}
                       <td className="py-4 px-4 text-right font-black text-emerald-700 bg-emerald-50/10 text-base">
-                        {item.debit > 0 ? formatMoney(item.debit) : '—'}
+                        {item.credit > 0 ? formatMoney(item.credit) : '—'}
                       </td>
                       <td className="py-4 px-4 text-right font-black text-rose-700 bg-rose-50/10 text-base">
-                        {item.credit > 0 ? formatMoney(item.credit) : '—'}
+                        {item.debit > 0 ? formatMoney(item.debit) : '—'}
                       </td>
                       <td className={`py-4 px-4 text-right font-black text-base shadow-inner ${item.balance <= 0 ? 'text-emerald-800 bg-emerald-50/30' : 'text-rose-800 bg-rose-50/30'}`}>
                         {formatMoney(Math.abs(item.balance))}
@@ -174,10 +174,10 @@ export default function SupplierHistory() {
                     <td colSpan="3" className="py-6 px-4 text-right text-[10px] uppercase tracking-[0.2em] text-slate-400">Grand Ledger Totals:</td>
                     {/* Swapped Footers */}
                     <td className="py-6 px-4 text-right text-emerald-400 border-t-4 border-emerald-500/50 text-lg decoration-double underline underline-offset-8">
-                       {formatMoney(Number(data.summary?.totalDebit || 0))}
+                       {formatMoney(Number(data.summary?.totalCredit || 0))}
                     </td>
                     <td className="py-6 px-4 text-right text-rose-400 border-t-4 border-rose-500/50 text-lg decoration-double underline underline-offset-8">
-                       {formatMoney(Number(data.summary?.totalCredit || 0))}
+                       {formatMoney(Number(data.summary?.totalDebit || 0))}
                     </td>
                     <td className="py-6 px-4 text-right bg-slate-900 border-t-4 border-amber-500 text-xl font-black">
                       {formatMoney(Math.abs(data.summary?.finalBalance || 0))} 
