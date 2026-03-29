@@ -75,6 +75,7 @@ export default function AuditSummary() {
   );
 
   const tabs = [
+    { id: 'master_log', label: 'Master Entries Audit', icon: FaFileContract },
     { id: 'overview', label: 'Overview', icon: FaFileContract },
     { id: 'customers', label: 'Customers (Receivables)', icon: FaUsers },
     { id: 'suppliers', label: 'Suppliers (Payables)', icon: FaIndustry },
@@ -88,9 +89,24 @@ export default function AuditSummary() {
   const filteredItems = (list) => {
     if (!list) return [];
     return list.filter(item => 
-      (item.name || item.itemName || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (item.name || item.itemName || item.description || item.note || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
+
+  const masterTotals = useMemo(() => {
+    if (!data || !data.periodTransactions) return { in: 0, out: 0 };
+    let totalIn = 0;
+    let totalOut = 0;
+    data.periodTransactions.forEach(t => {
+      // Logic for Mill-wide cash movement:
+      // If payment from any account -> Outflow
+      // If receipt to any account -> Inflow
+      if (t.fromAccountId) totalOut += Number(t.amount);
+      else if (t.toAccountId) totalIn += Number(t.amount);
+      // Special case: Sales/Purchases jahan account mention ho backend handle kr rha hoga
+    });
+    return { in: totalIn, out: totalOut };
+  }, [data]);
 
   return (
     <div className="space-y-6">
@@ -119,7 +135,7 @@ export default function AuditSummary() {
       <section className="card p-5 bg-white border-none shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-6 pb-4 border-b border-slate-100 mb-4">
            {/* Date Range */}
-           <div className="flex flex-wrap items-end gap-3">
+           <div className="flex flex-wrap items-end gap-3 text-black">
             <div>
               <label className="input-label text-[10px] uppercase text-slate-400 font-black mb-1">From Date</label>
               <input 
@@ -186,8 +202,82 @@ export default function AuditSummary() {
 
       {/* CONTENT AREA */}
       <div className="min-h-[500px]">
+        {activeTab === 'master_log' && data && (
+          <div className="animate-in slide-in-from-bottom-4 duration-300">
+             <div className="flex items-center justify-between mb-4 px-2">
+                <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">Master Transaction Audit Log (Register Style)</h3>
+                <div className="text-xs font-bold text-slate-400 italic">Total {data.periodTransactions?.length || 0} Professional Entries</div>
+             </div>
+             <div className="card p-0 overflow-hidden border-none shadow-xl">
+               <table className="w-full border-collapse">
+                 <thead className="bg-slate-900 text-white">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest border-b border-slate-700">Date/Time</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest border-b border-slate-700">Description / Participants</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest border-b border-slate-700 bg-rose-500/20">Debit (Kharch)</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest border-b border-slate-700 bg-emerald-500/20">Credit (Aamad)</th>
+                    </tr>
+                 </thead>
+                 <tbody className="bg-white divide-y divide-slate-100">
+                    {filteredItems(data.periodTransactions).map((t, i) => {
+                      const isOut = !!t.fromAccountId;
+                      const isIn = !!t.toAccountId;
+                      const participant = t.customerId?.name || t.supplierId?.name || t.mazdoorId?.name || t.expenseTypeId?.name || t.taxTypeId?.name || "Manual Account";
+                      const description = t.note || t.category || (t.type === 'transfer' ? 'Internal Transfer' : 'Entry');
+                      
+                      return (
+                        <tr key={i} className="hover:bg-slate-50 transition-colors group">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                             <div className="text-xs font-bold text-slate-500 uppercase">{formatDate(t.date)}</div>
+                             <div className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{t.type}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                             <div className="text-sm font-black text-slate-800 uppercase tracking-tight">{participant}</div>
+                             <div className="text-[10px] text-slate-400 italic font-medium">{description}</div>
+                             {t.fromAccountId && t.toAccountId && (
+                               <div className="text-[9px] text-indigo-400 font-bold mt-1">
+                                 {t.fromAccountId.name} ➔ {t.toAccountId.name}
+                               </div>
+                             )}
+                          </td>
+                          <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10">
+                             {isOut ? `Rs. ${formatMoney(t.amount)}` : <span className="text-slate-200">—</span>}
+                          </td>
+                          <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10">
+                             {isIn ? `Rs. ${formatMoney(t.amount)}` : <span className="text-slate-200">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                 </tbody>
+                 <tfoot className="bg-slate-100 border-t border-slate-200">
+                    <tr className="font-black">
+                       <td colSpan="2" className="px-6 py-5 text-right text-[10px] uppercase text-slate-500 tracking-widest italic">Consolidated Audit Movement:</td>
+                       <td className="px-6 py-5 text-right text-base text-rose-700">Rs. {formatMoney(masterTotals.out)}</td>
+                       <td className="px-6 py-5 text-right text-base text-emerald-700">Rs. {formatMoney(masterTotals.in)}</td>
+                    </tr>
+                 </tfoot>
+               </table>
+             </div>
+          </div>
+        )}
+
         {activeTab === 'overview' && data && (
           <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Quick Gross Card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="card bg-rose-600 text-white p-6 shadow-xl shadow-rose-100 border-none relative overflow-hidden">
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Total Period Kharch (Outflow)</p>
+                <p className="text-3xl font-black">Rs. {formatMoney(masterTotals.out)}</p>
+                <FaArrowDown className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10" />
+              </div>
+              <div className="card bg-emerald-600 text-white p-6 shadow-xl shadow-emerald-100 border-none relative overflow-hidden">
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Total Period Aamad (Inflow)</p>
+                <p className="text-3xl font-black">Rs. {formatMoney(masterTotals.in)}</p>
+                <FaArrowUp className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10" />
+              </div>
+            </div>
+
             {/* Net Position Card */}
             <div className="card bg-gradient-to-br from-indigo-700 via-blue-700 to-indigo-800 text-white p-8 relative overflow-hidden shadow-xl shadow-indigo-100 border-none">
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">

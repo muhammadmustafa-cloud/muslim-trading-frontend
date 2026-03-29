@@ -16,6 +16,7 @@ const TYPE_LABELS = {
   transfer: "Transfer",
   mill_expense: "Mill Expense",
   mazdoor_expense: "Mazdoor Expense",
+  salary: "Salary Payment",
 };
 
 export default function DailyCashMemo() {

@@ -490,7 +490,7 @@ export default function Transactions() {
               </>
             )}
             <div className="sm:col-span-2">
-              <label className="input-label">Note</label>
+              <label className="input-label">Note / Category {form.type === "salary" ? "(e.g. Salary for March 2024)" : "(optional)"}</label>
               <input type="text" placeholder="Optional" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field" />
             </div>
           </div>
@@ -611,22 +611,22 @@ export default function Transactions() {
                 </tbody>
                 <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                   {(() => {
-                    let tCol1 = 0;
-                    let tCol2 = 0;
+                    let tKharchTotal = 0;
+                    let tAamadTotal = 0;
                     list.forEach(row => {
-                      if (row.type === "deposit" || row.type === "sale") tCol1 += row.amount;
-                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tCol2 += row.amount;
+                      if (row.type === "deposit" || row.type === "sale") tAamadTotal += row.amount;
+                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tKharchTotal += row.amount;
                       else if (row.type === "transfer") {
-                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tCol1 += row.amount;
-                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tCol2 += row.amount;
-                        else tCol2 += row.amount; 
+                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tAamadTotal += row.amount;
+                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tKharchTotal += row.amount;
+                        else tKharchTotal += row.amount; 
                       }
                     });
                     return (
                       <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
                         <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
-                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tCol1)}</td>
-                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tCol2)}</td>
+                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tKharchTotal)}</td>
+                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tAamadTotal)}</td>
                         <td className="bg-slate-50/30"></td>
                       </tr>
                     );

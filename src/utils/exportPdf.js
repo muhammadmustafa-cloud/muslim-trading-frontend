@@ -1173,21 +1173,56 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   }
 
 
-  // 1. Bank & Cash Accounts (Aamne-Samne)
+  // 1. Master Transaction Audit Log (Register Style)
+  const masterEntries = data.periodTransactions || [];
+  if (masterEntries.length > 0) {
+    addGroupHeader("1. MASTER TRANSACTION AUDIT (FULL RECORD)");
+    tableRows.push([
+      { content: "Date", styles: { fontStyle: "bold" } }, 
+      { content: "Description / Participants", styles: { fontStyle: "bold" } }, 
+      { content: "Debit (Kharch)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }, 
+      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [236, 253, 245] } }
+    ]);
+    masterEntries.forEach(t => {
+      const isOut = !!t.fromAccountId;
+      const isIn = !!t.toAccountId;
+      const participant = t.customerId?.name || t.supplierId?.name || t.mazdoorId?.name || t.expenseTypeId?.name || t.taxTypeId?.name || "Manual Account";
+      const description = t.note || t.category || (t.type === 'transfer' ? 'Internal Transfer' : 'Entry');
+      
+      tableRows.push([
+        formatDate(t.date),
+        `${participant.toUpperCase()}\n${description}`,
+        isOut ? formatMoney(t.amount) : "—",
+        isIn ? formatMoney(t.amount) : "—"
+      ]);
+    });
+
+    // Summary Totals for Master Log
+    const totalOut = masterEntries.filter(t => t.fromAccountId).reduce((s,t) => s + Number(t.amount), 0);
+    const totalIn = masterEntries.filter(t => t.toAccountId).reduce((s,t) => s + Number(t.amount), 0);
+
+    tableRows.push([
+      { content: "TOTAL GROSS AUDIT MOVEMENT", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [248, 250, 252] } },
+      { content: "Rs. " + formatMoney(totalOut), styles: { fontStyle: "black", halign: "right", fillColor: [254, 242, 242] } },
+      { content: "Rs. " + formatMoney(totalIn), styles: { fontStyle: "black", halign: "right", fillColor: [236, 253, 245] } }
+    ]);
+  }
+
+  // 2. Bank & Cash Accounts (Aamne-Samne Balances)
   const cashAccounts = data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata);
   if (cashAccounts.length > 0) {
-    tableRows.push([{ content: "1. BANK & CASH ACCOUNTS (INFLOW VS OUTFLOW AUDIT)", colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }]);
+    tableRows.push([{ content: "2. BANK & CASH ACCOUNTS (BALANCES)", colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }]);
     tableRows.push([
       { content: "Account Name", styles: { fontStyle: "bold" } }, 
-      { content: "Credit (Inflow)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Debit (Outflow)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Closing", styles: { fontStyle: "bold", halign: "right" } }
+      { content: "Total Out (Kharch)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Total In (Aamad)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
     ]);
     cashAccounts.forEach(a => {
       tableRows.push([
         a.name.toUpperCase(),
-        formatMoney(Number(a.totalIn || 0)),
         formatMoney(Number(a.totalOut || 0)),
+        formatMoney(Number(a.totalIn || 0)),
         formatMoney(Number(a.balance || 0))
       ]);
     });
