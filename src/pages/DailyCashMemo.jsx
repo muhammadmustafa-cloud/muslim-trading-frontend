@@ -104,21 +104,20 @@ export default function DailyCashMemo() {
     });
   };
 
-  // Total Aamad (Credit) = Opening Balance (if positive) + Today's Inflows
-  const totalIn = (summary.openingBalance > 0 ? summary.openingBalance : 0) + summary.totalIn;
-  // Total Kharch (Debit) = Opening Deficit (if negative) + Today's Outflows
-  const totalOut = (summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + summary.totalOut;
+  // Professional Absolute Summation (Rolling Pool)
+  const totalIn = Number(summary.openingBalance > 0 ? summary.openingBalance : 0) + Number(summary.totalIn || 0);
+  const totalOut = Number(summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + Number(summary.totalOut || 0);
 
   return (
-    <div>
+    <div className="animate-in fade-in duration-500">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
             <FaFileInvoiceDollar className="w-6 h-6 text-amber-500" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Daily Cash Memo</h1>
-            <p className="text-slate-500 text-sm">Aaj ki saari transactions — sales, purchase, udhaar, salary, deposit, withdraw, transfer</p>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Daily Cash Memo</h1>
+            <p className="text-slate-500 text-sm font-medium italic">Mukammal Hisaab Kitab — Full Account & Participant Traceability</p>
           </div>
         </div>
       </div>
@@ -128,98 +127,98 @@ export default function DailyCashMemo() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <FaCalendarDay className="text-slate-500" />
-            <label className="text-sm font-medium text-slate-600">Date</label>
+            <label className="text-sm font-semibold text-slate-700">Date Range:</label>
           </div>
           <input
             type="date"
             value={filters.dateFrom}
             onChange={(e) => setFilters((p) => ({ ...p, dateFrom: e.target.value, dateTo: e.target.value }))}
-            className="input border border-slate-200 rounded-lg px-3 py-2 text-sm"
+            className="input border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all"
           />
           <button
             type="button"
             onClick={setFilterToday}
-            className="btn bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            className="btn bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm"
           >
             Aaj (Today)
           </button>
           <button
             type="button"
             onClick={() => setShowFilters((s) => !s)}
-            className="btn border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+            className="btn border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm flex items-center gap-2 font-semibold text-slate-700 transition-colors"
           >
-            <FaFilter className="w-4 h-4" />
-            {showFilters ? "Hide filters" : "Filters"}
+            <FaFilter className="w-3.5 h-3.5" />
+            {showFilters ? "Hide options" : "More Filters"}
           </button>
           {showFilters && (
-            <button type="button" onClick={clearFilters} className="btn border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg text-sm">
-              Clear filters
+            <button type="button" onClick={clearFilters} className="btn border border-rose-200 text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+              Reset
             </button>
           )}
         </div>
 
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 animate-in slide-in-from-top-2">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Account</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Account</label>
               <select
                 value={filters.accountId}
                 onChange={(e) => setFilters((p) => ({ ...p, accountId: e.target.value }))}
-                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 outline-none"
               >
-                <option value="">All</option>
+                <option value="">All Accounts</option>
                 {accounts.map((a) => (
                   <option key={a._id} value={a._id}>{a.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Customer</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Customer</label>
               <select
                 value={filters.customerId}
                 onChange={(e) => setFilters((p) => ({ ...p, customerId: e.target.value }))}
-                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 outline-none"
               >
-                <option value="">All</option>
+                <option value="">All Customers</option>
                 {customers.map((c) => (
                   <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Supplier</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Supplier</label>
               <select
                 value={filters.supplierId}
                 onChange={(e) => setFilters((p) => ({ ...p, supplierId: e.target.value }))}
-                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 outline-none"
               >
-                <option value="">All</option>
+                <option value="">All Suppliers</option>
                 {suppliers.map((s) => (
                   <option key={s._id} value={s._id}>{s.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Mazdoor</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Mazdoor</label>
               <select
                 value={filters.mazdoorId}
                 onChange={(e) => setFilters((p) => ({ ...p, mazdoorId: e.target.value }))}
-                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 outline-none"
               >
-                <option value="">All</option>
+                <option value="">All Mazdoor</option>
                 {mazdoor.map((m) => (
                   <option key={m._id} value={m._id}>{m.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Item (Khata)</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Item</label>
               <select
                 value={filters.itemId}
                 onChange={(e) => setFilters((p) => ({ ...p, itemId: e.target.value }))}
-                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="input w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 outline-none"
               >
-                <option value="">All</option>
+                <option value="">All Items</option>
                 {items.map((i) => (
                   <option key={i._id} value={i._id}>{i.name}</option>
                 ))}
@@ -230,73 +229,82 @@ export default function DailyCashMemo() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 animate-bounce">
           {error}
         </div>
       )}
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 transition-all hover:shadow-md">
-          <p className="text-[10px] uppercase font-black text-emerald-700 mb-1 tracking-widest">Total Aamad / Credit (Incl. Prev)</p>
-          <p className="text-2xl font-black text-emerald-800">Rs. {formatMoney(totalIn)}</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white border-l-4 border-emerald-500 rounded-xl p-5 shadow-soft transition-all hover:translate-y-[-2px]">
+          <p className="text-[10px] uppercase font-black text-emerald-600 mb-1 tracking-widest">TOTAL CREDITS (IN)</p>
+          <p className="text-3xl font-black text-emerald-800">{formatMoney(totalIn)}</p>
         </div>
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 transition-all hover:shadow-md">
-          <p className="text-[10px] uppercase font-black text-rose-700 mb-1 tracking-widest">Total Kharch / Debit (Incl. Prev)</p>
-          <p className="text-2xl font-black text-rose-800">Rs. {formatMoney(totalOut)}</p>
+        <div className="bg-white border-l-4 border-rose-500 rounded-xl p-5 shadow-soft transition-all hover:translate-y-[-2px]">
+          <p className="text-[10px] uppercase font-black text-rose-600 mb-1 tracking-widest">TOTAL DEBITS (OUT)</p>
+          <p className="text-3xl font-black text-rose-800">{formatMoney(totalOut)}</p>
+        </div>
+        <div className="bg-white border-l-4 border-indigo-500 rounded-xl p-5 shadow-soft transition-all hover:translate-y-[-2px]">
+          <p className="text-[10px] uppercase font-black text-indigo-600 mb-1 tracking-widest">NET MOVEMENT</p>
+          <p className="text-3xl font-black text-indigo-800">{formatMoney(totalIn - totalOut)}</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-soft overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-soft">
         {loading ? (
-          <div className="p-8 text-center text-slate-500">Loading...</div>
+          <div className="p-12 text-center text-slate-400 font-medium tracking-widest uppercase text-xs">Processing Ledger...</div>
         ) : list.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">No records for selected date/filters.</div>
+          <div className="p-12 text-center text-slate-500">
+             <FaFileInvoiceDollar className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+             <p className="font-bold text-slate-700">No records found for the selected date.</p>
+          </div>
         ) : (
           <div className="flex flex-col lg:flex-row">
             {/* LEFT SIDE: IN (Credit) */}
             <div className="flex-1 w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-200">
-              <div className="bg-emerald-50 py-3 px-4 border-b border-emerald-100 flex justify-between items-center">
-                <h3 className="font-bold text-emerald-800">Aamad / In (Credit)</h3>
+              <div className="bg-slate-800 py-4 px-4 border-b border-slate-700 flex justify-between items-center shadow-inner">
+                <h3 className="font-black text-white uppercase text-xs tracking-widest">Credit (Payments Received)</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Time</th>
-                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Account (Kahan)</th>
-                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Party (Kisko)</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-600">Amount</th>
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-tighter border-b border-slate-200">
+                    <tr>
+                      <th className="text-left py-3 px-3">Date</th>
+                      <th className="text-left py-3 px-3">Account → Participant</th>
+                      <th className="text-right py-3 px-3">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {summary.openingBalance > 0 && (
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <td className="py-2.5 px-3 text-slate-400 font-bold">—</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-800 italic" colSpan={2}>Previous Balance (Opening)</td>
-                        <td className="py-2.5 px-3 text-right font-black text-emerald-700 bg-emerald-50/20">{formatMoney(summary.openingBalance)}</td>
+                      <tr className="bg-slate-50/50 border-b border-slate-200 group">
+                        <td className="py-4 px-3 text-slate-400 font-bold">—</td>
+                        <td className="py-4 px-3">
+                           <div className="font-black text-slate-800 uppercase text-[11px] tracking-wider italic">PREVIOUS BALANCE</div>
+                           <div className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">Opening Balance</div>
+                        </td>
+                        <td className="py-4 px-3 text-right font-black text-emerald-700 bg-emerald-50/20 text-base">
+                          {formatMoney(summary.openingBalance)}
+                        </td>
                       </tr>
                     )}
                     {list.filter(r => r.amountType === 'in').map((row, idx) => (
-                      <tr key={`in-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">{formatTime(row.date)}</td>
-                        <td className="py-2.5 px-3">
-                           <div className="font-medium text-slate-700">{row.accountName || "—"}</div>
-                           <div className="text-[10px] uppercase text-emerald-700 font-bold tracking-wider mt-0.5">{TYPE_LABELS[row.type] || row.type}</div>
+                      <tr key={`in-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-3 text-slate-400 whitespace-nowrap text-[11px]">{formatDate(row.date)}</td>
+                        <td className="py-4 px-3">
+                           <div className="font-bold text-slate-800 leading-tight">
+                              {row.accountName} <span className="text-rose-500 mx-1">➜</span> {row.name || "—"}
+                           </div>
+                           <div className="text-[10px] text-slate-400 uppercase tracking-tighter mt-1 italic">{row.description}</div>
                         </td>
-                        <td className="py-2.5 px-3">
-                           <div className="font-bold text-slate-800">{row.name || "—"}</div>
-                           <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[150px] sm:max-w-xs">{row.description}</div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-emerald-600">{formatMoney(row.amount)}</td>
+                        <td className="py-4 px-3 text-right font-black text-emerald-600 text-base">{formatMoney(row.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-emerald-900 text-white font-black">
+                  <tfoot className="bg-slate-50 text-slate-800 font-black border-t border-slate-200">
                     <tr>
-                      <td colSpan={3} className="py-4 px-3 text-xs uppercase tracking-widest">Grand Total Aamad (Prev + Today)</td>
-                      <td className="py-4 px-3 text-right text-base text-emerald-300">Rs. {formatMoney(totalIn)}</td>
+                      <td colSpan={2} className="py-5 px-3 text-right text-[10px] uppercase tracking-widest text-slate-500">TOTAL CREDITS:</td>
+                      <td className="py-5 px-3 text-right text-lg text-emerald-700 font-black bg-emerald-50/10 underline decoration-double underline-offset-4">{formatMoney(totalIn)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -305,46 +313,48 @@ export default function DailyCashMemo() {
 
             {/* RIGHT SIDE: OUT (Debit) */}
             <div className="flex-1 w-full lg:w-1/2">
-              <div className="bg-rose-50 py-3 px-4 border-b border-rose-100 flex justify-between items-center">
-                <h3 className="font-bold text-rose-800">Kharch / Out (Debit)</h3>
+              <div className="bg-slate-900 py-4 px-4 border-b border-slate-800 flex justify-between items-center shadow-inner">
+                <h3 className="font-black text-white uppercase text-xs tracking-widest">Debit (Payments Made)</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Time</th>
-                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Account (Kahan Se)</th>
-                      <th className="text-left py-2 px-3 font-semibold text-slate-600">Party (Kisko)</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-600">Amount</th>
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-tighter border-b border-slate-200">
+                    <tr>
+                      <th className="text-left py-3 px-3">Date</th>
+                      <th className="text-left py-3 px-3">Account → Participant</th>
+                      <th className="text-right py-3 px-3">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {summary.openingBalance < 0 && (
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <td className="py-2.5 px-3 text-slate-400 font-bold">—</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-800 italic" colSpan={2}>Previous Balance (Opening Neg)</td>
-                        <td className="py-2.5 px-3 text-right font-black text-rose-700 bg-rose-50/20">{formatMoney(Math.abs(summary.openingBalance))}</td>
+                      <tr className="bg-slate-50/50 border-b border-slate-200">
+                        <td className="py-4 px-3 text-slate-400 font-bold">—</td>
+                        <td className="py-4 px-3">
+                           <div className="font-black text-slate-800 uppercase text-[11px] tracking-wider italic">PREVIOUS BALANCE</div>
+                           <div className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">Opening Balance</div>
+                        </td>
+                        <td className="py-4 px-3 text-right font-black text-rose-700 bg-rose-50/20 text-base">
+                          {formatMoney(Math.abs(summary.openingBalance))}
+                        </td>
                       </tr>
                     )}
                     {list.filter(r => r.amountType === 'out').map((row, idx) => (
-                      <tr key={`out-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">{formatTime(row.date)}</td>
-                        <td className="py-2.5 px-3">
-                           <div className="font-medium text-slate-700">{row.accountName || "—"}</div>
-                           <div className="text-[10px] uppercase text-rose-700 font-bold tracking-wider mt-0.5">{TYPE_LABELS[row.type] || row.type}</div>
+                      <tr key={`out-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-3 text-slate-400 whitespace-nowrap text-[11px]">{formatDate(row.date)}</td>
+                        <td className="py-4 px-3">
+                           <div className="font-bold text-slate-700 leading-tight">
+                              {row.accountName} <span className="text-rose-500 mx-1">➜</span> {row.name || "—"}
+                           </div>
+                           <div className="text-[10px] text-slate-400 uppercase tracking-tighter mt-1 italic">{row.description}</div>
                         </td>
-                        <td className="py-2.5 px-3">
-                           <div className="font-bold text-slate-800">{row.name || "—"}</div>
-                           <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[150px] sm:max-w-xs">{row.description}</div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-rose-600">{formatMoney(row.amount)}</td>
+                        <td className="py-4 px-3 text-right font-black text-rose-600 text-base">{formatMoney(row.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-rose-950 text-white font-black">
+                  <tfoot className="bg-slate-50 text-slate-800 font-black border-t border-slate-200">
                     <tr>
-                      <td colSpan={3} className="py-4 px-3 text-xs uppercase tracking-widest">Grand Total Kharch (Prev + Today)</td>
-                      <td className="py-4 px-3 text-right text-base text-rose-300">Rs. {formatMoney(totalOut)}</td>
+                      <td colSpan={2} className="py-5 px-3 text-right text-[10px] uppercase tracking-widest text-slate-500">TOTAL DEBITS:</td>
+                      <td className="py-5 px-3 text-right text-lg text-rose-700 font-black bg-rose-50/10 underline decoration-double underline-offset-4">{formatMoney(totalOut)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -356,22 +366,24 @@ export default function DailyCashMemo() {
 
       {/* End summary: total added, total deducted, overall total */}
       {!loading && list.length > 0 && (
-        <div className="mt-6 bg-slate-800 text-white rounded-xl border border-slate-700 overflow-hidden">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
-            <div className="p-5 border-b sm:border-b-0 sm:border-r border-slate-600">
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Credit (Available)</p>
-              <p className="text-xl font-black text-emerald-400 mt-1">Rs. {formatMoney(totalIn)}</p>
+        <div className="mt-8 bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-700">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-x divide-slate-700">
+            <div className="p-6 bg-slate-800/50">
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Available Cash (Wasooli)</p>
+              <p className="text-2xl font-black text-emerald-400">Rs. {formatMoney(totalIn)}</p>
+              <div className="mt-2 text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Rolling Pool: {formatMoney(summary.openingBalance > 0 ? summary.openingBalance : 0)} + {formatMoney(summary.totalIn)}</div>
             </div>
-            <div className="p-5 border-b sm:border-b-0 sm:border-r border-slate-600">
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Debit (Utilized)</p>
-              <p className="text-xl font-black text-rose-400 mt-1">Rs. {formatMoney(totalOut)}</p>
+            <div className="p-6 bg-slate-900/40">
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Payments (Kharch)</p>
+              <p className="text-2xl font-black text-rose-400">Rs. {formatMoney(totalOut)}</p>
+              <div className="mt-2 text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Total Cash Outflow</div>
             </div>
-            <div className="p-5">
-              <p className="text-slate-400 text-sm font-medium">Overall Total (Net)</p>
-              <p className={`text-xl font-bold mt-1 ${totalIn - totalOut >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            <div className="p-6 bg-slate-800 hover:bg-slate-700/50 transition-colors">
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1 font-bold">CALCULATED BAQAYA (Net)</p>
+              <p className={`text-3xl font-black mt-1 ${totalIn - totalOut >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {formatMoney(totalIn - totalOut)}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">{totalIn - totalOut >= 0 ? "More in than out" : "More out than in"}</p>
+              <p className="text-[10px] text-slate-400 mt-2 font-bold italic">Cash presently remaining in mill box</p>
             </div>
           </div>
         </div>

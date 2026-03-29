@@ -32,16 +32,16 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
   const maxRows = Math.max(credits.length, debits.length);
   const formattedRows = [];
 
-  // Add "Previous Balance" as the first row in the table body
-  const openingIn = summary.openingBalance > 0 ? summary.openingBalance : 0;
-  const openingOut = summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0;
+  const grandTotalIn = Number(summary.openingBalance || 0) + Number(summary.totalIn || 0);
+  const grandTotalOut = Number(summary.totalOut || 0);
 
+  // Opening Balance Row
   formattedRows.push([
-    "Previous Blnc",
-    "Yesterday's Closing",
+    "—",
+    "PREVIOUS BALANCE (Wasooli)",
     openingIn > 0 ? formatMoney(openingIn) : "0",
-    "Previous Blnc",
-    openingOut > 0 ? "Opening Deficit" : "",
+    "—",
+    "PREVIOUS BALANCE (Udhari)",
     openingOut > 0 ? formatMoney(openingOut) : "0",
   ]);
 
@@ -49,88 +49,125 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
     const c = credits[i] || {};
     const d = debits[i] || {};
     formattedRows.push([
+      c.date ? formatDate(c.date) : "",
       c.name || "",
-      (c.description || "").slice(0, 25),
       c.amount ? formatMoney(c.amount) : "",
+      d.date ? formatDate(d.date) : "",
       d.name || "",
-      (d.description || "").slice(0, 25),
       d.amount ? formatMoney(d.amount) : "",
     ]);
   }
 
-  // Add Grand Totals (Opening + Today)
-  const grandTotalIn = openingIn + (summary.totalIn || 0);
-  const grandTotalOut = openingOut + (summary.totalOut || 0);
-
   formattedRows.push([
-    "GRAND TOTAL",
-    "(Yesterday + Today)",
+    "TOTAL",
+    "(Wasooli + Aamad)",
     formatMoney(grandTotalIn),
-    "GRAND TOTAL",
-    "(Yesterday + Today)",
+    "TOTAL",
+    "(Kharch + Baqaya)",
     formatMoney(grandTotalOut),
   ]);
 
-  // Add Closing Balance prominently
+  // Add the final Closing Balance (Net Baqaya) as a single emphasized row
   formattedRows.push([
     "",
-    "CLOSING BAQAYA",
+    "NET BAQAYA (Cash in Box)",
+    "",
+    "",
     "",
     formatMoney(summary.closingBalance),
-    "",
-    "",
   ]);
 
-  // Header
-  // ... (rest of the code remains same)
-  let y = 15;
+  const margin = 10;
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Header Section
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.setFont(undefined, "bold");
-  doc.text("Daily Cash Memo", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
-  y += 12;
+  doc.setTextColor(30, 41, 59); // Slate-800
+  doc.text("DAILY CASH MEMO", pageWidth / 2, 20, { align: "center" });
 
   doc.setFontSize(10);
-  doc.setFont(undefined, "normal");
-  const dateStr = filters.dateFrom === filters.dateTo ? `Date: ${formatDate(filters.dateFrom)}` : `Range: ${formatDate(filters.dateFrom)} — ${formatDate(filters.dateTo)}`;
-  const dayStr = filters.dateFrom === filters.dateTo ? `Day: ${new Date(filters.dateFrom).toLocaleDateString("en-PK", { weekday: "long" })}` : "";
-  
-  doc.text(dateStr, MARGIN, y);
-  if (dayStr) doc.text(dayStr, MARGIN + 60, y);
-  y += 8;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 116, 139); // Slate-500
+  doc.text("Professional Mill Financial Ledger - Accuracy Verified", pageWidth / 2, 26, { align: "center" });
 
-  doc.setFont(undefined, "bold");
-  doc.setFontSize(11);
-  doc.text("CREDIT (Cash In)", MARGIN, y);
-  doc.text("DEBIT (Cash Out)", MARGIN + 91, y);
-  y += 4;
+  // Summary Info (Date, Filter)
+  doc.setDrawColor(226, 232, 240);
+  doc.line(margin, 32, pageWidth - margin, 32);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(51, 65, 85);
+  doc.text(`Period: ${summary.period || "All Time"}`, margin, 40);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - margin, 40, { align: "right" });
+
+  // Summary Grid (Opening, In, Out, Closing)
+  const boxWidth = (pageWidth - (margin * 2) - 15) / 4;
+  const boxHeight = 18;
+  const boxY = 46;
+
+  const boxes = [
+    { label: "PREV WASOOLI", value: formatMoney(summary.openingBalance), color: [71, 85, 105] },
+    { label: "TOTAL CREDIT", value: formatMoney(grandTotalIn), color: [16, 185, 129] },
+    { label: "TOTAL DEBIT", value: formatMoney(grandTotalOut), color: [239, 68, 68] },
+    { label: "NET BAQAYA", value: formatMoney(summary.closingBalance), color: [245, 158, 11] },
+  ];
+
+  boxes.forEach((box, i) => {
+    const x = margin + (i * (boxWidth + 5));
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(x, boxY, boxWidth, boxHeight, 2, 2, "F");
+    
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(box.label, x + (boxWidth / 2), boxY + 6, { align: "center" });
+    
+    doc.setFontSize(12);
+    doc.setTextColor(box.color[0], box.color[1], box.color[2]);
+    doc.text(`Rs. ${box.value || "0"}`, x + (boxWidth / 2), boxY + 13, { align: "center" });
+  });
 
   autoTable(doc, {
-    startY: y,
-    head: [["Name", "Description", "Amount", "Name", "Description", "Amount"]],
+    startY: 72,
+    head: [["Date", "Account/Party", "Credit (Amount In)", "Date", "Account/Party", "Debit (Amount Out)"]],
     body: formattedRows,
-    headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: "bold", fontSize: 9, halign: "left" },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    theme: "grid",
+    headStyles: { 
+      fillColor: [30, 41, 59], 
+      textColor: [255, 255, 255], 
+      fontSize: 8, 
+      fontStyle: "bold",
+      halign: "center",
+      cellPadding: 3
+    },
+    styles: { fontSize: 8, cellPadding: 2.5, font: "helvetica" },
     columnStyles: {
       0: { cellWidth: 20 },
-      1: { cellWidth: 46 },
-      2: { cellWidth: 25, halign: "right", fontStyle: "bold" },
+      2: { halign: "right", fontStyle: "bold", textColor: [16, 122, 100] },
       3: { cellWidth: 20 },
-      4: { cellWidth: 46 },
-      5: { cellWidth: 25, halign: "right", fontStyle: "bold" },
+      5: { halign: "right", fontStyle: "bold", textColor: [185, 28, 28] },
     },
-    // Stripe specific rows (Opening, Totals, Closing)
-    didParseCell: function (data) {
-      if (data.row.index === 0 || data.row.index === formattedRows.length - 2) {
-        data.cell.styles.fillColor = [245, 245, 245];
+    didParseCell: (data) => {
+      // Style the Grand Total Row
+      if (data.row.raw[0] === "GRAND TOTAL") {
+        data.cell.styles.fillColor = [241, 245, 249];
         data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fontSize = 9;
+        if (data.column.index === 2 || data.column.index === 5) {
+          data.cell.styles.textColor = [30, 41, 59];
+        }
       }
-      if (data.row.index === formattedRows.length - 1) {
-        data.cell.styles.fillColor = [255, 248, 230];
+      // Style the Final Net Baqaya Row
+      if (data.row.raw[1] === "NET BAQAYA (Cash in Box)") {
+        data.cell.styles.fillColor = [255, 251, 235];
         data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fontSize = 11;
+        if (data.column.index === 5) {
+          data.cell.styles.textColor = [180, 83, 9];
+        }
       }
     },
-    margin: { left: MARGIN, right: MARGIN },
-    theme: "grid",
+    margin: { left: margin, right: margin },
   });
 
   // Footer generated line

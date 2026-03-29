@@ -121,37 +121,37 @@ export default function DailyKhata() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4 border-l-4 border-l-slate-400 bg-slate-50 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Previous Balance (Wasooli)</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pichli Wasooli (Opening)</p>
           <p className="text-xl font-black text-slate-700">{formatMoney(summary.openingBalance)}</p>
-          <p className="text-[10px] text-slate-400">Kal ka baqaya balance</p>
+          <p className="text-[10px] text-slate-400 italic font-medium">Yesterday's closing balance</p>
         </div>
-        <div className="card p-4 border-l-4 border-l-emerald-500 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total Aamad / In (Credit)</p>
+        <div className="card p-4 border-l-4 border-l-emerald-500 bg-emerald-50/10 transition-all hover:shadow-md">
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kul Wasooli (Total Credit)</p>
           <p className="text-xl font-black text-emerald-700">
-            {formatMoney((summary.openingBalance > 0 ? summary.openingBalance : 0) + summary.totalIn)}
+            {formatMoney(Number(summary.openingBalance || 0) + Number(summary.totalIn || 0))}
           </p>
-          <p className="text-[10px] text-emerald-500 font-bold">
-            {formatMoney(summary.openingBalance > 0 ? summary.openingBalance : 0)} (Prev) + {formatMoney(summary.totalIn)} (Today)
+          <p className="text-[10px] text-emerald-500 font-bold bg-white/50 px-1 py-0.5 rounded border border-emerald-100 mt-1 inline-block">
+            {formatMoney(Number(summary.openingBalance || 0))} (Pichli) + {formatMoney(Number(summary.totalIn || 0))} (Today)
           </p>
         </div>
-        <div className="card p-4 border-l-4 border-l-rose-500 transition-all hover:shadow-md">
-          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Total Kharch / Out (Debit)</p>
+        <div className="card p-4 border-l-4 border-l-rose-500 bg-rose-50/10 transition-all hover:shadow-md">
+          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Kul Kharch (Total Debit)</p>
           <p className="text-xl font-black text-rose-700">
-            {formatMoney((summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + summary.totalOut)}
+            {formatMoney(Number(summary.totalOut || 0))}
           </p>
-          <p className="text-[10px] text-rose-500 font-bold">
-            {formatMoney(summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0)} (Prev) + {formatMoney(summary.totalOut)} (Today)
+          <p className="text-[10px] text-rose-500 font-bold bg-white/50 px-1 py-0.5 rounded border border-rose-100 mt-1 inline-block italic">
+            Total of all payments today
           </p>
         </div>
         <div className="card p-4 border-l-4 border-l-amber-500 bg-amber-50/30 transition-all hover:shadow-md">
           <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Current Baqaya (Closing)</p>
-          <p className="text-xl font-black text-amber-700">{formatMoney(summary.closingBalance)}</p>
-          <p className="text-[10px] text-amber-400">Net cash in box</p>
+          <p className="text-xl font-black text-amber-700">{formatMoney(Number(summary.closingBalance || 0))}</p>
+          <p className="text-[10px] text-amber-400 font-bold">Total net cash in box</p>
         </div>
       </div>
 
       {/* Unified Table with Daily Grouping */}
-      <section className="card overflow-hidden border-t-4 border-t-amber-500">
+      <section className="card overflow-hidden border-t-4 border-t-slate-800">
         {loading ? (
           <div className="p-10 text-center text-slate-500"><div className="loading-spinner mb-3" /><p>Loading...</p></div>
         ) : list.length === 0 ? (
@@ -163,57 +163,58 @@ export default function DailyKhata() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Name / Account</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-600">Description</th>
-                  <th className="text-right py-3 px-4 font-semibold text-emerald-700">
-                    <span className="flex items-center justify-end gap-1"><FaArrowDown className="w-3 h-3" /> Credit (In)</span>
-                  </th>
-                  <th className="text-right py-3 px-4 font-semibold text-rose-700">
-                    <span className="flex items-center justify-end gap-1"><FaArrowUp className="w-3 h-3" /> Debit (Out)</span>
-                  </th>
+              <thead className="bg-slate-800 text-white uppercase text-[10px] tracking-widest">
+                <tr>
+                  <th className="text-left py-4 px-4 font-black">Date</th>
+                  <th className="text-left py-4 px-4 font-black">Account → Participant</th>
+                  <th className="text-left py-4 px-4 font-black">Description</th>
+                  <th className="text-right py-4 px-4 font-black bg-slate-700/50">Credit (Payments Received)</th>
+                  <th className="text-right py-4 px-4 font-black bg-slate-900/50">Debit (Payments Made)</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Previous Balance Row */}
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <td className="py-2.5 px-4 text-slate-400">—</td>
-                  <td className="py-2.5 px-4 font-bold text-slate-800 italic uppercase tracking-wider text-[11px]">Previous Balance (Wasooli)</td>
-                  <td className="py-2.5 px-4 text-slate-400">Kal ka baqaya</td>
-                  <td className="py-2.5 px-4 text-right font-black text-emerald-700 bg-emerald-50/20">
-                    {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : "0"}
+                  <td className="py-3 px-4 text-slate-400">—</td>
+                  <td className="py-3 px-4">
+                    <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Previous Balance</div>
+                    <div className="text-[9px] text-slate-400 uppercase">Opening Balance</div>
                   </td>
-                  <td className="py-2.5 px-4 text-right font-black text-rose-700 bg-rose-50/20">
-                    {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0"}
+                  <td className="py-3 px-4 text-slate-400">—</td>
+                  <td className="py-3 px-4 text-right font-black text-emerald-700 bg-emerald-50/20 text-base">
+                    {Number(summary.openingBalance || 0) > 0 ? formatMoney(summary.openingBalance) : ""}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-rose-700 bg-rose-50/20 text-base">
+                    {Number(summary.openingBalance || 0) < 0 ? formatMoney(Math.abs(summary.openingBalance)) : ""}
                   </td>
                 </tr>
                 {groupedData.map((group) => (
                   <Fragment key={group.date}>
-                    {/* Day Header (only show if range spans multiple days) */}
                     {isRange && (
-                      <tr key={`header-${group.date}`} className="bg-slate-100/80">
-                        <td colSpan="3" className="py-2.5 px-4 font-bold text-slate-700">
+                      <tr key={`header-${group.date}`} className="bg-slate-200/50">
+                        <td colSpan="3" className="py-2.5 px-4 font-black text-slate-600 text-xs uppercase">
                           📅 {formatDate(group.date)}
                         </td>
-                        <td className="py-2.5 px-4 text-right font-bold text-emerald-700">{formatMoney(group.dayIn)}</td>
-                        <td className="py-2.5 px-4 text-right font-bold text-rose-700">{formatMoney(group.dayOut)}</td>
+                        <td className="py-2.5 px-4 text-right font-bold text-emerald-800 bg-emerald-100/30">{formatMoney(group.dayIn)}</td>
+                        <td className="py-2.5 px-4 text-right font-bold text-rose-800 bg-rose-100/30">{formatMoney(group.dayOut)}</td>
                       </tr>
                     )}
                     {group.rows.map((row, i) => (
                       <tr key={`${group.date}-${i}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">{formatDate(row.date)}</td>
-                        <td className="py-2.5 px-4 font-bold text-slate-700">
-                          {row.name || "—"}
+                        <td className="py-3 px-4 text-slate-400 whitespace-nowrap text-xs">{formatDate(row.date)}</td>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-700 leading-tight">
+                            {row.accountName} <span className="text-rose-500 mx-1">➜</span> {row.name || "—"}
+                          </div>
+                          <div className="text-[10px] text-slate-400 uppercase tracking-tighter mt-0.5">{row.type.replace('_', ' ')}</div>
                         </td>
-                        <td className="py-2.5 px-4 text-slate-600 max-w-[320px] truncate" title={row.description}>
+                        <td className="py-3 px-4 text-slate-500 text-xs italic lowercase">
                           {row.description || "—"}
                         </td>
-                        <td className="py-2.5 px-4 text-right font-black text-emerald-700 bg-emerald-50/20">
+                        <td className="py-3 px-4 text-right font-black text-emerald-600 bg-emerald-50/10 text-base">
                           {row.amountType === "in" ? formatMoney(row.amount) : ""}
                         </td>
-                        <td className="py-2.5 px-4 text-right font-black text-rose-700 bg-rose-50/20">
+                        <td className="py-3 px-4 text-right font-black text-rose-600 bg-rose-50/10 text-base">
                           {row.amountType === "out" ? formatMoney(row.amount) : ""}
                         </td>
                       </tr>
@@ -221,18 +222,18 @@ export default function DailyKhata() {
                   </Fragment>
                 ))}
               </tbody>
-              <tfoot className="bg-slate-900 text-white font-black border-t-2 border-amber-500">
+              <tfoot className="bg-slate-50 text-slate-800 font-black border-t-2 border-slate-800">
                 <tr>
-                  <td colSpan="3" className="py-5 px-4 text-xs uppercase tracking-widest text-slate-400">
-                    Grand Total Activity (Yesterday + Today's Records)
+                  <td colSpan="3" className="py-5 px-4 text-right text-[10px] uppercase tracking-widest text-slate-500">
+                    Grand Total Activity:
                   </td>
-                  <td className="py-5 px-4 text-right text-lg text-emerald-400">
-                    <div className="text-[10px] text-emerald-600 uppercase mb-1">Total Aamad</div>
-                    Rs. {formatMoney((summary.openingBalance > 0 ? summary.openingBalance : 0) + (summary.totalIn || 0))}
+                  <td className="py-5 px-4 text-right text-xl text-emerald-700 bg-emerald-50/30">
+                    <div className="text-[10px] text-emerald-600 uppercase mb-1 font-black">Total Credits</div>
+                    {formatMoney(Number(summary.openingBalance || 0) + Number(summary.totalIn || 0))}
                   </td>
-                  <td className="py-5 px-4 text-right text-lg text-rose-400">
-                    <div className="text-[10px] text-rose-600 uppercase mb-1">Total Kharch</div>
-                    Rs. {formatMoney((summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + (summary.totalOut || 0))}
+                  <td className="py-5 px-4 text-right text-xl text-rose-700 bg-rose-50/30">
+                    <div className="text-[10px] text-rose-600 uppercase mb-1 font-black">Total Debits</div>
+                    {formatMoney(Number(summary.totalOut || 0))}
                   </td>
                 </tr>
               </tfoot>

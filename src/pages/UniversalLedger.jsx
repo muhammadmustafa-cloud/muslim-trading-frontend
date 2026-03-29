@@ -118,18 +118,30 @@ export default function UniversalLedger() {
       </section>
 
       {/* Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="card p-4 border-l-4 border-l-slate-400 bg-slate-50/50">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pichli Wasooli (Prev)</p>
+          <p className="text-xl font-black text-slate-700">{formatMoney(summary.openingBalance)}</p>
+          <p className="text-[9px] text-slate-400 italic">Yesterday's closing cash</p>
+        </div>
         <div className="card p-4 border-l-4 border-l-emerald-500 bg-emerald-50/20">
-          <p className="text-xs font-bold text-emerald-600 uppercase">Total Credits (In)</p>
-          <p className="text-xl font-black text-emerald-700">{formatMoney(summary.totalIn)}</p>
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kul Wasooli (Total Credit)</p>
+          <p className="text-xl font-black text-emerald-700">
+            {formatMoney(Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0))}
+          </p>
+          <p className="text-[9px] text-emerald-500 font-bold">Today: +{formatMoney(summary.totalIn)}</p>
         </div>
         <div className="card p-4 border-l-4 border-l-rose-500 bg-rose-50/20">
-          <p className="text-xs font-bold text-rose-600 uppercase">Total Debits (Out)</p>
-          <p className="text-xl font-black text-rose-700">{formatMoney(summary.totalOut)}</p>
+          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Kul Kharch (Total Debit)</p>
+          <p className="text-xl font-black text-rose-700">
+            {formatMoney(Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0))}
+          </p>
+          <p className="text-[9px] text-rose-500 font-bold">Today: -{formatMoney(summary.totalOut)}</p>
         </div>
-        <div className="card p-4 border-l-4 border-l-indigo-500 bg-indigo-50/20">
-          <p className="text-xs font-bold text-indigo-600 uppercase">Net Movement</p>
-          <p className="text-xl font-black text-indigo-700">{formatMoney(summary.net)}</p>
+        <div className="card p-4 border-l-4 border-l-amber-500 bg-amber-50/30">
+          <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Net Baqaya (Closing)</p>
+          <p className="text-xl font-black text-amber-700">{formatMoney(summary.closingBalance || (Number(summary.openingBalance || 0) + Number(summary.totalIn || 0) - Number(summary.totalOut || 0)))}</p>
+          <p className="text-[9px] text-amber-600 font-bold">Current cash in box</p>
         </div>
       </div>
 
@@ -226,10 +238,14 @@ export default function UniversalLedger() {
               </tbody>
               <tfoot className="bg-slate-50 font-black border-t-2 border-slate-300">
                 <tr>
-                   <td colSpan="2" className="py-3 px-4 text-right text-slate-500 uppercase text-[10px] border-r border-slate-200">Total Credits:</td>
-                   <td className="py-3 px-4 text-right text-emerald-700 border-r border-slate-200">{formatMoney(summary.totalIn)}</td>
-                   <td colSpan="2" className="py-3 px-4 text-right text-slate-500 uppercase text-[10px]">Total Debits:</td>
-                   <td className="py-3 px-4 text-right text-rose-700">{formatMoney(summary.totalOut)}</td>
+                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px] border-r border-slate-200">GRAND TOTAL CREDITS:</td>
+                   <td className="py-4 px-4 text-right text-emerald-700 border-r border-slate-200 text-lg">
+                      {formatMoney(Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0))}
+                   </td>
+                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px]">GRAND TOTAL DEBITS:</td>
+                   <td className="py-4 px-4 text-right text-rose-700 text-lg">
+                      {formatMoney(Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0))}
+                   </td>
                 </tr>
               </tfoot>
             </table>

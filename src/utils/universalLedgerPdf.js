@@ -31,24 +31,28 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
     ]);
   }
 
-  // Totals Row
+  // Totals Row (Rolling Balance)
+  const grandTotalIn = Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0);
+  const grandTotalOut = Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0);
+  const netBaqaya = grandTotalIn - grandTotalOut;
+
   formattedRows.push([
     "",
     "TOTAL CREDITS",
     "",
-    formatMoney(summary.totalIn),
+    formatMoney(grandTotalIn),
     "",
     "TOTAL DEBITS",
     "",
-    formatMoney(summary.totalOut),
+    formatMoney(grandTotalOut),
   ]);
 
   // Net Movement Row (Centered across all columns)
   formattedRows.push([
     { 
-      content: `NET MOVEMENT (BAQAYA): ${formatMoney(summary.net)}`, 
+      content: `CLOSING BAQAYA (CASH IN BOX): ${formatMoney(netBaqaya)}`, 
       colSpan: 8, 
-      styles: { halign: 'center', fontStyle: 'bold', fontSize: 10 } 
+      styles: { halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [255, 251, 235] } 
     }
   ]);
 
@@ -97,7 +101,7 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Account", "Party / Item", "Amount", "Date", "Account", "Party / Item", "Amount"]],
+    head: [["Date", "Party", "Description", "Amount", "Date", "Party", "Description", "Amount"]],
     body: formattedRows,
     headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
