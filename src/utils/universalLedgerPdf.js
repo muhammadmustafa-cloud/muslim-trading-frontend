@@ -38,11 +38,11 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   formattedRows.push([
     "",
-    "TOTAL DEBITS",
+    "TOTAL CREDITS (KHARCH)",
     "",
     formatMoney(grandTotalOut),
     "",
-    "TOTAL CREDITS",
+    "TOTAL DEBITS (AAMAD)",
     "",
     formatMoney(grandTotalIn),
   ]);

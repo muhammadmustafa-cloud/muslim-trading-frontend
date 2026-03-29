@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { apiGet } from "../config/api.js";
 import { 
   FaFileContract, 
@@ -27,7 +27,7 @@ export default function AuditSummary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: getToday() });
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("master_log");
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchSummary = async () => {
@@ -59,21 +59,6 @@ export default function AuditSummary() {
     return assets - data.totalPayables;
   };
 
-  if (loading) return (
-    <div className="card p-12 flex flex-col items-center justify-center min-h-[400px]">
-      <div className="loading-spinner mb-4" />
-      <p className="text-slate-500 animate-pulse font-medium text-lg">Preparing Detailed Submail Report...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="bg-red-50 border border-red-200 text-red-700 p-8 rounded-xl text-center">
-      <p className="font-bold text-lg mb-2">Error loading audit summary</p>
-      <p className="text-sm opacity-80">{error}</p>
-      <button onClick={fetchSummary} className="btn-primary mt-4">Retry</button>
-    </div>
-  );
-
   const tabs = [
     { id: 'master_log', label: 'Master Entries Audit', icon: FaFileContract },
     { id: 'overview', label: 'Overview', icon: FaFileContract },
@@ -99,14 +84,26 @@ export default function AuditSummary() {
     let totalOut = 0;
     data.periodTransactions.forEach(t => {
       // Logic for Mill-wide cash movement:
-      // If payment from any account -> Outflow
-      // If receipt to any account -> Inflow
       if (t.fromAccountId) totalOut += Number(t.amount);
       else if (t.toAccountId) totalIn += Number(t.amount);
-      // Special case: Sales/Purchases jahan account mention ho backend handle kr rha hoga
     });
     return { in: totalIn, out: totalOut };
   }, [data]);
+
+  if (loading) return (
+    <div className="card p-12 flex flex-col items-center justify-center min-h-[400px]">
+      <div className="loading-spinner mb-4" />
+      <p className="text-slate-500 animate-pulse font-medium text-lg">Preparing Detailed Submail Report...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="bg-red-50 border border-red-200 text-red-700 p-8 rounded-xl text-center">
+      <p className="font-bold text-lg mb-2">Error loading audit summary</p>
+      <p className="text-sm opacity-80">{error}</p>
+      <button onClick={fetchSummary} className="btn-primary mt-4">Retry</button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
