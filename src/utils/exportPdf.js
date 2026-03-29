@@ -476,6 +476,7 @@ export function downloadSaleInvoicePdf(sale) {
       doc.text(itName, 18, yPos);
       doc.text(String(it.kattay || 0), 95, yPos);
       
+      // MUN calculation: Net weight of the item divided by 40
       const itMun = it.quantity ? (it.quantity / 40).toFixed(3) : "0.000";
       doc.text(String(itMun), 120, yPos);
       doc.text(String(it.kgPerKata || 0), 140, yPos);

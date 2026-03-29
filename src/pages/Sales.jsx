@@ -183,7 +183,8 @@ export default function Sales() {
       // 1. Master Weights
       const totalGross = Number(next.totalGrossWeight) || 0;
       const totalCut = Number(next.totalSHCut) || 0;
-      next.netWeight = String(Math.max(0, totalGross - totalCut));
+      const mainNet = Math.max(0, totalGross - totalCut);
+      next.netWeight = String(mainNet);
 
       // 2. Individual Items
       let grandTotalAmount = 0;
@@ -191,8 +192,11 @@ export default function Sales() {
         const k = Number(item.kattay) || 0;
         const kpk = Number(item.kgPerKata) || 0;
         
-        // Auto-calc line gross if not manually set
-        let lineGross = Number(item.grossWeight) || (k * kpk);
+        // Auto-calc line gross
+        // If only 1 item, FORCE it to match master gross to prevent 10x errors
+        let lineGross = (next.items.length === 1 && totalGross > 0) 
+          ? totalGross 
+          : (Number(item.grossWeight) || (k * kpk));
         
         // Proportional S.H Cut
         const lineSHCut = totalGross > 0 ? (lineGross / totalGross) * totalCut : 0;
@@ -218,9 +222,9 @@ export default function Sales() {
 
         return {
           ...item,
-          grossWeight: lineGross ? String(lineGross) : item.grossWeight,
-          bardanaAmount: bAmt ? String(bAmt) : item.bardanaAmount,
-          totalAmount: lineTotal ? String(lineTotal) : item.totalAmount
+          grossWeight: String(lineGross),
+          bardanaAmount: String(bAmt),
+          totalAmount: String(lineTotal)
         };
       });
 
@@ -487,14 +491,16 @@ export default function Sales() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-100 border-b border-slate-200">
+                <thead className="bg-slate-100 border-b border-slate-200 text-[10px] text-slate-500 uppercase font-black">
                   <tr>
                     <th className="px-4 py-3 text-left w-64">Item *</th>
-                    <th className="px-4 py-3 text-left w-24">Bags</th>
-                    <th className="px-4 py-3 text-left w-24">Kg/Bag</th>
-                    <th className="px-4 py-3 text-left w-36">Rate (MUN)</th>
-                    <th className="px-4 py-3 text-left w-24">Brd Rate</th>
-                    <th className="px-4 py-3 text-left w-24">Mazdori</th>
+                    <th className="px-4 py-3 text-left w-20">Bags</th>
+                    <th className="px-4 py-3 text-left w-20">Kg/Bag</th>
+                    <th className="px-4 py-3 text-left w-24 bg-amber-50">Total KG</th>
+                    <th className="px-4 py-3 text-left w-24 bg-amber-100/50">Total MUN</th>
+                    <th className="px-4 py-3 text-left w-32">Rate (MUN)</th>
+                    <th className="px-4 py-3 text-left w-20">Brd Rs.</th>
+                    <th className="px-4 py-3 text-left w-20">Mazdori</th>
                     <th className="px-4 py-3 text-right font-bold bg-slate-200/50">Line Total</th>
                     <th className="px-4 py-3 text-center w-12"></th>
                   </tr>
@@ -519,21 +525,31 @@ export default function Sales() {
                           const newItems = [...form.items];
                           newItems[idx].kattay = e.target.value;
                           updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2" placeholder="0" />
+                        }} className="input-field py-1.5 px-2 text-center" placeholder="0" />
                       </td>
                       <td className="p-3">
                         <input type="number" value={item.kgPerKata} onChange={(e) => {
                           const newItems = [...form.items];
                           newItems[idx].kgPerKata = e.target.value;
                           updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2" placeholder="0" />
+                        }} className="input-field py-1.5 px-2 text-center" placeholder="0" />
+                      </td>
+                      <td className="p-3 bg-amber-50/50">
+                        <div className="font-bold text-amber-900 text-center">
+                          {item.grossWeight ? Number(item.grossWeight).toLocaleString() : "—"}
+                        </div>
+                      </td>
+                      <td className="p-3 bg-amber-100/30">
+                        <div className="font-black text-amber-900 text-center">
+                          {item.grossWeight ? (Number(item.grossWeight) / 40).toFixed(3) : "—"}
+                        </div>
                       </td>
                       <td className="p-3">
                         <input type="number" value={item.rate} onChange={(e) => {
                           const newItems = [...form.items];
                           newItems[idx].rate = e.target.value;
                           updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2 font-bold text-amber-700 bg-amber-50/50" placeholder="0" />
+                        }} className="input-field py-1.5 px-2 font-bold text-emerald-700 bg-emerald-50/20" placeholder="0" />
                       </td>
                       <td className="p-3">
                         <input type="number" value={item.bardanaRate} onChange={(e) => {
@@ -549,7 +565,7 @@ export default function Sales() {
                           updateFormWithAutoCalc({ items: newItems });
                         }} className="input-field py-1.5 px-2" placeholder="0" />
                       </td>
-                      <td className="p-3 text-right font-black text-indigo-700 bg-slate-50/50 text-base">
+                      <td className="p-3 text-right font-black text-slate-900 bg-slate-50/50 text-base">
                         {formatMoney(item.totalAmount)}
                       </td>
                       <td className="p-3 text-center">

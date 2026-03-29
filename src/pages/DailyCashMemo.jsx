@@ -104,8 +104,10 @@ export default function DailyCashMemo() {
     });
   };
 
-  const totalIn = summary.totalIn;
-  const totalOut = summary.totalOut;
+  // Total Aamad (Credit) = Opening Balance (if positive) + Today's Inflows
+  const totalIn = (summary.openingBalance > 0 ? summary.openingBalance : 0) + summary.totalIn;
+  // Total Kharch (Debit) = Opening Deficit (if negative) + Today's Outflows
+  const totalOut = (summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + summary.totalOut;
 
   return (
     <div>
@@ -235,13 +237,13 @@ export default function DailyCashMemo() {
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <p className="text-sm text-emerald-700 font-medium">Total Credit (In)</p>
-          <p className="text-2xl font-bold text-emerald-800">{formatMoney(totalIn)}</p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 transition-all hover:shadow-md">
+          <p className="text-[10px] uppercase font-black text-emerald-700 mb-1 tracking-widest">Total Aamad / Credit (Incl. Prev)</p>
+          <p className="text-2xl font-black text-emerald-800">Rs. {formatMoney(totalIn)}</p>
         </div>
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-          <p className="text-sm text-rose-700 font-medium">Total Debit (Out)</p>
-          <p className="text-2xl font-bold text-rose-800">{formatMoney(totalOut)}</p>
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 transition-all hover:shadow-md">
+          <p className="text-[10px] uppercase font-black text-rose-700 mb-1 tracking-widest">Total Kharch / Debit (Incl. Prev)</p>
+          <p className="text-2xl font-black text-rose-800">Rs. {formatMoney(totalOut)}</p>
         </div>
       </div>
 
@@ -291,6 +293,12 @@ export default function DailyCashMemo() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-emerald-900 text-white font-black">
+                    <tr>
+                      <td colSpan={3} className="py-4 px-3 text-xs uppercase tracking-widest">Grand Total Aamad (Prev + Today)</td>
+                      <td className="py-4 px-3 text-right text-base text-emerald-300">Rs. {formatMoney(totalIn)}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -333,6 +341,12 @@ export default function DailyCashMemo() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-rose-950 text-white font-black">
+                    <tr>
+                      <td colSpan={3} className="py-4 px-3 text-xs uppercase tracking-widest">Grand Total Kharch (Prev + Today)</td>
+                      <td className="py-4 px-3 text-right text-base text-rose-300">Rs. {formatMoney(totalOut)}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -345,12 +359,12 @@ export default function DailyCashMemo() {
         <div className="mt-6 bg-slate-800 text-white rounded-xl border border-slate-700 overflow-hidden">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
             <div className="p-5 border-b sm:border-b-0 sm:border-r border-slate-600">
-              <p className="text-slate-400 text-sm font-medium">Total Credit (In)</p>
-              <p className="text-xl font-bold text-emerald-400 mt-1">{formatMoney(totalIn)}</p>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Credit (Available)</p>
+              <p className="text-xl font-black text-emerald-400 mt-1">Rs. {formatMoney(totalIn)}</p>
             </div>
             <div className="p-5 border-b sm:border-b-0 sm:border-r border-slate-600">
-              <p className="text-slate-400 text-sm font-medium">Total Debit (Out)</p>
-              <p className="text-xl font-bold text-rose-400 mt-1">{formatMoney(totalOut)}</p>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Debit (Utilized)</p>
+              <p className="text-xl font-black text-rose-400 mt-1">Rs. {formatMoney(totalOut)}</p>
             </div>
             <div className="p-5">
               <p className="text-slate-400 text-sm font-medium">Overall Total (Net)</p>

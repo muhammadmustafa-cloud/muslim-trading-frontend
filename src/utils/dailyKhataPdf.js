@@ -33,13 +33,16 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
   const formattedRows = [];
 
   // Add "Previous Balance" as the first row in the table body
+  const openingIn = summary.openingBalance > 0 ? summary.openingBalance : 0;
+  const openingOut = summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0;
+
   formattedRows.push([
     "Previous Blnc",
-    "",
-    formatMoney(summary.openingBalance),
+    "Yesterday's Closing",
+    openingIn > 0 ? formatMoney(openingIn) : "0",
     "Previous Blnc",
-    "",
-    "",
+    openingOut > 0 ? "Opening Deficit" : "",
+    openingOut > 0 ? formatMoney(openingOut) : "0",
   ]);
 
   for (let i = 0; i < maxRows; i++) {
@@ -55,20 +58,23 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
     ]);
   }
 
-  // Add Totals
+  // Add Grand Totals (Opening + Today)
+  const grandTotalIn = openingIn + (summary.totalIn || 0);
+  const grandTotalOut = openingOut + (summary.totalOut || 0);
+
   formattedRows.push([
-    "Total",
-    "",
-    formatMoney(summary.totalIn),
-    "Total",
-    "",
-    formatMoney(summary.totalOut),
+    "GRAND TOTAL",
+    "(Yesterday + Today)",
+    formatMoney(grandTotalIn),
+    "GRAND TOTAL",
+    "(Yesterday + Today)",
+    formatMoney(grandTotalOut),
   ]);
 
   // Add Closing Balance prominently
   formattedRows.push([
     "",
-    "Closing Balance",
+    "CLOSING BAQAYA",
     "",
     formatMoney(summary.closingBalance),
     "",
@@ -76,6 +82,7 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
   ]);
 
   // Header
+  // ... (rest of the code remains same)
   let y = 15;
   doc.setFontSize(22);
   doc.setFont(undefined, "bold");

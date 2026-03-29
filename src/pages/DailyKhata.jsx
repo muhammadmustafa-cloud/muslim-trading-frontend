@@ -120,25 +120,33 @@ export default function DailyKhata() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-4 border-l-4 border-l-slate-400 bg-slate-50">
-          <p className="text-xs font-bold text-slate-500 uppercase">Opening Balance</p>
+        <div className="card p-4 border-l-4 border-l-slate-400 bg-slate-50 transition-all hover:shadow-md">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Previous Balance (Wasooli)</p>
           <p className="text-xl font-black text-slate-700">{formatMoney(summary.openingBalance)}</p>
-          <p className="text-[10px] text-slate-400">Total till yesterday</p>
+          <p className="text-[10px] text-slate-400">Kal ka baqaya balance</p>
         </div>
-        <div className="card p-4 border-l-4 border-l-emerald-500">
-          <p className="text-xs font-bold text-emerald-600 uppercase">Total In (Credit)</p>
-          <p className="text-xl font-black text-emerald-700">{formatMoney(summary.totalIn)}</p>
-          <p className="text-[10px] text-emerald-400">Cash entering mill</p>
+        <div className="card p-4 border-l-4 border-l-emerald-500 transition-all hover:shadow-md">
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total Aamad / In (Credit)</p>
+          <p className="text-xl font-black text-emerald-700">
+            {formatMoney((summary.openingBalance > 0 ? summary.openingBalance : 0) + summary.totalIn)}
+          </p>
+          <p className="text-[10px] text-emerald-500 font-bold">
+            {formatMoney(summary.openingBalance > 0 ? summary.openingBalance : 0)} (Prev) + {formatMoney(summary.totalIn)} (Today)
+          </p>
         </div>
-        <div className="card p-4 border-l-4 border-l-rose-500">
-          <p className="text-xs font-bold text-rose-600 uppercase">Total Out (Debit)</p>
-          <p className="text-xl font-black text-rose-700">{formatMoney(summary.totalOut)}</p>
-          <p className="text-[10px] text-rose-400">Cash leaving mill</p>
+        <div className="card p-4 border-l-4 border-l-rose-500 transition-all hover:shadow-md">
+          <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Total Kharch / Out (Debit)</p>
+          <p className="text-xl font-black text-rose-700">
+            {formatMoney((summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + summary.totalOut)}
+          </p>
+          <p className="text-[10px] text-rose-500 font-bold">
+            {formatMoney(summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0)} (Prev) + {formatMoney(summary.totalOut)} (Today)
+          </p>
         </div>
-        <div className="card p-4 border-l-4 border-l-amber-500 bg-amber-50/30">
-          <p className="text-xs font-bold text-amber-600 uppercase">Closing Balance</p>
+        <div className="card p-4 border-l-4 border-l-amber-500 bg-amber-50/30 transition-all hover:shadow-md">
+          <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Current Baqaya (Closing)</p>
           <p className="text-xl font-black text-amber-700">{formatMoney(summary.closingBalance)}</p>
-          <p className="text-[10px] text-amber-400">Net cash on hand</p>
+          <p className="text-[10px] text-amber-400">Net cash in box</p>
         </div>
       </div>
 
@@ -169,6 +177,18 @@ export default function DailyKhata() {
                 </tr>
               </thead>
               <tbody>
+                {/* Previous Balance Row */}
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <td className="py-2.5 px-4 text-slate-400">—</td>
+                  <td className="py-2.5 px-4 font-bold text-slate-800 italic uppercase tracking-wider text-[11px]">Previous Balance (Wasooli)</td>
+                  <td className="py-2.5 px-4 text-slate-400">Kal ka baqaya</td>
+                  <td className="py-2.5 px-4 text-right font-black text-emerald-700 bg-emerald-50/20">
+                    {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : "0"}
+                  </td>
+                  <td className="py-2.5 px-4 text-right font-black text-rose-700 bg-rose-50/20">
+                    {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0"}
+                  </td>
+                </tr>
                 {groupedData.map((group) => (
                   <Fragment key={group.date}>
                     {/* Day Header (only show if range spans multiple days) */}
@@ -201,6 +221,21 @@ export default function DailyKhata() {
                   </Fragment>
                 ))}
               </tbody>
+              <tfoot className="bg-slate-900 text-white font-black border-t-2 border-amber-500">
+                <tr>
+                  <td colSpan="3" className="py-5 px-4 text-xs uppercase tracking-widest text-slate-400">
+                    Grand Total Activity (Yesterday + Today's Records)
+                  </td>
+                  <td className="py-5 px-4 text-right text-lg text-emerald-400">
+                    <div className="text-[10px] text-emerald-600 uppercase mb-1">Total Aamad</div>
+                    Rs. {formatMoney((summary.openingBalance > 0 ? summary.openingBalance : 0) + (summary.totalIn || 0))}
+                  </td>
+                  <td className="py-5 px-4 text-right text-lg text-rose-400">
+                    <div className="text-[10px] text-rose-600 uppercase mb-1">Total Kharch</div>
+                    Rs. {formatMoney((summary.openingBalance < 0 ? Math.abs(summary.openingBalance) : 0) + (summary.totalOut || 0))}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
