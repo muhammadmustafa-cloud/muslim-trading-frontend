@@ -311,7 +311,7 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
     y += 6;
   }
   doc.setFontSize(9);
-  doc.text(`Total Bags In: ${data.totalBagsPurchased || 0}  |  Total Bags Out: ${data.totalBagsSold || 0}  |  Stock Balance: ${Math.abs((data.totalBagsPurchased || 0) - (data.totalBagsSold || 0))}`, MARGIN, y);
+  doc.text(`Total Bags In: ${data.totalBagsPurchased || 0}  |  Total Bags Out: ${data.totalBagsSold || 0}  |  Stock Balance: ${data.stockBalanceBags || 0}`, MARGIN, y);
   y += 6;
   doc.text(
     `Total Cost: ${formatMoney(totalCost)}  |  Total Revenue: ${formatMoney(totalRevenue)}  |  Profit: ${formatMoney(profit)}`,
@@ -319,8 +319,10 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
     y
   );
   y += 6;
+  const pDharo = data.totalMunPurchased > 0 ? (totalCost / data.totalMunPurchased).toFixed(2) : "—";
+  const sDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
   doc.text(
-    `Purchase Dharo: ${data.totalMunPurchased > 0 ? (totalCost / data.totalMunPurchased).toFixed(2) : "0"}  |  Sale Dharo (Avg): ${data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "0"}`,
+    `Purchase Dharo: ${pDharo}  |  Sale Dharo (Avg): ${sDharo}`,
     MARGIN,
     y
   );
@@ -370,8 +372,8 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
       ],
       [
         { content: "BALANCE (REMAINING)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: String(Math.abs((data.totalBagsPurchased || 0) - (data.totalBagsSold || 0))), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: Math.abs((data.totalMunPurchased || 0) - (data.totalMunSold || 0)).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: String(data.stockBalanceBags || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: (data.stockBalanceMun || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
       ],
@@ -396,8 +398,8 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   const pageWidth = doc.internal.pageSize.getWidth();
   doc.setFontSize(11);
   doc.setFont(undefined, "bold");
-  const saleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "0";
-  doc.text(`Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${saleDharo}`, pageWidth - MARGIN, finalY, { align: "right" });
+  const finalSaleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
+  doc.text(`Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`, pageWidth - MARGIN, finalY, { align: "right" });
 
   addPageNumbers(doc);
   doc.save(`${(data.name || "item").replace(/\s+/g, "-")}-khata.pdf`);

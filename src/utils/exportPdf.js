@@ -1161,6 +1161,14 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
   };
 
+  if (data.openingBalance !== undefined) {
+    tableRows.push([
+      { content: "CURRENT ROLLING POOL (PICHLI WASOOLI)", colSpan: 2, styles: { fontStyle: "bold", fillColor: [252, 211, 77], textColor: [0, 0, 0] } },
+      { content: "Rs. " + formatMoney(data.openingBalance || 0), colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [252, 211, 77], textColor: [0, 0, 0] } }
+    ]);
+  }
+
+
   // 1. Bank & Cash Accounts (Aamne-Samne)
   const cashAccounts = data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata);
   if (cashAccounts.length > 0) {
@@ -1254,7 +1262,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 6. Valuation
+  // Valuation
   addGroupHeader("6. VALUATION & EXPENSES");
   tableRows.push(["Current Inventory Value", formatMoney(Number(data.totalStockValue)), "-", "ASSET"]);
   tableRows.push(["Machinery & Equipment", formatMoney(Number(data.totalMachineryValue)), "-", "ASSET"]);
@@ -1263,7 +1271,35 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   tableRows.push(["Total Operating Expenses", "-", formatMoney(totalExp), "OUTFLOW"]);
   tableRows.push(["Total Period Taxes", "-", formatMoney(totalTax), "OUTFLOW"]);
 
-  // Calculate Column Totals
+  // Calculate Row-based Totals for the Footer
+  let grandCredit = 0;
+  let grandDebit = 0;
+
+  // 1. Accounts
+  data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata).forEach(a => {
+    grandCredit += Number(a.totalIn || 0);
+    grandDebit += Number(a.totalOut || 0);
+  });
+  // 2. Customers
+  data.customers.forEach(c => {
+    if (c.balance < 0) grandCredit += Math.abs(Number(c.balance));
+    else if (c.balance > 0) grandDebit += Number(c.balance);
+  });
+  // 3. Suppliers
+  data.suppliers.forEach(s => {
+    if (s.balance < 0) grandCredit += Math.abs(Number(s.balance));
+    else if (s.balance > 0) grandDebit += Number(s.balance);
+  });
+  // 4. Mazdoor
+  data.mazdoors.forEach(m => {
+    if (m.balance > 0) grandCredit += Number(m.balance); // Work done = Credit for them
+    else if (m.balance < 0) grandDebit += Math.abs(Number(m.balance));
+  });
+  // 5. Assets & Expenses
+  grandDebit += totalExp + totalTax;
+  grandDebit += Number(data.totalStockValue || 0) + Number(data.totalMachineryValue || 0);
+
+  // Calculate Summary Totals
   const totalReceivables = Number(data.totalReceivables || 0);
   const totalPayables = Number(data.totalPayables || 0);
   const totalAssets = Number(data.totalCash || 0) + totalReceivables + Number(data.totalStockValue || 0) + Number(data.totalMachineryValue || 0);
@@ -1274,6 +1310,12 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     head: [["ACCOUNT CLASSIFICATION", "CREDIT (AAMNE)", "DEBIT (KHARCH)", "NET POSITION"]],
     body: tableRows,
     foot: [
+      [
+        { content: "TOTAL AUDIT MOVEMENT", styles: { fontStyle: "bold", fillColor: [240, 240, 240] } },
+        { content: "Rs. " + formatMoney(grandCredit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240] } },
+        { content: "Rs. " + formatMoney(grandDebit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240] } },
+        { content: "", styles: { fillColor: [240, 240, 240] } }
+      ],
       [
         { content: "GRAND TOTAL ASSETS", styles: { fontStyle: "bold" } },
         { content: "Rs. " + formatMoney(totalAssets), colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }

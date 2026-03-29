@@ -45,7 +45,7 @@ export default function AuditSummary() {
 
   useEffect(() => {
     fetchSummary();
-  }, []); // Only run once on mount, as requested (manual search button added below)
+  }, []);
 
   const handlePdf = () => {
     if (data) {
@@ -201,14 +201,18 @@ export default function AuditSummary() {
                      LIVE AUDIT DATA AS OF {formatDate(filters.dateTo)}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[160px]">
-                    <p className="text-[10px] font-black text-indigo-100/60 uppercase mb-1">Total Assets</p>
-                    <p className="text-xl font-black">Rs. {formatMoney(data.totalCash + data.totalReceivables + data.totalStockValue + data.totalMachineryValue)}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
+                    <p className="text-[10px] font-black text-amber-100/80 uppercase mb-1">Pichli Wasooli (Opening)</p>
+                    <p className="text-xl font-black text-amber-400">Rs. {formatMoney(data.openingBalance || 0)}</p>
                   </div>
-                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[160px]">
+                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
+                    <p className="text-[10px] font-black text-indigo-100/60 uppercase mb-1">Total Assets</p>
+                    <p className="text-xl font-black text-emerald-400">Rs. {formatMoney(data.totalCash + data.totalReceivables + data.totalStockValue + data.totalMachineryValue)}</p>
+                  </div>
+                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
                     <p className="text-[10px] font-black text-rose-100/60 uppercase mb-1">Total Payables</p>
-                    <p className="text-xl font-black">Rs. {formatMoney(data.totalPayables)}</p>
+                    <p className="text-xl font-black text-rose-400">Rs. {formatMoney(data.totalPayables)}</p>
                   </div>
                 </div>
               </div>
@@ -303,11 +307,11 @@ export default function AuditSummary() {
                       </tr>
                     ))}
                  </tbody>
-                 <tfoot className="bg-slate-900 text-white font-black">
+                 <tfoot className="bg-slate-900 text-white font-black uppercase tracking-tighter">
                     <tr>
-                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Grand Total Receivables</td>
-                      <td className="px-6 py-5 text-right text-base text-emerald-400">Rs. {formatMoney(data.customers.filter(c => c.balance < 0).reduce((s,c) => s+Math.abs(c.balance), 0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.customers.filter(c => c.balance > 0).reduce((s,c) => s+c.balance, 0))}</td>
+                      <td className="px-6 py-5 text-xs">Category Totals</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-400">Rs. {formatMoney(data.customers.filter(c => c.balance < 0).reduce((s,c) => s+Math.abs(Number(c.balance)), 0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.customers.filter(c => c.balance > 0).reduce((s,c) => s+Number(c.balance), 0))}</td>
                       <td className="px-6 py-5 text-right text-lg text-amber-500">Rs. {formatMoney(data.totalReceivables)}</td>
                     </tr>
                  </tfoot>
@@ -326,7 +330,6 @@ export default function AuditSummary() {
                  <thead className="bg-slate-50">
                     <tr>
                       <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Supplier Name</th>
-                      {/* Swapped Columns */}
                       <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">Credit (Aamad)</th>
                       <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">Debit (Payments)</th>
                       <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">Closing Payable</th>
@@ -336,25 +339,25 @@ export default function AuditSummary() {
                     {filteredItems(data.suppliers).map((s, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-6 py-4 font-bold uppercase text-slate-700">{s.name}</td>
-                        <td className="px-6 py-4 text-right">
-                           {s.balance < 0 ? <span className="text-sm font-black text-rose-600 font-mono">Rs. {formatMoney(s.balance)}</span> : <span className="text-slate-200">—</span>}
+                        <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10 text-sm">
+                           {s.balance < 0 ? `Rs. ${formatMoney(Math.abs(s.balance))}` : <span className="text-slate-200">—</span>}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                           {s.balance > 0 ? <span className="text-sm font-black text-indigo-600 font-mono">Rs. {formatMoney(s.balance)}</span> : <span className="text-slate-200">—</span>}
+                        <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10 text-sm">
+                           {s.balance > 0 ? `Rs. ${formatMoney(s.balance)}` : <span className="text-slate-200">—</span>}
                         </td>
-                        <td className="px-6 py-4 text-right font-black text-slate-800">
+                        <td className={`px-6 py-4 text-right font-black ${s.balance <= 0 ? 'text-emerald-700 bg-emerald-50/20' : 'text-rose-700 bg-rose-50/20'}`}>
                            Rs. {formatMoney(Math.abs(s.balance))}
                            <span className="text-[10px] ml-1 uppercase">{s.balance <= 0 ? 'Cr' : 'Dr'}</span>
                         </td>
                       </tr>
                     ))}
                  </tbody>
-                 <tfoot className="bg-slate-900 text-white font-black">
+                 <tfoot className="bg-slate-800 text-white font-black uppercase tracking-tighter">
                     <tr>
-                      <td className="px-6 py-5 text-sm uppercase tracking-widest">Total Payables Pool</td>
-                      <td className="px-6 py-5 text-right text-base text-rose-400">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
-                      <td className="px-6 py-5 text-right text-base text-indigo-400">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+Number(s.balance),0))}</td>
-                      <td className="px-6 py-5 text-right text-lg text-amber-500">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
+                      <td className="px-6 py-5 text-xs text-slate-400 tracking-[0.2em]">Supplier Pool Totals</td>
+                      <td className="px-6 py-5 text-right text-base text-emerald-400 italic">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
+                      <td className="px-6 py-5 text-right text-base text-rose-400 italic">Rs. {formatMoney(data.suppliers.filter(s => s.balance > 0).reduce((sum, s) => sum+Number(s.balance),0))}</td>
+                      <td className="px-6 py-5 text-right text-lg text-amber-500 font-black">Rs. {formatMoney(data.suppliers.filter(s => s.balance < 0).reduce((sum, s) => sum+Math.abs(Number(s.balance)),0))}</td>
                     </tr>
                  </tfoot>
                </table>
@@ -418,9 +421,9 @@ export default function AuditSummary() {
                            <div className="text-sm font-bold text-slate-700 uppercase">{m.name}</div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                           <span className={`text-sm font-black ${m.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                           <span className={`text-sm font-black ${m.balance > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                              Rs. {formatMoney(Math.abs(Number(m.balance)))}
-                             <span className="text-[10px] ml-1">{m.balance > 0 ? 'Dr' : 'Cr'}</span>
+                             <span className="text-[10px] ml-1 uppercase">{m.balance > 0 ? 'Cr' : 'Dr'}</span>
                            </span>
                         </td>
                       </tr>
@@ -612,37 +615,87 @@ export default function AuditSummary() {
                      </div>
 
                      {/* Aamne-Samne T-Account View */}
-                     <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+                     <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 bg-white">
                         {/* LEFT: CREDIT (INFLOW) */}
-                        <div className="p-6 bg-emerald-50/20">
-                           <div className="flex items-center justify-between mb-6">
+                        <div className="flex-1 w-full md:w-1/2">
+                           <div className="bg-emerald-50/50 py-3 px-4 flex items-center justify-between border-b border-emerald-100">
                               <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2 italic">
                                  <FaArrowUp className="text-emerald-500" /> Credit (Aamne / Inflow)
                               </h4>
                               <div className="bg-emerald-100 px-3 py-1 rounded-full text-[10px] font-black text-emerald-700 uppercase">Received</div>
                            </div>
-                           <div className="flex flex-col items-center justify-center min-h-[100px]">
-                              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Total Amount Received in this period</p>
-                              <p className="text-4xl font-black text-emerald-600 font-mono tracking-tighter">
-                                 Rs. {formatMoney(Number(acc.totalIn || 0))}
-                              </p>
-                           </div>
+                           <table className="w-full text-sm">
+                             <thead className="bg-slate-50 text-slate-400 uppercase text-[9px] font-black text-left">
+                               <tr className="border-b border-slate-100">
+                                 <th className="py-2 px-3">Date</th>
+                                 <th className="py-2 px-3">Description / Party</th>
+                                 <th className="py-2 px-3 text-right">Amount</th>
+                               </tr>
+                             </thead>
+                             <tbody className="divide-y divide-slate-100">
+                               {data.periodTransactions?.filter(t => t.toAccountId?._id === acc._id || t.toAccountId === acc._id).map((t, idx) => (
+                                 <tr key={`in-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                                   <td className="py-3 px-3 text-[10px] font-bold text-slate-400 whitespace-nowrap">{formatDate(t.date)}</td>
+                                   <td className="py-3 px-3">
+                                      <div className="font-bold text-slate-700 text-xs">
+                                        {t.customerId ? t.customerId.name : t.supplierId ? t.supplierId.name : t.mazdoorId ? t.mazdoorId.name : t.note || t.category || 'Manual Deposit'}
+                                      </div>
+                                   </td>
+                                   <td className="py-3 px-3 text-right font-black text-emerald-600">Rs. {formatMoney(t.amount)}</td>
+                                 </tr>
+                               ))}
+                               {(!data.periodTransactions || data.periodTransactions.filter(t => t.toAccountId?._id === acc._id || t.toAccountId === acc._id).length === 0) && (
+                                 <tr><td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">No Credits</td></tr>
+                               )}
+                             </tbody>
+                             <tfoot className="bg-emerald-50/30 border-t border-emerald-100">
+                               <tr>
+                                 <td colSpan="2" className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500">Total Inflow:</td>
+                                 <td className="py-3 px-3 text-right text-sm font-black text-emerald-700">Rs. {formatMoney(acc.totalIn || 0)}</td>
+                               </tr>
+                             </tfoot>
+                           </table>
                         </div>
 
                         {/* RIGHT: DEBIT (OUTFLOW) */}
-                        <div className="p-6 bg-rose-50/20">
-                           <div className="flex items-center justify-between mb-6">
+                        <div className="flex-1 w-full md:w-1/2">
+                           <div className="bg-rose-50/50 py-3 px-4 flex items-center justify-between border-b border-rose-100">
                               <h4 className="text-xs font-black text-rose-800 uppercase tracking-widest flex items-center gap-2 italic">
                                  <FaArrowDown className="text-rose-500" /> Debit (Kharch / Outflow)
                               </h4>
                               <div className="bg-rose-100 px-3 py-1 rounded-full text-[10px] font-black text-rose-700 uppercase">Paid Out</div>
                            </div>
-                           <div className="flex flex-col items-center justify-center min-h-[100px]">
-                              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Total Amount Paid from this account</p>
-                              <p className="text-4xl font-black text-rose-600 font-mono tracking-tighter">
-                                 Rs. {formatMoney(Number(acc.totalOut || 0))}
-                              </p>
-                           </div>
+                           <table className="w-full text-sm">
+                             <thead className="bg-slate-50 text-slate-400 uppercase text-[9px] font-black text-left">
+                               <tr className="border-b border-slate-100">
+                                 <th className="py-2 px-3">Date</th>
+                                 <th className="py-2 px-3">Description / Party</th>
+                                 <th className="py-2 px-3 text-right">Amount</th>
+                               </tr>
+                             </thead>
+                             <tbody className="divide-y divide-slate-100">
+                               {data.periodTransactions?.filter(t => t.fromAccountId?._id === acc._id || t.fromAccountId === acc._id).map((t, idx) => (
+                                 <tr key={`out-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                                   <td className="py-3 px-3 text-[10px] font-bold text-slate-400 whitespace-nowrap">{formatDate(t.date)}</td>
+                                   <td className="py-3 px-3">
+                                      <div className="font-bold text-slate-700 text-xs">
+                                        {t.customerId ? t.customerId.name : t.supplierId ? t.supplierId.name : t.mazdoorId ? t.mazdoorId.name : t.expenseTypeId ? t.expenseTypeId.name : t.note || t.category || 'Manual Withdrawal'}
+                                      </div>
+                                   </td>
+                                   <td className="py-3 px-3 text-right font-black text-rose-600">Rs. {formatMoney(t.amount)}</td>
+                                 </tr>
+                               ))}
+                               {(!data.periodTransactions || data.periodTransactions.filter(t => t.fromAccountId?._id === acc._id || t.fromAccountId === acc._id).length === 0) && (
+                                  <tr><td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">No Debits</td></tr>
+                               )}
+                             </tbody>
+                             <tfoot className="bg-rose-50/30 border-t border-rose-100">
+                               <tr>
+                                 <td colSpan="2" className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500">Total Outflow:</td>
+                                 <td className="py-3 px-3 text-right text-sm font-black text-rose-700">Rs. {formatMoney(acc.totalOut || 0)}</td>
+                               </tr>
+                             </tfoot>
+                           </table>
                         </div>
                      </div>
 
