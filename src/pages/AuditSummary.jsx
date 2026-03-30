@@ -457,19 +457,21 @@ export default function AuditSummary() {
                   </h3>
                 </div>
                 <div className="p-4 space-y-3">
-                  {data.accounts.map((acc, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition-transform hover:scale-[1.01]"
-                    >
-                      <span className="text-sm font-bold text-slate-600">
-                        {acc.name}
-                      </span>
-                      <span className="text-sm font-black text-indigo-700">
-                        Rs. {formatMoney(acc.balance)}
-                      </span>
-                    </div>
-                  ))}
+                  {data.accounts
+                    .filter((acc) => !acc.isDailyKhata && !acc.isMillKhata)
+                    .map((acc, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition-transform hover:scale-[1.01]"
+                      >
+                        <span className="text-sm font-bold text-slate-600">
+                          {acc.name}
+                        </span>
+                        <span className="text-sm font-black text-indigo-700">
+                          Rs. {formatMoney(acc.balance)}
+                        </span>
+                      </div>
+                    ))}
                 </div>
               </div>
 
@@ -1131,6 +1133,7 @@ export default function AuditSummary() {
 
             <div className="grid grid-cols-1 gap-8">
               {data.accounts
+                .filter((acc) => !acc.isDailyKhata && !acc.isMillKhata)
                 .map((acc, i) => (
                   <div
                     key={i}

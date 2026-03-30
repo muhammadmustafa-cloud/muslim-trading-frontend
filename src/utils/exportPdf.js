@@ -1185,7 +1185,9 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   }
 
   // 2. Bank & Cash Audit
-  if (data.accounts && data.accounts.length > 0) {
+  const auditAccounts = (data.accounts || []).filter(a => !a.isDailyKhata && !a.isMillKhata);
+
+  if (auditAccounts && auditAccounts.length > 0) {
     addGroupHeader("1. BANK & CASH ACCOUNTS (TOTAL FUNDS)");
     tableRows.push([
       { content: "Account Name", styles: { fontStyle: "bold" } }, 
@@ -1193,15 +1195,20 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
       { content: "Debit (Balance)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
-    data.accounts.forEach(a => {
+    auditAccounts.forEach(a => {
       const bal = Number(a.balance || 0);
       const isLiability = bal < 0;
+      const creditAmt = isLiability ? Math.abs(bal) : 0;
+      const debitAmt = !isLiability ? bal : 0;
+
       tableRows.push([
         a.name.toUpperCase(),
-        (a.isDailyKhata || a.isMillKhata ? "Main Cash Box" : "Bank/Commercial"),
-        isLiability ? formatMoney(Math.abs(bal)) : "—", // Credit (Aamad) if Liability/OD
-        !isLiability ? formatMoney(bal) : "—" // Debit (Kharch) if Asset
+        "Bank/Commercial",
+        creditAmt > 0 ? formatMoney(creditAmt) : "—", // Credit (Aamad) if Liability/OD
+        debitAmt > 0 ? formatMoney(debitAmt) : "—" // Debit (Kharch) if Asset
       ]);
+      totalAuditCredit += creditAmt;
+      totalAuditDebit += debitAmt;
     });
   }
 
