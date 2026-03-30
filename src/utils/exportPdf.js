@@ -1155,7 +1155,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   }
   
   const isPeriodAudit = !!(filters.dateFrom || filters.dateTo);
-  const reportTitle = isPeriodAudit ? "Professional Audit Scenario (Submail)" : "Master Balance Sheet (Audit Report)";
+  const reportTitle = isPeriodAudit ? "Professional Submail Audit (Periodic)" : "Master Audit Balance Sheet";
 
   addReportHeader(doc, reportTitle, subtitleLines);
 
@@ -1167,6 +1167,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
   };
 
+  // 1. Rolling Pool / Opening
   if (data.openingBalance !== undefined) {
     tableRows.push([
       { content: "CURRENT ROLLING POOL (PICHLI WASOOLI)", colSpan: 2, styles: { fontStyle: "bold", fillColor: [252, 211, 77], textColor: [0, 0, 0] } },
@@ -1174,74 +1175,39 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     ]);
   }
 
-
-  // 1. Master Transaction Audit Log (Register Style)
-  const masterEntries = data.periodTransactions || [];
-  if (masterEntries.length > 0) {
-    addGroupHeader("1. MASTER TRANSACTION AUDIT (DAILY RECORD)");
-    tableRows.push([
-      { content: "Date", styles: { fontStyle: "bold" } }, 
-      { content: "Description / Participants", styles: { fontStyle: "bold" } }, 
-      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Kharch)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
-    ]);
-    masterEntries.forEach(t => {
-      const isOut = !!t.fromAccountId;
-      const isIn = !!t.toAccountId;
-      const amount = Number(t.amount) || 0;
-      const participant = t.customerId?.name || t.supplierId?.name || t.mazdoorId?.name || t.expenseTypeId?.name || t.taxTypeId?.name || "Manual Account";
-      const description = t.note || t.category || (t.type === 'transfer' ? 'Internal Transfer' : 'Entry');
-      
-      tableRows.push([
-        formatDate(t.date),
-        participant.toUpperCase() + (description ? `\n(${description})` : ""),
-        isIn ? formatMoney(amount) : "—",
-        isOut ? formatMoney(amount) : "—"
-      ]);
-
-      if (isIn) totalAuditCredit += amount;
-      if (isOut) totalAuditDebit += amount;
-    });
-  }
-
-  // 2. Bank & Cash Accounts
-  const cashAccounts = data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata);
-  if (cashAccounts.length > 0) {
-    addGroupHeader("2. BANK & CASH ACCOUNTS (PERIODIC AUDIT)");
+  // 2. Bank & Cash Audit
+  if (data.accounts && data.accounts.length > 0) {
+    addGroupHeader("1. BANK & CASH ACCOUNTS (TOTAL FUNDS)");
     tableRows.push([
       { content: "Account Name", styles: { fontStyle: "bold" } }, 
-      { content: "Description", styles: { fontStyle: "bold" } },
-      { content: "Total In (Credit)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Total Out (Debit)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
+      { content: "Account Type", styles: { fontStyle: "bold" } },
+      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Balance)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
-    cashAccounts.forEach(a => {
-      const tin = Number(a.totalIn || 0);
-      const tout = Number(a.totalOut || 0);
+    data.accounts.forEach(a => {
+      const bal = Number(a.balance || 0);
       tableRows.push([
         a.name.toUpperCase(),
-        "CLOSING BALANCE: " + formatMoney(a.balance),
-        formatMoney(tin),
-        formatMoney(tout)
+        (a.isDailyKhata || a.isMillKhata ? "Main Cash Box" : "Bank/Commercial"),
+        "—", // Accounts are assets, we show them as balance on debit/kharch side in this summary logic
+        formatMoney(bal)
       ]);
-      // Note: We don't add account periodic totals to grand total if master log is already included 
-      // as it would double count. But if user wants a "total sumup of tables", we include them.
-      // Usually, Register Audit sums ALL columns.
-      totalAuditCredit += tin;
-      totalAuditDebit += tout;
+      // We don't add to movement totals unless we want to show daily IN/OUT. 
+      // The user wants "remaining amount" (balance).
     });
   }
 
   // Divider
   tableRows.push([{ content: "", colSpan: 4, styles: { cellPadding: 1 } }]);
 
-  // 3. Customers
+  // 3. Customers Audit
   if (data.customers.length > 0) {
-    addGroupHeader("3. CUSTOMER BALANCES (RECEIVABLES)");
+    addGroupHeader("2. CUSTOMER AUDIT (RECEIVABLES)");
     tableRows.push([
-      "Customer Name", 
-      "Closing Balance Type",
-      { content: "Credit (Aamad/Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Kharch/Due)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
+      { content: "Customer Name", styles: { fontStyle: "bold" } }, 
+      { content: "Net Standing", styles: { fontStyle: "bold" } },
+      { content: "Credit (Received)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Receivable)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     data.customers.forEach(c => {
       const bal = Number(c.balance) || 0;
@@ -1250,24 +1216,23 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
       tableRows.push([
         c.name.toUpperCase(),
-        (bal >= 0 ? "Debit (Receivable)" : "Credit (Paid/Advance)"),
+        (bal >= 0 ? "Debit (Dr)" : "Credit (Cr)"),
         creditAmt > 0 ? formatMoney(creditAmt) : "—",
         debitAmt > 0 ? formatMoney(debitAmt) : "—"
       ]);
-
       totalAuditCredit += creditAmt;
       totalAuditDebit += debitAmt;
     });
   }
 
-  // 4. Suppliers
+  // 3. Suppliers Audit
   if (data.suppliers.length > 0) {
-    addGroupHeader("4. SUPPLIER BALANCES (PAYABLES)");
+    addGroupHeader("2. SUPPLIER AUDIT (PAYABLES)");
     tableRows.push([
-      "Supplier Name", 
-      "Closing Balance Type",
-      { content: "Credit (Bill/Due)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Kharch/Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
+      { content: "Supplier Name", styles: { fontStyle: "bold" } }, 
+      { content: "Net Standing", styles: { fontStyle: "bold" } },
+      { content: "Credit (Payable)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     data.suppliers.forEach(s => {
       const bal = Number(s.balance) || 0;
@@ -1276,52 +1241,51 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
       tableRows.push([
         s.name.toUpperCase(),
-        (bal <= 0 ? "Credit (Payable)" : "Debit (Paid Over)"),
+        (bal <= 0 ? "Credit (Cr)" : "Debit (Dr)"),
         creditAmt > 0 ? formatMoney(creditAmt) : "—",
         debitAmt > 0 ? formatMoney(debitAmt) : "—"
       ]);
-
       totalAuditCredit += creditAmt;
       totalAuditDebit += debitAmt;
     });
   }
 
-  // 5. Mazdoor
-  if (data.mazdoors.length > 0) {
-    addGroupHeader("5. MAZDOOR OUTSTANDING WAGES");
+  // 4. Mazdoor Audit
+  if (data.mazdoors && data.mazdoors.length > 0) {
+    addGroupHeader("3. MAZDOOR AUDIT (OUTSTANDING WAGES)");
     tableRows.push([
-       "Worker Name", "Classification", 
-       { content: "Credit (Work)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
+       { content: "Worker Name", styles: { fontStyle: "bold" } }, 
+       { content: "Classification", styles: { fontStyle: "bold" } }, 
+       { content: "Credit (Earned)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
        { content: "Debit (Paid)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
     ]);
     data.mazdoors.forEach(m => {
       const bal = Number(m.balance) || 0;
-      const creditAmt = bal > 0 ? Math.abs(bal) : 0;
-      const debitAmt = bal < 0 ? Math.abs(bal) : 0;
+      const earned = Number(m.earned) || 0;
+      const paid = Number(m.paid) || 0;
       
       tableRows.push([
         m.name.toUpperCase(),
-        "WAGE BALANCE",
-        creditAmt > 0 ? formatMoney(creditAmt) : "—",
-        debitAmt > 0 ? formatMoney(debitAmt) : "—",
+        (bal >= 0 ? "Net Payable" : "Advance Paid"),
+        formatMoney(earned),
+        formatMoney(paid),
       ]);
-
-      totalAuditCredit += creditAmt;
-      totalAuditDebit += debitAmt;
+      totalAuditCredit += earned;
+      totalAuditDebit += paid;
     });
   }
 
-  // 6. Valuation & Expenses (Debit Side)
-  addGroupHeader("6. ASSET VALUATION & EXPENSES (KHARCH)");
+  // 5. Assets & Outflows
+  addGroupHeader("4. ASSETS & EXPENDITURE AUDIT");
   const stockVal = Number(data.totalStockValue) || 0;
   const machineVal = Number(data.totalMachineryValue) || 0;
   const totalExp = data.expenses.reduce((s,e) => s + Number(e.amount), 0);
   const totalTax = data.taxes.reduce((s,t) => s + Number(t.amount), 0);
 
-  tableRows.push(["Current Inventory Value", "ASSET BALANCE", "—", formatMoney(stockVal)]);
-  tableRows.push(["Machinery & Equipment", "FIXED ASSET", "—", formatMoney(machineVal)]);
-  tableRows.push(["Total Operating Expenses", "CASH OUTFLOW", "—", formatMoney(totalExp)]);
-  tableRows.push(["Total Period Taxes", "CASH OUTFLOW", "—", formatMoney(totalTax)]);
+  tableRows.push(["Godam Stock Valuation", "Inventory Asset", "—", formatMoney(stockVal)]);
+  tableRows.push(["Machinery & Equipment", "Fixed Asset", "—", formatMoney(machineVal)]);
+  tableRows.push(["Total Period Expenses", "Operational Outflow", "—", formatMoney(totalExp)]);
+  tableRows.push(["Total Period Taxes", "Government Outflow", "—", formatMoney(totalTax)]);
 
   totalAuditDebit += (stockVal + machineVal + totalExp + totalTax);
 
@@ -1332,16 +1296,16 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
   autoTable(doc, {
     startY: 40,
-    head: [["ACCOUNT CLASSIFICATION", "DETAIL / STATUS", "CREDIT (AAMAD)", "DEBIT (KHARCH)"]],
+    head: [["SUBMAIL CLASSIFICATION", "DETAIL / CATEGORY", "CREDIT (AAMAD)", "DEBIT (KHARCH)"]],
     body: tableRows,
     foot: [
       [
-        { content: "TOTAL AUDIT MOVEMENT (SUMUP)", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
+        { content: "TOTAL AUDIT MOVEMENT (T-ACCOUNT SUM)", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
         { content: "Rs. " + formatMoney(totalAuditCredit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
         { content: "Rs. " + formatMoney(totalAuditDebit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240], textColor: [0, 0, 0] } }
       ],
       [
-        { content: "NET ASSET POSITION (TOTAL EQUITY)", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } },
+        { content: "CONSOLIDATED NET EQUITY (BUSINESS VALUE)", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } },
         { content: "Rs. " + formatMoney(netPosition_Final), colSpan: 2, styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 11 } }
       ]
     ],
@@ -1356,5 +1320,5 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   });
 
   addPageNumbers(doc);
-  doc.save(`Audit_Summary_${new Date().toISOString().slice(0,10)}.pdf`);
+  doc.save(`Professional_Audit_${new Date().toISOString().slice(0,10)}.pdf`);
 }

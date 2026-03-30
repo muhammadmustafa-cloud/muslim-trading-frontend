@@ -347,53 +347,54 @@ export default function AuditSummary() {
         {activeTab === "overview" && data && (
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Quick Gross Card */}
+            {/* Quick Gross Card */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="card bg-emerald-600 text-white p-6 shadow-xl shadow-emerald-100 border-none relative overflow-hidden">
+              <div className="card bg-emerald-700 text-white p-6 shadow-xl shadow-emerald-100 border-none relative overflow-hidden">
                 <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">
-                  Total Period Credits (Aamad)
+                  Total Business Receivables (Lene Hain)
                 </p>
                 <p className="text-3xl font-black">
-                  Rs. {formatMoney(masterTotals.in)}
+                  Rs. {formatMoney(data.totalReceivables)}
                 </p>
                 <FaArrowUp className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10" />
               </div>
-              <div className="card bg-rose-600 text-white p-6 shadow-xl shadow-rose-100 border-none relative overflow-hidden">
+              <div className="card bg-rose-700 text-white p-6 shadow-xl shadow-rose-100 border-none relative overflow-hidden">
                 <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">
-                  Total Period Debits (Kharch)
+                  Total Business Payables (Dene Hain)
                 </p>
                 <p className="text-3xl font-black">
-                  Rs. {formatMoney(masterTotals.out)}
+                  Rs. {formatMoney(data.totalPayables)}
                 </p>
                 <FaArrowDown className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10" />
               </div>
             </div>
 
             {/* Net Position Card */}
-            <div className="card bg-gradient-to-br from-indigo-700 via-blue-700 to-indigo-800 text-white p-8 relative overflow-hidden shadow-xl shadow-indigo-100 border-none">
+            <div className="card bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-8 relative overflow-hidden shadow-2xl border-none">
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div className="space-y-2">
-                  <p className="text-indigo-100 font-bold uppercase tracking-[0.2em] text-[10px] opacity-80">
-                    Estimated Net Position (Assets - Liabilities)
+                  <p className="text-indigo-200 font-bold uppercase tracking-[0.2em] text-[10px] opacity-80 italic">
+                    Certified Net Standing (Submail Analysis)
                   </p>
-                  <h2 className="text-5xl font-black tracking-tight leading-none">
+                  <h2 className="text-5xl font-black tracking-tight leading-none text-white">
                     Rs. {formatMoney(getNetPosition())}
                   </h2>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold border border-white/10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full text-[10px] font-bold border border-white/10 uppercase tracking-widest text-indigo-300">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    LIVE AUDIT DATA AS OF {formatDate(filters.dateTo)}
+                    Audit Logic: Assets - Business Liabilities
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
-                    <p className="text-[10px] font-black text-amber-100/80 uppercase mb-1">
-                      Pichli Wasooli (Opening)
+                  <div className="bg-white/5 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
+                    <p className="text-[10px] font-black text-indigo-200/50 uppercase mb-1">
+                      Pichli Wasooli
                     </p>
                     <p className="text-xl font-black text-amber-400">
                       Rs. {formatMoney(data.openingBalance || 0)}
                     </p>
                   </div>
-                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
-                    <p className="text-[10px] font-black text-indigo-100/60 uppercase mb-1">
+                  <div className="bg-white/5 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
+                    <p className="text-[10px] font-black text-indigo-200/50 uppercase mb-1">
                       Total Assets
                     </p>
                     <p className="text-xl font-black text-emerald-400">
@@ -406,8 +407,8 @@ export default function AuditSummary() {
                       )}
                     </p>
                   </div>
-                  <div className="bg-white/10 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
-                    <p className="text-[10px] font-black text-rose-100/60 uppercase mb-1">
+                  <div className="bg-white/5 p-5 rounded-[20px] backdrop-blur-md border border-white/10 flex flex-col justify-center min-w-[140px]">
+                    <p className="text-[10px] font-black text-indigo-200/50 uppercase mb-1">
                       Total Payables
                     </p>
                     <p className="text-xl font-black text-rose-400">
@@ -428,19 +429,19 @@ export default function AuditSummary() {
                 icon={FaWallet}
               />
               <SummaryCard
-                label="Receivables"
+                label="Total Lene Hain"
                 amount={data.totalReceivables}
                 color="emerald"
                 icon={FaUsers}
               />
               <SummaryCard
-                label="Stock Value"
+                label="Godam Stock value"
                 amount={data.totalStockValue}
                 color="orange"
                 icon={FaBoxes}
               />
               <SummaryCard
-                label="Machinery"
+                label="Machinery Value"
                 amount={data.totalMachineryValue}
                 color="slate"
                 icon={FaTools}
@@ -527,14 +528,15 @@ export default function AuditSummary() {
                       Customer Name
                     </th>
                     {/* Swapped Columns */}
+                    {/* Traditional Mill Perspective for Customers: Debit (Kharch) = Receivable, Credit (Aamad) = Received */}
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">
-                      Credit (Payments)
+                      Credit (Aamad / Received)
                     </th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">
-                      Debit (Due)
+                      Debit (Kharch / Receivable)
                     </th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
-                      Closing Balance
+                      Net Balance
                     </th>
                   </tr>
                 </thead>
@@ -550,18 +552,18 @@ export default function AuditSummary() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {c.balance > 0 ? (
+                        {c.balance < 0 ? (
                           <span className="text-sm font-black text-emerald-600">
-                            Rs. {formatMoney(c.balance)}
+                            Rs. {formatMoney(Math.abs(c.balance))}
                           </span>
                         ) : (
                           <span className="text-slate-200">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {c.balance < 0 ? (
+                        {c.balance > 0 ? (
                           <span className="text-sm font-black text-red-600">
-                            Rs. {formatMoney(Math.abs(c.balance))}
+                            Rs. {formatMoney(c.balance)}
                           </span>
                         ) : (
                           <span className="text-slate-200">—</span>
@@ -580,20 +582,20 @@ export default function AuditSummary() {
                 </tbody>
                 <tfoot className="bg-slate-900 text-white font-black uppercase tracking-tighter">
                   <tr>
-                    <td className="px-6 py-5 text-xs">Category Totals</td>
+                    <td className="px-6 py-5 text-xs">Customer Pool Totals</td>
                     <td className="px-6 py-5 text-right text-base text-emerald-400">
                       Rs.{" "}
                       {formatMoney(
                         data.customers
-                          .filter((c) => c.balance > 0)
-                          .reduce((s, c) => s + Number(c.balance), 0),
+                          .filter((c) => c.balance < 0)
+                          .reduce((s, c) => s + Math.abs(Number(c.balance)), 0),
                       )}
                     </td>
                     <td className="px-6 py-5 text-right text-base text-rose-400">
                       Rs.{" "}
                       {formatMoney(
                         data.customers
-                          .filter((c) => c.balance < 0)
+                          .filter((c) => c.balance > 0)
                           .reduce((s, c) => s + Math.abs(Number(c.balance)), 0),
                       )}
                     </td>
@@ -618,17 +620,18 @@ export default function AuditSummary() {
               <table className="w-full border-collapse">
                 <thead className="bg-slate-50">
                   <tr>
+                    {/* Traditional Mill Perspective for Suppliers: Credit (Aamad) = Our Debt/Payable, Debit (Kharch) = Our Payments/Advance */}
                     <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
                       Supplier Name
                     </th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">
-                      Credit (Aamad)
+                      Credit (Aamad / Payable)
                     </th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">
-                      Debit (Payments)
+                      Debit (Kharch / Paid)
                     </th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
-                      Closing Payable
+                      Net Payable
                     </th>
                   </tr>
                 </thead>
@@ -642,14 +645,14 @@ export default function AuditSummary() {
                         {s.name}
                       </td>
                       <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10 text-sm">
-                        {s.balance > 0 ? (
+                        {s.balance < 0 ? (
                           `Rs. ${formatMoney(Math.abs(s.balance))}`
                         ) : (
                           <span className="text-slate-200">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10 text-sm">
-                        {s.balance < 0 ? (
+                        {s.balance > 0 ? (
                           `Rs. ${formatMoney(Math.abs(s.balance))}`
                         ) : (
                           <span className="text-slate-200">—</span>
@@ -675,7 +678,7 @@ export default function AuditSummary() {
                       Rs.{" "}
                       {formatMoney(
                         data.suppliers
-                          .filter((s) => s.balance > 0)
+                          .filter((s) => s.balance < 0)
                           .reduce(
                             (sum, s) => sum + Math.abs(Number(s.balance)),
                             0,
@@ -686,7 +689,7 @@ export default function AuditSummary() {
                       Rs.{" "}
                       {formatMoney(
                         data.suppliers
-                          .filter((s) => s.balance < 0)
+                          .filter((s) => s.balance > 0)
                           .reduce(
                             (sum, s) => sum + Math.abs(Number(s.balance)),
                             0,
@@ -796,26 +799,42 @@ export default function AuditSummary() {
                     <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
                       Mazdoor Name
                     </th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-emerald-50/50">
+                      Credit (Earned Wages)
+                    </th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b bg-rose-50/50">
+                      Debit (Paid Wages)
+                    </th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
-                      Current Owed (Rs)
+                      Net Balance (Owed)
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-50">
                   {filteredItems(data.mazdoors).map((m, i) => (
-                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={i}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="text-sm font-bold text-slate-700 uppercase">
                           {m.name}
                         </div>
+                        <div className="text-[10px] text-slate-400 italic">{m.contact}</div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10">
+                        Rs. {formatMoney(m.earned)}
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10">
+                        Rs. {formatMoney(m.paid)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span
-                          className={`text-sm font-black ${m.balance > 0 ? "text-emerald-600" : "text-rose-600"}`}
+                          className={`text-sm font-black ${m.balance >= 0 ? "text-amber-600" : "text-emerald-600"}`}
                         >
                           Rs. {formatMoney(Math.abs(Number(m.balance)))}
                           <span className="text-[10px] ml-1 uppercase">
-                            {m.balance > 0 ? "Cr" : "Dr"}
+                            {m.balance >= 0 ? "Cr (Dene)" : "Dr (Advance)"}
                           </span>
                         </span>
                       </td>
@@ -825,15 +844,17 @@ export default function AuditSummary() {
                 <tfoot className="bg-slate-900 text-white font-black">
                   <tr>
                     <td className="px-6 py-5 text-sm uppercase tracking-widest">
-                      Total Outstanding Owed
+                      Mazdoor Audit Pool Totals
                     </td>
-                    <td className="px-6 py-5 text-right text-lg text-rose-400">
-                      Rs.{" "}
-                      {formatMoney(
-                        data.mazdoors
-                          .filter((m) => m.balance > 0)
-                          .reduce((s, m) => s + Number(m.balance), 0),
-                      )}
+                    <td className="px-6 py-5 text-right text-base text-emerald-400">
+                      Rs. {formatMoney(data.mazdoors.reduce((s, m) => s + Number(m.earned), 0))}
+                    </td>
+                    <td className="px-6 py-5 text-right text-base text-rose-400">
+                      Rs. {formatMoney(data.mazdoors.reduce((s, m) => s + Number(m.paid), 0))}
+                    </td>
+                    <td className="px-6 py-5 text-right text-lg text-amber-500">
+                      Rs. {formatMoney(data.totalPayables - (data.totalReceivables || 0))}
+                      <span className="text-xs ml-1 opacity-60">NET</span>
                     </td>
                   </tr>
                 </tfoot>
@@ -1103,14 +1124,13 @@ export default function AuditSummary() {
                 Accounts Audit{" "}
                 <span className="text-indigo-600">(Aamne-Samne)</span>
               </h1>
-              <p className="text-[10px] text-slate-400 font-black uppercase italic">
-                Excluding Mill/Daily Accounts as requested
+              <p className="text-[10px] text-indigo-400 font-black uppercase italic">
+                Including All Active Ledgers (Cash Box & Bank)
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-8">
               {data.accounts
-                .filter((acc) => !acc.isDailyKhata && !acc.isMillKhata)
                 .map((acc, i) => (
                   <div
                     key={i}
@@ -1143,22 +1163,22 @@ export default function AuditSummary() {
 
                     {/* Aamne-Samne T-Account View */}
                     <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 bg-white">
-                      {/* LEFT: DEBIT (INFLOW) */}
+                      {/* LEFT: CREDIT (INFLOW / AAMAD) */}
                       <div className="flex-1 w-full md:w-1/2">
                         <div className="bg-emerald-50/50 py-3 px-4 flex items-center justify-between border-b border-emerald-100">
                           <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2 italic">
-                            <FaArrowUp className="text-emerald-500" /> Debit
-                            (Aamne / Inflow)
+                            <FaArrowUp className="text-emerald-500" /> Credit
+                            (Left / Aamad / Inflow)
                           </h4>
                           <div className="bg-emerald-100 px-3 py-1 rounded-full text-[10px] font-black text-emerald-700 uppercase">
-                            Received
+                            Receiving
                           </div>
                         </div>
                         <table className="w-full text-sm">
                           <thead className="bg-slate-50 text-slate-400 uppercase text-[9px] font-black text-left">
                             <tr className="border-b border-slate-100">
                               <th className="py-2 px-3">Date</th>
-                              <th className="py-2 px-3">Description / Party</th>
+                              <th className="py-2 px-3">Particulars</th>
                               <th className="py-2 px-3 text-right">Amount</th>
                             </tr>
                           </thead>
@@ -1206,7 +1226,7 @@ export default function AuditSummary() {
                                   colSpan="3"
                                   className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled"
                                 >
-                                  No Debits Recorded
+                                  No Credits Recorded
                                 </td>
                               </tr>
                             )}
@@ -1217,7 +1237,7 @@ export default function AuditSummary() {
                                 colSpan="2"
                                 className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500"
                               >
-                                Total Inflow (Debit):
+                                Total Aamad (Credit):
                               </td>
                               <td className="py-3 px-3 text-right text-sm font-black text-emerald-700">
                                 Rs. {formatMoney(acc.totalIn || 0)}
@@ -1227,22 +1247,22 @@ export default function AuditSummary() {
                         </table>
                       </div>
 
-                      {/* RIGHT: CREDIT (OUTFLOW) */}
+                      {/* RIGHT: DEBIT (OUTFLOW / KHARCH) */}
                       <div className="flex-1 w-full md:w-1/2">
                         <div className="bg-rose-50/50 py-3 px-4 flex items-center justify-between border-b border-rose-100">
                           <h4 className="text-xs font-black text-rose-800 uppercase tracking-widest flex items-center gap-2 italic">
-                            <FaArrowDown className="text-rose-500" /> Credit
-                            (Kharch / Outflow)
+                            <FaArrowDown className="text-rose-500" /> Debit
+                            (Right / Kharch / Outflow)
                           </h4>
                           <div className="bg-rose-100 px-3 py-1 rounded-full text-[10px] font-black text-rose-700 uppercase">
-                            Paid Out
+                            Payments
                           </div>
                         </div>
                         <table className="w-full text-sm">
                           <thead className="bg-slate-50 text-slate-400 uppercase text-[9px] font-black text-left">
                             <tr className="border-b border-slate-100">
                               <th className="py-2 px-3">Date</th>
-                              <th className="py-2 px-3">Description / Party</th>
+                              <th className="py-2 px-3">Particulars</th>
                               <th className="py-2 px-3 text-right">Amount</th>
                             </tr>
                           </thead>
@@ -1262,7 +1282,7 @@ export default function AuditSummary() {
                                     {formatDate(t.date)}
                                   </td>
                                   <td className="py-3 px-3">
-                                    <div className="font-bold text-slate-700 text-xs">
+                                    <div className="font-bold text-slate-700 text-xs text-rose-800">
                                       {t.customerId
                                         ? t.customerId.name
                                         : t.supplierId
@@ -1273,7 +1293,7 @@ export default function AuditSummary() {
                                               ? t.expenseTypeId.name
                                               : t.note ||
                                                 t.category ||
-                                                "Manual Withdrawal"}
+                                                "Manual Outflow"}
                                     </div>
                                   </td>
                                   <td className="py-3 px-3 text-right font-black text-rose-600">
@@ -1292,7 +1312,7 @@ export default function AuditSummary() {
                                   colSpan="3"
                                   className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled"
                                 >
-                                  No Credits Recorded
+                                  No Debits Recorded
                                 </td>
                               </tr>
                             )}
@@ -1303,7 +1323,7 @@ export default function AuditSummary() {
                                 colSpan="2"
                                 className="py-3 px-3 text-right text-[10px] uppercase font-black text-slate-500"
                               >
-                                Total Outflow (Credit):
+                                Total Kharch (Debit):
                               </td>
                               <td className="py-3 px-3 text-right text-sm font-black text-rose-700">
                                 Rs. {formatMoney(acc.totalOut || 0)}
