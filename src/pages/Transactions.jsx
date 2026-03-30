@@ -562,25 +562,22 @@ export default function Transactions() {
                      let col1 = 0; // Left Col (Credit / Aamad)
                      let col2 = 0; // Right Col (Debit / Kharch)
                      
-                     // DEEP LOGIC: Perspective-based column mapping
                      if (filters.accountId) {
-                       // Specific Bank/Cash account view
-                       if (row.fromAccountId?._id === filters.accountId) {
-                         // Money leaving common account (User wants this on Credit/Left)
-                         col1 = row.amount;
-                       } else if (row.toAccountId?._id === filters.accountId) {
-                         // Money entering common account (User wants this on Debit/Right)
-                         col2 = row.amount;
-                       } else {
-                         // Fallback for sales/purchases
-                         if (row.type === "sale") col1 = row.amount;
-                         else col2 = row.amount;
-                       }
-                     } else {
-                       // General View
-                       if (row.type === "deposit" || row.type === "sale") col1 = row.amount; 
-                       else col2 = row.amount; 
-                     }
+                        // Relative view for Transfer, but Category-based for others (PDF Logic)
+                        if (row.type === "transfer") {
+                          if (row.toAccountId?._id === filters.accountId) col2 = row.amount; // Receiving = Kharch
+                          else if (row.fromAccountId?._id === filters.accountId) col1 = row.amount; // Giving = Aamad
+                          else col2 = row.amount;
+                        } else {
+                          // Fixed Categories for specific account view (Matches PDF)
+                          if (row.type === "withdraw" || row.type === "sale") col1 = row.amount;
+                          else col2 = row.amount;
+                        }
+                      } else {
+                        // General View
+                        if (row.type === "deposit" || row.type === "sale") col1 = row.amount; 
+                        else col2 = row.amount; 
+                      }
 
                      const participant = getParticipant(row);
                      const reference = getReference(row);
