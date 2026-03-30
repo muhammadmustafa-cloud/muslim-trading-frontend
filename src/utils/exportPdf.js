@@ -1160,6 +1160,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   addReportHeader(doc, reportTitle, subtitleLines);
 
   const tableRows = [];
+  let totalAuditCredit = 0;
+  let totalAuditDebit = 0;
 
   const addGroupHeader = (title) => {
     tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
