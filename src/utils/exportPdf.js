@@ -1176,12 +1176,22 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
   };
 
-  // 1. Rolling Pool / Opening
-  if (data.openingBalance !== undefined) {
+  // 1. Previous Balance (Opening)
+  const opBal = Number(data.openingBalance || 0);
+  if (opBal !== 0) {
+    addGroupHeader("0. PREVIOUS BALANCE (OPENING)");
+    const isSurplus = opBal > 0;
+    const creditAmt = isSurplus ? Math.abs(opBal) : 0;
+    const debitAmt = !isSurplus ? Math.abs(opBal) : 0;
+
     tableRows.push([
-      { content: "CURRENT ROLLING POOL (PICHLI WASOOLI)", colSpan: 2, styles: { fontStyle: "bold", fillColor: [252, 211, 77], textColor: [0, 0, 0] } },
-      { content: "Rs. " + formatMoney(data.openingBalance || 0), colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [252, 211, 77], textColor: [0, 0, 0] } }
+      "PREVIOUS BALANCE (BAQAYA)",
+      (isSurplus ? "Cash Surplus Forward" : "Opening Deficit/Udhaar"),
+      creditAmt > 0 ? formatMoney(creditAmt) : "—", 
+      debitAmt > 0 ? formatMoney(debitAmt) : "—"
     ]);
+    totalAuditCredit += creditAmt;
+    totalAuditDebit += debitAmt;
   }
 
   // 2. Bank & Cash Audit

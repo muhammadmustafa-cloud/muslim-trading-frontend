@@ -457,6 +457,17 @@ export default function AuditSummary() {
                   </h3>
                 </div>
                 <div className="p-4 space-y-3">
+                  {/* Previous Balance (Opening) */}
+                  {Number(data.openingBalance) !== 0 && (
+                    <div className="flex items-center justify-between p-3 bg-indigo-50/50 rounded-xl border border-dashed border-indigo-200">
+                      <span className="text-sm font-black text-indigo-800 uppercase italic tracking-tight">
+                        Previous Balance (Baqaya)
+                      </span>
+                      <span className={`text-sm font-black ${Number(data.openingBalance) > 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                        Rs. {formatMoney(data.openingBalance)}
+                      </span>
+                    </div>
+                  )}
                   {data.accounts
                     .filter((acc) => !acc.isDailyKhata && !acc.isMillKhata)
                     .map((acc, i) => (
