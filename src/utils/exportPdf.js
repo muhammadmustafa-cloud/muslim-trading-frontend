@@ -1195,14 +1195,13 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     ]);
     data.accounts.forEach(a => {
       const bal = Number(a.balance || 0);
+      const isLiability = bal < 0;
       tableRows.push([
         a.name.toUpperCase(),
         (a.isDailyKhata || a.isMillKhata ? "Main Cash Box" : "Bank/Commercial"),
-        "—", // Accounts are assets, we show them as balance on debit/kharch side in this summary logic
-        formatMoney(bal)
+        isLiability ? formatMoney(Math.abs(bal)) : "—", // Credit (Aamad) if Liability/OD
+        !isLiability ? formatMoney(bal) : "—" // Debit (Kharch) if Asset
       ]);
-      // We don't add to movement totals unless we want to show daily IN/OUT. 
-      // The user wants "remaining amount" (balance).
     });
   }
 
@@ -1285,17 +1284,47 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   }
 
   // 5. Assets & Outflows
-  addGroupHeader("4. ASSETS & EXPENDITURE AUDIT");
+  addGroupHeader("4. ASSETS & EXPENDITURE AUDIT (DETAILED BREAKDOWN)");
   const stockVal = Number(data.totalStockValue) || 0;
-  const machineVal = Number(data.totalMachineryValue) || 0;
-  const totalExp = data.expenses.reduce((s,e) => s + Number(e.amount), 0);
-  const totalTax = data.taxes.reduce((s,t) => s + Number(t.amount), 0);
+  
+  // Stock
+  tableRows.push(["GODAM STOCK VALUATION", "Inventory Asset", "—", formatMoney(stockVal)]);
 
-  tableRows.push(["Godam Stock Valuation", "Inventory Asset", "—", formatMoney(stockVal)]);
-  tableRows.push(["Machinery & Equipment", "Fixed Asset", "—", formatMoney(machineVal)]);
-  tableRows.push(["Total Period Expenses", "Operational Outflow", "—", formatMoney(totalExp)]);
-  tableRows.push(["Total Period Taxes", "Government Outflow", "—", formatMoney(totalTax)]);
+  // Detailed Machinery
+  if (data.machinery && data.machinery.length > 0) {
+    data.machinery.forEach(m => {
+      tableRows.push([
+        (m.machineryItemId?.name || "Machinery").toUpperCase(),
+        "Fixed Asset Purchase",
+        "—",
+        formatMoney(m.amount)
+      ]);
+    });
+  }
 
+  // Detailed Expenses (Grouped by Head)
+  const expenseGroups = {};
+  data.expenses.forEach(e => {
+    const name = e.expenseTypeId?.name || "General Expense";
+    expenseGroups[name] = (expenseGroups[name] || 0) + Number(e.amount);
+  });
+  Object.entries(expenseGroups).forEach(([name, amt]) => {
+    tableRows.push([name.toUpperCase(), "Operational Expense", "—", formatMoney(amt)]);
+  });
+
+  // Detailed Taxes (Grouped by Head)
+  const taxGroups = {};
+  data.taxes.forEach(t => {
+    const name = t.taxTypeId?.name || "General Tax";
+    taxGroups[name] = (taxGroups[name] || 0) + Number(t.amount);
+  });
+  Object.entries(taxGroups).forEach(([name, amt]) => {
+    tableRows.push([name.toUpperCase(), "Government Tax", "—", formatMoney(amt)]);
+  });
+
+  const machineVal = data.machinery.reduce((s, m) => s + Number(m.amount), 0);
+  const totalExp = data.expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const totalTax = data.taxes.reduce((s, t) => s + Number(t.amount), 0);
   totalAuditDebit += (stockVal + machineVal + totalExp + totalTax);
 
   // Summary Totals
@@ -1312,10 +1341,6 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
         { content: "TOTAL AUDIT MOVEMENT (T-ACCOUNT SUM)", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
         { content: "Rs. " + formatMoney(totalAuditCredit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
         { content: "Rs. " + formatMoney(totalAuditDebit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240], textColor: [0, 0, 0] } }
-      ],
-      [
-        { content: "CONSOLIDATED NET EQUITY (BUSINESS VALUE)", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } },
-        { content: "Rs. " + formatMoney(netPosition_Final), colSpan: 2, styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 11 } }
       ]
     ],
     ...tableTheme,
