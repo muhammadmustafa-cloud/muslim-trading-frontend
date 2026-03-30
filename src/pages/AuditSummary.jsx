@@ -519,6 +519,65 @@ export default function AuditSummary() {
                   </div>
                 </div>
               </div>
+
+              {/* Item Trading Audit Section */}
+              <div className="card p-0 overflow-hidden border-2 border-emerald-100 shadow-xl mt-8">
+                <div className="px-6 py-4 bg-emerald-600 text-white flex items-center justify-between">
+                  <h3 className="text-sm font-black uppercase tracking-widest italic">
+                    Item Trading Audit (Turnover)
+                  </h3>
+                  <span className="text-[10px] font-black uppercase opacity-75">
+                    Stock Purchases & Sales
+                  </span>
+                </div>
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] text-slate-400 font-black uppercase">
+                      <th className="px-6 py-3 text-left">Item Name</th>
+                      <th className="px-6 py-3 text-right bg-emerald-50 text-emerald-700 font-bold tracking-tight">
+                        Credit (Sale Revenue / Aamad)
+                      </th>
+                      <th className="px-6 py-3 text-right bg-rose-50 text-rose-700 font-bold tracking-tight">
+                        Debit (Purchase Spend / Kharch)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {data.items.map((item, i) => {
+                      const sale = Number(item.saleVolume || 0);
+                      const purchase = Number(item.purchaseVolume || 0);
+                      const net = sale - purchase;
+                      const isNetInflow = net >= 0;
+                      
+                      return (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-black text-slate-700 uppercase">
+                              {item.name}
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter italic">
+                              {isNetInflow ? "Net Revenue / Surplus" : "Net Accumulation / Deficit"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm font-black text-emerald-600">
+                             {isNetInflow && net !== 0 ? `Rs. ${formatMoney(net)}` : <span className="text-slate-100">—</span>}
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm font-black text-rose-600">
+                             {!isNetInflow ? `Rs. ${formatMoney(Math.abs(net))}` : <span className="text-slate-100">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {data.items.length === 0 && (
+                      <tr>
+                        <td colSpan="3" className="px-6 py-10 text-center text-slate-400 text-xs italic">
+                           Is period mein koi stock ki kharid-o-farokht nahi hui.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

@@ -1300,8 +1300,35 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 5. Assets & Outflows
-  addGroupHeader("4. ASSETS & EXPENDITURE AUDIT (DETAILED BREAKDOWN)");
+  // 5. Item Trading Audit (Stock Turnover)
+  if (data.items && data.items.length > 0) {
+    addGroupHeader("4. ITEM TRADING AUDIT (STOCK TURNOVER)");
+    tableRows.push([
+      { content: "Item Name", styles: { fontStyle: "bold" } }, 
+      { content: "Classification", styles: { fontStyle: "bold" } }, 
+      { content: "Credit (Sale Revenue)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Purchase Spend)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
+    ]);
+    data.items.forEach(item => {
+      const sale = Number(item.saleVolume || 0);
+      const purchase = Number(item.purchaseVolume || 0);
+      const netValue = sale - purchase;
+      const isNetInflow = netValue >= 0;
+
+      tableRows.push([
+        item.name.toUpperCase(),
+        isNetInflow ? "Net Stock Sale (Revenue)" : "Net Stock Purchase (Investment)",
+        isNetInflow && netValue !== 0 ? formatMoney(netValue) : "—",
+        !isNetInflow ? formatMoney(Math.abs(netValue)) : "—",
+      ]);
+      
+      if (isNetInflow) totalAuditCredit += netValue;
+      else totalAuditDebit += Math.abs(netValue);
+    });
+  }
+
+  // 6. Assets & Outflows
+  addGroupHeader("5. ASSETS & EXPENDITURE AUDIT (DETAILED BREAKDOWN)");
   const stockVal = Number(data.totalStockValue) || 0;
   
   // Stock
