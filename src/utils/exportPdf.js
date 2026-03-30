@@ -1176,205 +1176,180 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   // 1. Master Transaction Audit Log (Register Style)
   const masterEntries = data.periodTransactions || [];
   if (masterEntries.length > 0) {
-    addGroupHeader("1. MASTER TRANSACTION AUDIT (FULL RECORD)");
+    addGroupHeader("1. MASTER TRANSACTION AUDIT (DAILY RECORD)");
     tableRows.push([
       { content: "Date", styles: { fontStyle: "bold" } }, 
       { content: "Description / Participants", styles: { fontStyle: "bold" } }, 
-      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [236, 253, 245] } }, 
+      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
       { content: "Debit (Kharch)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     masterEntries.forEach(t => {
       const isOut = !!t.fromAccountId;
       const isIn = !!t.toAccountId;
+      const amount = Number(t.amount) || 0;
       const participant = t.customerId?.name || t.supplierId?.name || t.mazdoorId?.name || t.expenseTypeId?.name || t.taxTypeId?.name || "Manual Account";
       const description = t.note || t.category || (t.type === 'transfer' ? 'Internal Transfer' : 'Entry');
       
       tableRows.push([
         formatDate(t.date),
-        `${participant.toUpperCase()}\n${description}`,
-        isIn ? formatMoney(t.amount) : "—",
-        isOut ? formatMoney(t.amount) : "—"
+        participant.toUpperCase() + (description ? `\n(${description})` : ""),
+        isIn ? formatMoney(amount) : "—",
+        isOut ? formatMoney(amount) : "—"
       ]);
+
+      if (isIn) totalAuditCredit += amount;
+      if (isOut) totalAuditDebit += amount;
     });
-
-    // Summary Totals for Master Log
-    const totalOut = masterEntries.filter(t => t.fromAccountId).reduce((s,t) => s + Number(t.amount), 0);
-    const totalIn = masterEntries.filter(t => t.toAccountId).reduce((s,t) => s + Number(t.amount), 0);
-
-    tableRows.push([
-      { content: "TOTAL GROSS AUDIT MOVEMENT", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [248, 250, 252] } },
-      { content: "Rs. " + formatMoney(totalIn), styles: { fontStyle: "black", halign: "right", fillColor: [236, 253, 245] } },
-      { content: "Rs. " + formatMoney(totalOut), styles: { fontStyle: "black", halign: "right", fillColor: [254, 242, 242] } }
-    ]);
   }
 
-  // 2. Bank & Cash Accounts (Aamne-Samne Balances)
+  // 2. Bank & Cash Accounts
   const cashAccounts = data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata);
   if (cashAccounts.length > 0) {
-    tableRows.push([{ content: "2. BANK & CASH ACCOUNTS (BALANCES)", colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }]);
+    addGroupHeader("2. BANK & CASH ACCOUNTS (PERIODIC AUDIT)");
     tableRows.push([
       { content: "Account Name", styles: { fontStyle: "bold" } }, 
-      { content: "Total In (Aamad)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Total Out (Kharch)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
+      { content: "Description", styles: { fontStyle: "bold" } },
+      { content: "Total In (Credit)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
+      { content: "Total Out (Debit)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     cashAccounts.forEach(a => {
+      const tin = Number(a.totalIn || 0);
+      const tout = Number(a.totalOut || 0);
       tableRows.push([
         a.name.toUpperCase(),
-        formatMoney(Number(a.totalIn || 0)),
-        formatMoney(Number(a.totalOut || 0)),
-        formatMoney(Number(a.balance || 0))
+        "CLOSING BALANCE: " + formatMoney(a.balance),
+        formatMoney(tin),
+        formatMoney(tout)
       ]);
+      // Note: We don't add account periodic totals to grand total if master log is already included 
+      // as it would double count. But if user wants a "total sumup of tables", we include them.
+      // Usually, Register Audit sums ALL columns.
+      totalAuditCredit += tin;
+      totalAuditDebit += tout;
     });
   }
 
   // Divider
   tableRows.push([{ content: "", colSpan: 4, styles: { cellPadding: 1 } }]);
 
-  // 2. Customers
+  // 3. Customers
   if (data.customers.length > 0) {
-    addGroupHeader("2. CUSTOMER BALANCES (RECEIVABLES)");
+    addGroupHeader("3. CUSTOMER BALANCES (RECEIVABLES)");
     tableRows.push([
       "Customer Name", 
-      { content: "Credit (Inflow/Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Debit (Outflow/Due)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
+      "Closing Balance Type",
+      { content: "Credit (Aamad/Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Kharch/Due)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     data.customers.forEach(c => {
+      const bal = Number(c.balance) || 0;
+      const creditAmt = bal < 0 ? Math.abs(bal) : 0;
+      const debitAmt = bal > 0 ? bal : 0;
+
       tableRows.push([
         c.name.toUpperCase(),
-        c.balance < 0 ? formatMoney(Math.abs(c.balance)) : "-",
-        c.balance > 0 ? formatMoney(c.balance) : "-",
-        formatMoney(Math.abs(c.balance)) + (c.balance >= 0 ? " Dr" : " Cr")
+        (bal >= 0 ? "Debit (Receivable)" : "Credit (Paid/Advance)"),
+        creditAmt > 0 ? formatMoney(creditAmt) : "—",
+        debitAmt > 0 ? formatMoney(debitAmt) : "—"
       ]);
+
+      totalAuditCredit += creditAmt;
+      totalAuditDebit += debitAmt;
     });
   }
 
-  // 3. Suppliers
+  // 4. Suppliers
   if (data.suppliers.length > 0) {
-    addGroupHeader("3. SUPPLIER BALANCES (PAYABLES)");
+    addGroupHeader("4. SUPPLIER BALANCES (PAYABLES)");
     tableRows.push([
       "Supplier Name", 
-      { content: "Credit (Bill/Due)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
+      "Closing Balance Type",
+      { content: "Credit (Bill/Due)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Kharch/Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     data.suppliers.forEach(s => {
+      const bal = Number(s.balance) || 0;
+      const creditAmt = bal < 0 ? Math.abs(bal) : 0;
+      const debitAmt = bal > 0 ? bal : 0;
+
       tableRows.push([
         s.name.toUpperCase(),
-        s.balance < 0 ? formatMoney(Math.abs(s.balance)) : "-",
-        s.balance > 0 ? formatMoney(s.balance) : "-",
-        formatMoney(Math.abs(s.balance)) + (s.balance <= 0 ? " Cr" : " Dr")
+        (bal <= 0 ? "Credit (Payable)" : "Debit (Paid Over)"),
+        creditAmt > 0 ? formatMoney(creditAmt) : "—",
+        debitAmt > 0 ? formatMoney(debitAmt) : "—"
       ]);
+
+      totalAuditCredit += creditAmt;
+      totalAuditDebit += debitAmt;
     });
   }
 
-  // 4. Mazdoor
+  // 5. Mazdoor
   if (data.mazdoors.length > 0) {
-    addGroupHeader("4. MAZDOOR OUTSTANDING WAGES");
+    addGroupHeader("5. MAZDOOR OUTSTANDING WAGES");
+    tableRows.push([
+       "Worker Name", "Classification", 
+       { content: "Credit (Work)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
+       { content: "Debit (Paid)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
+    ]);
     data.mazdoors.forEach(m => {
+      const bal = Number(m.balance) || 0;
+      const creditAmt = bal > 0 ? Math.abs(bal) : 0;
+      const debitAmt = bal < 0 ? Math.abs(bal) : 0;
+      
       tableRows.push([
         m.name.toUpperCase(),
-        "-",
-        formatMoney(Math.abs(Number(m.balance))),
-        formatMoney(Math.abs(Number(m.balance))) + (m.balance > 0 ? " Dr" : " Cr"),
+        "WAGE BALANCE",
+        creditAmt > 0 ? formatMoney(creditAmt) : "—",
+        debitAmt > 0 ? formatMoney(debitAmt) : "—",
       ]);
+
+      totalAuditCredit += creditAmt;
+      totalAuditDebit += debitAmt;
     });
   }
 
-  // 5. Items (Trading)
-  if (data.items && data.items.length > 0) {
-    addGroupHeader("5. ITEM-WISE TRADING SCENARIO");
-    tableRows.push([
-      "Item Description", 
-      { content: "Credit (Sales/In)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Debit (Purchase/Out)", styles: { fontStyle: "bold", halign: "right" } }, 
-      "Status"
-    ]);
-    data.items.forEach(i => {
-      tableRows.push([
-        i.name.toUpperCase(),
-        formatMoney(Number(i.saleVolume || 0)),
-        formatMoney(Number(i.purchaseVolume || 0)),
-        Number(i.saleVolume) >= Number(i.purchaseVolume) ? "SURPLUS" : "DEFICIT"
-      ]);
-    });
-  }
-
-  // Valuation
-  addGroupHeader("6. VALUATION & EXPENSES");
-  tableRows.push(["Current Inventory Value", formatMoney(Number(data.totalStockValue)), "-", "ASSET"]);
-  tableRows.push(["Machinery & Equipment", formatMoney(Number(data.totalMachineryValue)), "-", "ASSET"]);
+  // 6. Valuation & Expenses (Debit Side)
+  addGroupHeader("6. ASSET VALUATION & EXPENSES (KHARCH)");
+  const stockVal = Number(data.totalStockValue) || 0;
+  const machineVal = Number(data.totalMachineryValue) || 0;
   const totalExp = data.expenses.reduce((s,e) => s + Number(e.amount), 0);
   const totalTax = data.taxes.reduce((s,t) => s + Number(t.amount), 0);
-  tableRows.push(["Total Operating Expenses", "-", formatMoney(totalExp), "OUTFLOW"]);
-  tableRows.push(["Total Period Taxes", "-", formatMoney(totalTax), "OUTFLOW"]);
 
-  // Calculate Row-based Totals for the Footer
-  let grandCredit = 0;
-  let grandDebit = 0;
+  tableRows.push(["Current Inventory Value", "ASSET BALANCE", "—", formatMoney(stockVal)]);
+  tableRows.push(["Machinery & Equipment", "FIXED ASSET", "—", formatMoney(machineVal)]);
+  tableRows.push(["Total Operating Expenses", "CASH OUTFLOW", "—", formatMoney(totalExp)]);
+  tableRows.push(["Total Period Taxes", "CASH OUTFLOW", "—", formatMoney(totalTax)]);
 
-  // 1. Accounts
-  data.accounts.filter(a => !a.isDailyKhata && !a.isMillKhata).forEach(a => {
-    grandCredit += Number(a.totalIn || 0);
-    grandDebit += Number(a.totalOut || 0);
-  });
-  // 2. Customers
-  data.customers.forEach(c => {
-    if (c.balance < 0) grandCredit += Math.abs(Number(c.balance));
-    else if (c.balance > 0) grandDebit += Number(c.balance);
-  });
-  // 3. Suppliers
-  data.suppliers.forEach(s => {
-    if (s.balance < 0) grandCredit += Math.abs(Number(s.balance));
-    else if (s.balance > 0) grandDebit += Number(s.balance);
-  });
-  // 4. Mazdoor
-  data.mazdoors.forEach(m => {
-    if (m.balance > 0) grandCredit += Number(m.balance); // Work done = Credit for them
-    else if (m.balance < 0) grandDebit += Math.abs(Number(m.balance));
-  });
-  // 5. Assets & Expenses
-  grandDebit += totalExp + totalTax;
-  grandDebit += Number(data.totalStockValue || 0) + Number(data.totalMachineryValue || 0);
+  totalAuditDebit += (stockVal + machineVal + totalExp + totalTax);
 
-  // Calculate Summary Totals
-  const totalReceivables = Number(data.totalReceivables || 0);
-  const totalPayables = Number(data.totalPayables || 0);
-  const totalAssets = Number(data.totalCash || 0) + totalReceivables + Number(data.totalStockValue || 0) + Number(data.totalMachineryValue || 0);
-  const netPosition = totalAssets - totalPayables;
+  // Summary Totals
+  const totalAssets_Final = Number(data.totalCash || 0) + Number(data.totalReceivables || 0) + stockVal + machineVal;
+  const totalPayables_Final = Number(data.totalPayables || 0);
+  const netPosition_Final = totalAssets_Final - totalPayables_Final;
 
   autoTable(doc, {
     startY: 40,
-    head: [["ACCOUNT CLASSIFICATION", "CREDIT (AAMAD)", "DEBIT (KHARCH)", "NET POSITION"]],
+    head: [["ACCOUNT CLASSIFICATION", "DETAIL / STATUS", "CREDIT (AAMAD)", "DEBIT (KHARCH)"]],
     body: tableRows,
     foot: [
       [
-        { content: "TOTAL AUDIT MOVEMENT", styles: { fontStyle: "bold", fillColor: [240, 240, 240] } },
-        { content: "Rs. " + formatMoney(grandCredit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240] } },
-        { content: "Rs. " + formatMoney(grandDebit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240] } },
-        { content: "", styles: { fillColor: [240, 240, 240] } }
+        { content: "TOTAL AUDIT MOVEMENT (SUMUP)", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
+        { content: "Rs. " + formatMoney(totalAuditCredit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
+        { content: "Rs. " + formatMoney(totalAuditDebit), styles: { halign: "right", fontStyle: "bold", fillColor: [240, 240, 240], textColor: [0, 0, 0] } }
       ],
       [
-        { content: "GRAND TOTAL ASSETS", styles: { fontStyle: "bold" } },
-        { content: "Rs. " + formatMoney(totalAssets), colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }
-      ],
-      [
-        { content: "GRAND TOTAL PAYABLES", styles: { fontStyle: "bold" } },
-        { content: "Rs. " + formatMoney(totalPayables), colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242], textColor: [153, 27, 27] } }
-      ],
-      [
-        { content: reportTitle.toUpperCase(), styles: { fontStyle: "bold" } },
-        { content: `Rs. ${formatMoney(netPosition)}`, colSpan: 3, styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 11 } }
+        { content: "NET ASSET POSITION (TOTAL EQUITY)", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } },
+        { content: "Rs. " + formatMoney(netPosition_Final), colSpan: 2, styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 11 } }
       ]
     ],
     ...tableTheme,
-    margin: { left: MARGIN, right: MARGIN, top: 20 },
+    margin: { left: MARGIN, right: MARGIN, top: 25 },
     columnStyles: {
       0: { cellWidth: 70 },
-      1: { cellWidth: 35, halign: "right" },
-      2: { cellWidth: 35, halign: "right" },
-      3: { cellWidth: 40, halign: "right" }
+      1: { cellWidth: 60 },
+      2: { cellWidth: 25, halign: "right" },
+      3: { cellWidth: 25, halign: "right" }
     }
   });
 
