@@ -92,7 +92,11 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   const balStr = summary.openingBalance !== 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0";
   // Always draw on the Left (Credit/Kharch) side as requested
   const xPos = MARGIN + 90; // Left column amount position
-  doc.setTextColor(summary.openingBalance > 0 ? [0, 100, 0] : [200, 0, 0]); // Emerald for surplus, Rose for deficit
+  if (summary.openingBalance > 0) {
+    doc.setTextColor(0, 100, 0); // Emerald for surplus
+  } else {
+    doc.setTextColor(200, 0, 0); // Rose for deficit
+  }
   doc.text(balStr, xPos, y + 5, { align: "right" });
   y += 7;
 
