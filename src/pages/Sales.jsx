@@ -132,7 +132,6 @@ export default function Sales() {
         kgPerKata: "",
         grossWeight: "",
         rate: "",
-        bardanaRate: "",
         bardanaAmount: "",
         mazdori: "",
         totalAmount: "",
@@ -160,7 +159,6 @@ export default function Sales() {
         kgPerKata: "",
         grossWeight: "",
         rate: "",
-        bardanaRate: "",
         bardanaAmount: "",
         mazdori: "",
         totalAmount: "",
@@ -187,7 +185,6 @@ export default function Sales() {
       next.netWeight = String(mainNet);
 
       // 2. Individual Items
-      let grandTotalAmount = 0;
       next.items = next.items.map(item => {
         const k = Number(item.kattay) || 0;
         const kpk = Number(item.kgPerKata) || 0;
@@ -203,22 +200,12 @@ export default function Sales() {
         const lineNet = Math.max(0, lineGross - lineSHCut);
         
         const rate = Number(item.rate) || 0;
-        const bRate = Number(item.bardanaRate) || 0;
+        const bAmt = Number(item.bardanaAmount) || 0;
         const mazdori = Number(item.mazdori) || 0;
 
-        // Auto-calc Bardana Amount
-        let bAmt = Number(item.bardanaAmount) || 0;
-        if (k > 0 && bRate > 0) bAmt = k * bRate;
-        
         // Line Total: (Net / 40) * Rate + Bardana + Mazdori
-        let lineTotal = 0;
-        if (lineNet > 0 && rate > 0) {
-          lineTotal = Math.round((lineNet / 40) * rate) + bAmt + mazdori;
-        } else {
-          lineTotal = (Number(item.totalAmount) || 0) + bAmt + mazdori;
-        }
-
-        grandTotalAmount += lineTotal;
+        // Recalculate from scratch to avoid cumulative errors
+        const lineTotal = Math.round((lineNet / 40) * rate) + bAmt + mazdori;
 
         return {
           ...item,
@@ -267,7 +254,6 @@ export default function Sales() {
         kgPerKata: String(item.kgPerKata || ""),
         grossWeight: String(item.grossWeight || ""),
         rate: String(item.rate || ""),
-        bardanaRate: String(item.bardanaRate || ""),
         bardanaAmount: String(item.bardanaAmount || ""),
         mazdori: String(item.mazdori || ""),
         totalAmount: String(item.totalAmount || ""),
@@ -277,7 +263,6 @@ export default function Sales() {
         kgPerKata: "",
         grossWeight: "",
         rate: "",
-        bardanaRate: "",
         bardanaAmount: "",
         mazdori: "",
         totalAmount: "",
@@ -327,7 +312,6 @@ export default function Sales() {
           kgPerKata: Number(item.kgPerKata) || 0,
           grossWeight: Number(item.grossWeight) || 0,
           rate: Number(item.rate) || 0,
-          bardanaRate: Number(item.bardanaRate) || 0,
           bardanaAmount: Number(item.bardanaAmount) || 0,
           mazdori: Number(item.mazdori) || 0,
           totalAmount: Number(item.totalAmount) || 0,
@@ -499,7 +483,7 @@ export default function Sales() {
                     <th className="px-4 py-3 text-left w-24 bg-amber-50">Total KG</th>
                     <th className="px-4 py-3 text-left w-24 bg-amber-100/50">Total MUN</th>
                     <th className="px-4 py-3 text-left w-32">Rate (MUN)</th>
-                    <th className="px-4 py-3 text-left w-20">Brd Rs.</th>
+                    <th className="px-4 py-3 text-left w-20">Bardana Amount</th>
                     <th className="px-4 py-3 text-left w-20">Mazdori</th>
                     <th className="px-4 py-3 text-right font-bold bg-slate-200/50">Line Total</th>
                     <th className="px-4 py-3 text-center w-12"></th>
@@ -552,9 +536,9 @@ export default function Sales() {
                         }} className="input-field py-1.5 px-2 font-bold text-emerald-700 bg-emerald-50/20" placeholder="0" />
                       </td>
                       <td className="p-3">
-                        <input type="number" value={item.bardanaRate} onChange={(e) => {
+                        <input type="number" value={item.bardanaAmount} onChange={(e) => {
                           const newItems = [...form.items];
-                          newItems[idx].bardanaRate = e.target.value;
+                          newItems[idx].bardanaAmount = e.target.value;
                           updateFormWithAutoCalc({ items: newItems });
                         }} className="input-field py-1.5 px-2" placeholder="0" />
                       </td>
