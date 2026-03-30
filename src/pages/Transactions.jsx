@@ -561,86 +561,148 @@ export default function Transactions() {
                   {paginatedList.map((row) => {
                      let col1 = 0; // Left Col (Credit / Aamad)
                      let col2 = 0; // Right Col (Debit / Kharch)
-                     
-                     if (filters.accountId) {
-                        // Relative view for Transfer, but Category-based for others (PDF Logic)
+                      // Nature-based Decision: Global/Mill = Credit Inflow, Bank = Debit Inflow
+                      const isMillNature = !filters.accountId || isTraditional;
+
+                      if (filters.accountId) {
                         if (row.type === "transfer") {
-                          if (row.toAccountId?._id === filters.accountId) col2 = row.amount; // Receiving = Kharch
-                          else if (row.fromAccountId?._id === filters.accountId) col1 = row.amount; // Giving = Aamad
-                          else col2 = row.amount;
+                          if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
+                            // Receiving into this account
+                            if (isMillNature) col1 = row.amount; // Mill Receiving = Credit (Aamad)
+                            else col2 = row.amount; // Bank Receiving = Debit
+                          } else if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
+                            // Leaving from this account
+                            if (isMillNature) col2 = row.amount; // Mill Giving = Debit (Kharch)
+                            else col1 = row.amount; // Bank Giving = Credit
+                          }
                         } else {
-                          // Fixed Categories for specific account view (Matches PDF)
-                          if (row.type === "withdraw" || row.type === "sale") col1 = row.amount;
-                          else col2 = row.amount;
+                          // Standard Inflow/Outflow
+                          const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+                          if (isMillNature) {
+                            if (isInflow) col1 = row.amount; // Credit (Aamad)
+                            else col2 = row.amount; // Debit (Kharch)
+                          } else {
+                            if (isInflow) col2 = row.amount; // Debit
+                            else col1 = row.amount; // Credit
+                          }
                         }
                       } else {
-                        // General View
-                        if (row.type === "deposit" || row.type === "sale") col1 = row.amount; 
-                        else col2 = row.amount; 
+                        // Global Perspective (Always Mill Nature)
+                        if (row.type === "deposit" || row.type === "sale" || row.type === "income") col1 = row.amount;
+                        else col2 = row.amount;
                       }
 
-                     const participant = getParticipant(row);
-                     const reference = getReference(row);
+                      const participant = getParticipant(row);
+                      const reference = getReference(row);
 
-                     return (
-                      <tr key={row._id} className="table-row-hover">
-                        <td className="table-cell text-sm">{formatDate(row.date)}</td>
-                         <td className="table-cell">
-                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
-                              row.type === "deposit" ? "bg-green-100 text-green-700" : 
-                              row.type === "sale" ? "bg-emerald-100 text-emerald-700" : 
-                              row.type === "withdraw" ? "bg-red-100 text-red-700" : 
-                              row.type === "tax" ? "bg-orange-100 text-orange-700 border border-orange-200" :
-                              row.type === "salary" ? "bg-amber-100 text-amber-700 border border-amber-200" : 
-                              row.type === "expense" ? "bg-rose-100 text-rose-700 border border-rose-200" :
-                              row.type === "purchase" ? "bg-orange-100 text-orange-700" : 
-                              "bg-blue-100 text-blue-700"
-                              }`}>{typeLabel(row.type)}</span>
-                         </td>
-                        <td className="table-cell">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800 text-sm leading-tight">{participant}</span>
-                            <span className="text-[11px] text-slate-500 leading-tight mt-0.5">
-                              {reference} {row.category ? `• ${row.category}` : ""}
+                      return (
+                        <tr key={row._id} className="table-row-hover">
+                          <td className="table-cell text-sm">{formatDate(row.date)}</td>
+                          <td className="table-cell">
+                            <span
+                              className={`inline-flex px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
+                                row.type === "deposit"
+                                  ? "bg-green-100 text-green-700"
+                                  : row.type === "sale"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : row.type === "withdraw"
+                                      ? "bg-red-100 text-red-700"
+                                      : row.type === "tax"
+                                        ? "bg-orange-100 text-orange-700 border border-orange-200"
+                                        : row.type === "salary"
+                                          ? "bg-amber-100 text-amber-700 border border-amber-200"
+                                          : row.type === "expense"
+                                            ? "bg-rose-100 text-rose-700 border border-rose-200"
+                                            : row.type === "purchase"
+                                              ? "bg-orange-100 text-orange-700"
+                                              : "bg-blue-100 text-blue-700"
+                              }`}
+                            >
+                              {typeLabel(row.type)}
                             </span>
-                          </div>
-                        </td>
-                        <td className="table-cell text-right font-black text-emerald-600">{col1 > 0 ? formatMoney(col1) : "—"}</td>
-                        <td className="table-cell text-right font-black text-rose-600">{col2 > 0 ? formatMoney(col2) : "—"}</td>
-                        <td className="table-cell text-center">
-                          {row.image && (
-                            <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center justify-center p-1.5 text-indigo-500 hover:text-indigo-700 bg-indigo-50 rounded mx-auto" title="Preview Receipt">
-                              <FaImage className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="bg-slate-100 border-t-2 border-slate-300">
-                  {(() => {
-                    let tKharchTotal = 0;
-                    let tAamadTotal = 0;
-                    list.forEach(row => {
-                      if (row.type === "withdraw" || row.type === "sale") tAamadTotal += row.amount;
-                      else if (row.type === "deposit" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tKharchTotal += row.amount;
-                      else if (row.type === "transfer") {
-                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tKharchTotal += row.amount;
-                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tAamadTotal += row.amount;
-                        else tKharchTotal += row.amount; 
-                      }
-                    });
-                    return (
-                      <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
-                        <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
-                        <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tAamadTotal)}</td>
-                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tKharchTotal)}</td>
-                        <td className="bg-slate-50/30"></td>
-                      </tr>
-                    );
-                  })()}
-                </tfoot>
+                          </td>
+                          <td className="table-cell">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-800 text-sm leading-tight">
+                                {participant}
+                              </span>
+                              <span className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                                {reference} {row.category ? `• ${row.category}` : ""}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="table-cell text-right font-black text-emerald-600">
+                            {col1 > 0 ? formatMoney(col1) : "—"}
+                          </td>
+                          <td className="table-cell text-right font-black text-rose-600">
+                            {col2 > 0 ? formatMoney(col2) : "—"}
+                          </td>
+                          <td className="table-cell text-center">
+                            {row.image && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage(row.image)}
+                                className="btn-ghost-primary flex items-center justify-center p-1.5 text-indigo-500 hover:text-indigo-700 bg-indigo-50 rounded mx-auto"
+                                title="Preview Receipt"
+                              >
+                                <FaImage className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+                    {(() => {
+                      let tKharchTotal = 0;
+                      let tAamadTotal = 0;
+                      const isMillNatureFooter = !filters.accountId || isTraditional;
+                      list.forEach((row) => {
+                        if (filters.accountId) {
+                          if (row.type === "transfer") {
+                            if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
+                               if (isMillNatureFooter) tAamadTotal += row.amount;
+                               else tKharchTotal += row.amount;
+                            } else if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
+                               if (isMillNatureFooter) tKharchTotal += row.amount;
+                               else tAamadTotal += row.amount;
+                            }
+                          } else {
+                            const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+                            if (isMillNatureFooter) {
+                               if (isInflow) tAamadTotal += row.amount;
+                               else tKharchTotal += row.amount;
+                            } else {
+                               if (isInflow) tKharchTotal += row.amount;
+                               else tAamadTotal += row.amount;
+                            }
+                          }
+                        } else {
+                          // Global (Mill Standard)
+                          if (row.type === "deposit" || row.type === "sale" || row.type === "income") tAamadTotal += row.amount;
+                          else tKharchTotal += row.amount;
+                        }
+                      });
+                      return (
+                        <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
+                          <td
+                            colSpan="3"
+                            className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold"
+                          >
+                            Total Account Movements:
+                          </td>
+                          <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">
+                            {formatMoney(tAamadTotal)}
+                          </td>
+                          <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">
+                            {formatMoney(tKharchTotal)}
+                          </td>
+                          <td className="bg-slate-50/30"></td>
+                        </tr>
+                      );
+                    })()}
+                  </tfoot>
               </table>
               <TablePagination page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} totalItems={sortedList.length} />
             </>

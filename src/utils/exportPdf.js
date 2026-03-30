@@ -193,17 +193,26 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     let credit = 0;
     let debit = 0;
 
-    if (row.type === "withdraw" || row.type === "sale") {
-      credit = row.amount;
-    } else if (row.type === "deposit" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") {
-      debit = row.amount;
-    } else if (row.type === "transfer") {
-      if (filters.accountId && row.toAccountId?._id === filters.accountId) {
-        debit = row.amount; // Bank Receiving = Debit
-      } else if (filters.accountId && row.fromAccountId?._id === filters.accountId) {
-        credit = row.amount; // Bank Giving = Credit
+    const isMillNature = !filters?.accountId || filters?.isTraditional;
+
+    if (row.type === "transfer") {
+      if (filters?.accountId && (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId)) {
+        if (isMillNature) credit = row.amount; // Mill Inflow = Credit
+        else debit = row.amount; // Bank Inflow = Debit
+      } else if (filters?.accountId && (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId)) {
+        if (isMillNature) debit = row.amount; // Mill Outflow = Debit
+        else credit = row.amount; // Bank Outflow = Credit
       } else {
-        debit = row.amount; 
+        debit = row.amount;
+      }
+    } else {
+      const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+      if (isMillNature) {
+        if (isInflow) credit = row.amount; // Mill Credit
+        else debit = row.amount; // Mill Debit
+      } else {
+        if (isInflow) debit = row.amount; // Bank Debit
+        else credit = row.amount; // Bank Credit
       }
     }
 
