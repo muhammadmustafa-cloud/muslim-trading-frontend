@@ -172,23 +172,39 @@ export default function UniversalLedger() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {/* Opening Balance Row */}
+                {/* Opening Balance Row: Now Dynamic Based on Value Nature */}
                 <tr className="bg-slate-50 border-b-2 border-slate-200 shadow-sm">
+                  {/* LEFT: CREDIT (Aamad) SIDE */}
+                  <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
+                  <td className="py-2 px-3 border-r border-slate-100">
+                    {summary.openingBalance > 0 ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-emerald-800 leading-tight uppercase tracking-tight">PREVIOUS BALANCE (BAQAYA)</span>
+                        <span className="text-[9px] text-emerald-600 font-black uppercase tracking-widest italic opacity-70">Cash Surplus from yesterday</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-300 italic">Balance moved to Kharch side</span>
+                    )}
+                  </td>
+                  <td className={`py-2 px-3 text-right font-black border-r border-slate-200 ${summary.openingBalance > 0 ? "text-emerald-700 bg-emerald-100/30" : "text-slate-300"}`}>
+                    {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : "—"}
+                  </td>
+
+                  {/* RIGHT: DEBIT (Kharch) SIDE */}
                   <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
                   <td className="py-2 px-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black text-indigo-800 leading-tight uppercase">PREVIOUS BALANCE (BAQAYA)</span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Rolling Opening Balance</span>
-                    </div>
+                    {summary.openingBalance < 0 ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-rose-800 leading-tight uppercase tracking-tight">PREVIOUS DEFICIT (UDHAAR)</span>
+                        <span className="text-[9px] text-rose-600 font-black uppercase tracking-widest italic opacity-70">Deficit from yesterday</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-300 italic">No opening deficit</span>
+                    )}
                   </td>
-                  <td className={`py-2 px-3 text-right font-black border-r border-slate-200 ${summary.openingBalance > 0 ? "text-emerald-700 bg-emerald-50/20" : "text-rose-700 bg-rose-50/20"}`}>
-                    {summary.openingBalance !== 0 ? formatMoney(Math.abs(summary.openingBalance)) : ""}
+                  <td className={`py-2 px-3 text-right font-black ${summary.openingBalance < 0 ? "text-rose-700 bg-rose-100/30" : "text-slate-300"}`}>
+                    {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : "—"}
                   </td>
-                  <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
-                  <td className="py-2 px-3">
-                    <span className="text-[10px] text-slate-300 italic">Previous balance moved to Left side</span>
-                  </td>
-                  <td className="py-2 px-3 text-right"></td>
                 </tr>
 
                 {[...Array(maxRows)].map((_, i) => {

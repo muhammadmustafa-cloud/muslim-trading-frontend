@@ -38,11 +38,11 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   formattedRows.push([
     "",
-    "TOTAL DEBITS (AAMAD)",
+    "TOTAL CREDIT",
     "",
     formatMoney(grandTotalIn),
     "",
-    "TOTAL CREDITS (KHARCH)",
+    "TOTAL DEBIT",
     "",
     formatMoney(grandTotalOut),
   ]);
@@ -81,23 +81,28 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   // Draw "Previous Balance" row manually above the table
   const pageWidth = doc.internal.pageSize.getWidth();
   const tableWidth = pageWidth - MARGIN * 2;
-  doc.setFillColor(235, 235, 235);
+  doc.setFillColor(242, 242, 242);
   doc.rect(MARGIN, y, tableWidth, 7, "F");
-  doc.setDrawColor(180);
+  doc.setDrawColor(200);
   doc.rect(MARGIN, y, tableWidth, 7, "S");
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont(undefined, "bold");
-  doc.setTextColor(0);
-  doc.text("Previous Balance (Opening Balance)", MARGIN + 2, y + 5);
-  const balStr = summary.openingBalance !== 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0";
-  // Always draw on the Left (Credit/Kharch) side as requested
-  const xPos = MARGIN + 90; // Left column amount position
-  if (summary.openingBalance > 0) {
-    doc.setTextColor(0, 100, 0); // Emerald for surplus
+  doc.setTextColor(80);
+
+  const balVal = Number(summary.openingBalance || 0);
+  const isSurplus = balVal >= 0;
+  const label = isSurplus ? "Previous Balance (Cash In Hand)" : "Opening Deficit (Previous Udhaar)";
+  const balStr = balVal !== 0 ? formatMoney(Math.abs(balVal)) : "0";
+
+  if (isSurplus) {
+    doc.text(label, MARGIN + 2, y + 5);
+    doc.setTextColor(0, 120, 0); // Darker emerald
+    doc.text(balStr, MARGIN + 91, y + 5, { align: "right" });
   } else {
-    doc.setTextColor(200, 0, 0); // Rose for deficit
+    doc.text(label, MARGIN + 93, y + 5);
+    doc.setTextColor(180, 0, 0); // Darker rose
+    doc.text(balStr, MARGIN + 182, y + 5, { align: "right" });
   }
-  doc.text(balStr, xPos, y + 5, { align: "right" });
   y += 7;
 
   autoTable(doc, {
