@@ -108,8 +108,8 @@ export default function MachineryItemKhata() {
                   <tr>
                     <th className="py-3 px-4 text-left border-r border-slate-700">Date</th>
                     <th className="py-3 px-4 text-left border-r border-slate-700">Description</th>
-                    <th className="py-3 px-4 text-right border-r border-slate-700">Credit (In)</th>
-                    <th className="py-3 px-4 text-right">Debit (Out)</th>
+                    <th className="py-3 px-4 text-right border-r border-slate-700 bg-emerald-500/10 text-emerald-600">Credit (Aamad)</th>
+                    <th className="py-3 px-4 text-right bg-rose-500/10 text-rose-600">Debit (Kharch)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -126,8 +126,8 @@ export default function MachineryItemKhata() {
                             <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">VIA: {row.accountId?.name || "CASH"}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right font-black text-emerald-600 border-r border-slate-100 bg-emerald-50/10">—</td>
-                        <td className="py-3 px-4 text-right font-black text-rose-700 bg-rose-50/10">{formatMoney(row.amount)}</td>
+                        <td className="py-3 px-4 text-right font-black text-emerald-600 border-r border-slate-100 bg-emerald-50/10">{row.type === 'credit' ? formatMoney(row.amount) : "—"}</td>
+                        <td className="py-3 px-4 text-right font-black text-rose-700 bg-rose-50/10">{row.type === 'debit' || !row.type ? formatMoney(row.amount) : "—"}</td>
                       </tr>
                     ))
                   )}

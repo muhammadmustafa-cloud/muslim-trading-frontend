@@ -193,17 +193,17 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     let credit = 0;
     let debit = 0;
 
-    if (row.type === "deposit" || row.type === "sale") {
-      debit = row.amount;
-    } else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") {
+    if (row.type === "withdraw" || row.type === "sale") {
       credit = row.amount;
+    } else if (row.type === "deposit" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") {
+      debit = row.amount;
     } else if (row.type === "transfer") {
       if (filters.accountId && row.toAccountId?._id === filters.accountId) {
-        debit = row.amount;
+        debit = row.amount; // Bank Receiving = Debit
       } else if (filters.accountId && row.fromAccountId?._id === filters.accountId) {
-        credit = row.amount;
+        credit = row.amount; // Bank Giving = Credit
       } else {
-        credit = row.amount; 
+        debit = row.amount; 
       }
     }
 
@@ -241,12 +241,12 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     ];
   });
 
-  const netBalance = totalDebit - totalCredit;
-  const balanceStr = `${formatMoney(Math.abs(netBalance))} ${netBalance >= 0 ? "DR" : "CR"}`;
+  const netBalance = totalCredit - totalDebit;
+  const balanceStr = `${formatMoney(Math.abs(netBalance))} ${netBalance >= 0 ? "CR" : "DR"}`;
 
   autoTable(doc, {
     startY,
-    head: [["Date", "Description", "Credit (Kharch)", "Debit (Aamad)", "Balance"]],
+    head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: formattedRows,
     foot: [[
       { content: "TOTAL ACCOUNT MOVEMENTS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
@@ -916,7 +916,7 @@ export function downloadTaxLedgerPdf(taxType, sessions, totalPaid, filters = {})
   let runningBalance = 0;
   autoTable(doc, {
     startY,
-    head: [["Date", "Description / Account", "Debit (Kharch)", "Credit (Aamad)", "Balance"]],
+    head: [["Date", "Description / Account", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: sessions.map((row) => {
       const debit = row.amount || 0;
       const credit = 0;
@@ -999,7 +999,7 @@ export function downloadMachineryItemKhataPdf(itemData, filters = {}) {
 
   autoTable(doc, {
     startY,
-    head: [["Date", "Description", "Credit (In)", "Debit (Out)"]],
+    head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)"]],
     body: itemData.purchases.map((row) => [
       formatDate(row.date),
       `${row.supplierId?.name || "Supplier"} [VIA: ${row.accountId?.name || "Cash"}]${row.note ? `\nNote: ${row.note}` : ""}`,
@@ -1108,7 +1108,7 @@ export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filte
   let runningBalance = 0;
   autoTable(doc, {
     startY,
-    head: [["Date", "Description / Account", "Debit (Kharch)", "Credit (Aamad)", "Balance"]],
+    head: [["Date", "Description / Account", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: sessions.map((row) => {
       const debit = row.amount || 0;
       const credit = 0;
@@ -1180,8 +1180,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     tableRows.push([
       { content: "Date", styles: { fontStyle: "bold" } }, 
       { content: "Description / Participants", styles: { fontStyle: "bold" } }, 
-      { content: "Debit (Kharch)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }, 
-      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [236, 253, 245] } }
+      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [236, 253, 245] } }, 
+      { content: "Debit (Kharch)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     masterEntries.forEach(t => {
       const isOut = !!t.fromAccountId;
@@ -1192,8 +1192,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       tableRows.push([
         formatDate(t.date),
         `${participant.toUpperCase()}\n${description}`,
-        isOut ? formatMoney(t.amount) : "—",
-        isIn ? formatMoney(t.amount) : "—"
+        isIn ? formatMoney(t.amount) : "—",
+        isOut ? formatMoney(t.amount) : "—"
       ]);
     });
 
@@ -1203,8 +1203,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
     tableRows.push([
       { content: "TOTAL GROSS AUDIT MOVEMENT", colSpan: 2, styles: { fontStyle: "bold", halign: "right", fillColor: [248, 250, 252] } },
-      { content: "Rs. " + formatMoney(totalOut), styles: { fontStyle: "black", halign: "right", fillColor: [254, 242, 242] } },
-      { content: "Rs. " + formatMoney(totalIn), styles: { fontStyle: "black", halign: "right", fillColor: [236, 253, 245] } }
+      { content: "Rs. " + formatMoney(totalIn), styles: { fontStyle: "black", halign: "right", fillColor: [236, 253, 245] } },
+      { content: "Rs. " + formatMoney(totalOut), styles: { fontStyle: "black", halign: "right", fillColor: [254, 242, 242] } }
     ]);
   }
 
@@ -1214,15 +1214,15 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     tableRows.push([{ content: "2. BANK & CASH ACCOUNTS (BALANCES)", colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], textColor: [0, 0, 0] } }]);
     tableRows.push([
       { content: "Account Name", styles: { fontStyle: "bold" } }, 
-      { content: "Total Out (Kharch)", styles: { fontStyle: "bold", halign: "right" } }, 
       { content: "Total In (Aamad)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Total Out (Kharch)", styles: { fontStyle: "bold", halign: "right" } }, 
       { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
     ]);
     cashAccounts.forEach(a => {
       tableRows.push([
         a.name.toUpperCase(),
-        formatMoney(Number(a.totalOut || 0)),
         formatMoney(Number(a.totalIn || 0)),
+        formatMoney(Number(a.totalOut || 0)),
         formatMoney(Number(a.balance || 0))
       ]);
     });
@@ -1236,8 +1236,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     addGroupHeader("2. CUSTOMER BALANCES (RECEIVABLES)");
     tableRows.push([
       "Customer Name", 
-      { content: "Credit (Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Debit (Due)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Credit (Inflow/Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Debit (Outflow/Due)", styles: { fontStyle: "bold", halign: "right" } }, 
       { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
     ]);
     data.customers.forEach(c => {
@@ -1255,7 +1255,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     addGroupHeader("3. SUPPLIER BALANCES (PAYABLES)");
     tableRows.push([
       "Supplier Name", 
-      { content: "Credit (Bill)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Credit (Bill/Due)", styles: { fontStyle: "bold", halign: "right" } }, 
       { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right" } }, 
       { content: "Balance", styles: { fontStyle: "bold", halign: "right" } }
     ]);
@@ -1287,8 +1287,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     addGroupHeader("5. ITEM-WISE TRADING SCENARIO");
     tableRows.push([
       "Item Description", 
-      { content: "Credit (Sales)", styles: { fontStyle: "bold", halign: "right" } }, 
-      { content: "Debit (Purchase)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Credit (Sales/In)", styles: { fontStyle: "bold", halign: "right" } }, 
+      { content: "Debit (Purchase/Out)", styles: { fontStyle: "bold", halign: "right" } }, 
       "Status"
     ]);
     data.items.forEach(i => {
@@ -1346,7 +1346,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
   autoTable(doc, {
     startY: 40,
-    head: [["ACCOUNT CLASSIFICATION", "CREDIT (AAMNE)", "DEBIT (KHARCH)", "NET POSITION"]],
+    head: [["ACCOUNT CLASSIFICATION", "CREDIT (AAMAD)", "DEBIT (KHARCH)", "NET POSITION"]],
     body: tableRows,
     foot: [
       [

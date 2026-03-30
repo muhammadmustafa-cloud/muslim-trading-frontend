@@ -176,8 +176,8 @@ export default function MazdoorHistory() {
                     <tr className="bg-slate-100">
                       <th className="table-header px-4 py-3 text-left w-32 text-black border border-slate-200">Date</th>
                       <th className="table-header px-4 py-3 text-left text-black border border-slate-200">Description / Account</th>
-                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200">Credit (+)</th>
-                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200">Debit (-)</th>
+                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200 bg-emerald-50">Credit (Aamad)</th>
+                      <th className="table-header px-4 py-3 text-right text-black border border-slate-200 bg-rose-50">Debit (Kharch)</th>
                       <th className="table-header px-4 py-3 text-right text-black border border-slate-200 bg-slate-50">Balance</th>
                     </tr>
                   </thead>
@@ -194,10 +194,10 @@ export default function MazdoorHistory() {
                             </div>
                             {t.note && <div className="text-[11px] text-slate-500 italic mt-1 line-clamp-1 group-hover:line-clamp-none transition-all">"{t.note}"</div>}
                           </td>
-                          <td className="px-4 py-3 text-right align-top font-semibold text-black border-r border-slate-200">
+                          <td className="px-4 py-3 text-right align-top font-bold text-emerald-700 border-r border-slate-200 bg-emerald-50/10">
                             {t.cr > 0 ? formatMoney(t.cr) : "—"}
                           </td>
-                          <td className="px-4 py-3 text-right align-top font-semibold text-black border-r border-slate-200">
+                          <td className="px-4 py-3 text-right align-top font-bold text-rose-700 border-r border-slate-200 bg-rose-50/10">
                             {t.dr > 0 ? formatMoney(t.dr) : "—"}
                           </td>
                           <td className="px-4 py-3 text-right align-top font-bold text-black bg-slate-50/50">

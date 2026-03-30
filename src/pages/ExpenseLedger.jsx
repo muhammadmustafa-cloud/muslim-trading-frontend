@@ -108,8 +108,8 @@ export default function ExpenseLedger() {
               <tr className="bg-slate-50 border-b border-slate-200 uppercase text-[10px] tracking-wider text-slate-500 font-bold">
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Description / Account</th>
-                <th className="px-5 py-3 text-right text-rose-600">Debit (Kharch)</th>
                 <th className="px-5 py-3 text-right text-emerald-600">Credit (Aamad)</th>
+                <th className="px-5 py-3 text-right text-rose-600">Debit (Kharch)</th>
                 <th className="px-5 py-3 text-right text-slate-800">Balance</th>
               </tr>
             </thead>
@@ -139,8 +139,8 @@ export default function ExpenseLedger() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-right font-black text-rose-600 group-hover:scale-110 transition-transform origin-right tracking-tight">{formatMoney(debit)}</td>
                         <td className="px-5 py-4 text-right font-bold text-emerald-600/30">—</td>
+                        <td className="px-5 py-4 text-right font-black text-rose-600 group-hover:scale-110 transition-transform origin-right tracking-tight">{formatMoney(debit)}</td>
                         <td className="px-5 py-4 text-right font-black text-slate-800 bg-slate-50/50">{formatMoney(runningBalance)}</td>
                       </tr>
                     );
@@ -151,8 +151,8 @@ export default function ExpenseLedger() {
             <tfoot className="bg-slate-50 font-black border-t-2 border-slate-200">
               <tr>
                 <td colSpan="2" className="px-5 py-4 text-right text-slate-400 uppercase text-[10px] tracking-widest">Grand Totals:</td>
-                <td className="px-5 py-4 text-right text-rose-600 font-black">{formatMoney(totalSpent)}</td>
                 <td className="px-5 py-4 text-right text-emerald-600">—</td>
+                <td className="px-5 py-4 text-right text-rose-600 font-black">{formatMoney(totalSpent)}</td>
                 <td className="px-5 py-4 text-right text-slate-900 bg-slate-100 border-l-2 border-slate-300">Rs. {formatMoney(totalSpent)}</td>
               </tr>
             </tfoot>

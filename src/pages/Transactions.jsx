@@ -374,8 +374,8 @@ export default function Transactions() {
             <div>
               <label className="input-label">Type *</label>
               <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className="input-field" required>
-                <option value="deposit">Credit (In / Deposit)</option>
-                <option value="withdraw">Debit (Out / Withdraw)</option>
+                <option value="deposit">Credit (Aamad / Lena / In / Deposit)</option>
+                <option value="withdraw">Debit (Kharch / Dena / Out / Withdraw)</option>
                 <option value="tax">Tax Payment (Audit)</option>
                 <option value="expense">General Expense (Kharcha)</option>
                 <option value="salary">Salary (Payment)</option>
@@ -544,13 +544,13 @@ export default function Transactions() {
                     <th className="table-header px-5 py-3.5">Description</th>
                     <th className="table-header px-5 py-3.5 text-right">
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">
-                        Credit (Kharch)
+                        Credit (Aamad)
                         <SortIcon columnKey="amount" />
                       </button>
                     </th>
                     <th className="table-header px-5 py-3.5 text-right">
                       <button type="button" onClick={() => toggleSort("amount")} className="flex items-center justify-end w-full hover:text-slate-800">
-                        Debit (Aamad)
+                        Debit (Kharch)
                         <SortIcon columnKey="amount" />
                       </button>
                     </th>
@@ -559,15 +559,27 @@ export default function Transactions() {
                 </thead>
                 <tbody>
                   {paginatedList.map((row) => {
-                     let col1 = 0; // Left Col (Standard Debit / Trad Credit)
-                     let col2 = 0; // Right Col (Standard Credit / Trad Debit)
+                     let col1 = 0; // Left Col (Credit / Aamad)
+                     let col2 = 0; // Right Col (Debit / Kharch)
                      
-                     if (row.type === "deposit" || row.type === "sale") col2 = row.amount; // Inflow -> 2nd Col (Debit)
-                     else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") col1 = row.amount; // Outflow -> 1st Col (Credit)
-                     else if (row.type === "transfer") {
-                       if (filters.accountId && row.toAccountId?._id === filters.accountId) col2 = row.amount;
-                       else if (filters.accountId && row.fromAccountId?._id === filters.accountId) col1 = row.amount;
-                       else col1 = row.amount; 
+                     // DEEP LOGIC: Perspective-based column mapping
+                     if (filters.accountId) {
+                       // Specific Bank/Cash account view
+                       if (row.fromAccountId?._id === filters.accountId) {
+                         // Money leaving common account (User wants this on Credit/Left)
+                         col1 = row.amount;
+                       } else if (row.toAccountId?._id === filters.accountId) {
+                         // Money entering common account (User wants this on Debit/Right)
+                         col2 = row.amount;
+                       } else {
+                         // Fallback for sales/purchases
+                         if (row.type === "sale") col1 = row.amount;
+                         else col2 = row.amount;
+                       }
+                     } else {
+                       // General View
+                       if (row.type === "deposit" || row.type === "sale") col1 = row.amount; 
+                       else col2 = row.amount; 
                      }
 
                      const participant = getParticipant(row);
@@ -596,8 +608,8 @@ export default function Transactions() {
                             </span>
                           </div>
                         </td>
-                        <td className="table-cell text-right font-black text-rose-600">{col1 > 0 ? formatMoney(col1) : "—"}</td>
-                        <td className="table-cell text-right font-black text-emerald-600">{col2 > 0 ? formatMoney(col2) : "—"}</td>
+                        <td className="table-cell text-right font-black text-emerald-600">{col1 > 0 ? formatMoney(col1) : "—"}</td>
+                        <td className="table-cell text-right font-black text-rose-600">{col2 > 0 ? formatMoney(col2) : "—"}</td>
                         <td className="table-cell text-center">
                           {row.image && (
                             <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center justify-center p-1.5 text-indigo-500 hover:text-indigo-700 bg-indigo-50 rounded mx-auto" title="Preview Receipt">
@@ -614,19 +626,19 @@ export default function Transactions() {
                     let tKharchTotal = 0;
                     let tAamadTotal = 0;
                     list.forEach(row => {
-                      if (row.type === "deposit" || row.type === "sale") tAamadTotal += row.amount;
-                      else if (row.type === "withdraw" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tKharchTotal += row.amount;
+                      if (row.type === "withdraw" || row.type === "sale") tAamadTotal += row.amount;
+                      else if (row.type === "deposit" || row.type === "purchase" || row.type === "salary" || row.type === "tax" || row.type === "expense") tKharchTotal += row.amount;
                       else if (row.type === "transfer") {
-                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tAamadTotal += row.amount;
-                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tKharchTotal += row.amount;
+                        if (filters.accountId && row.toAccountId?._id === filters.accountId) tKharchTotal += row.amount;
+                        else if (filters.accountId && row.fromAccountId?._id === filters.accountId) tAamadTotal += row.amount;
                         else tKharchTotal += row.amount; 
                       }
                     });
                     return (
                       <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
                         <td colSpan="3" className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold">Total Account Movements:</td>
-                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tKharchTotal)}</td>
                         <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">{formatMoney(tAamadTotal)}</td>
+                        <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">{formatMoney(tKharchTotal)}</td>
                         <td className="bg-slate-50/30"></td>
                       </tr>
                     );

@@ -69,7 +69,7 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Description", "Bags", "Credit (Receipts)", "Debit (Sales)", "Balance"]],
+    head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: ledger.map((item) => [
       formatDate(item.date),
       item.description,
@@ -131,7 +131,7 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Description", "Bags", "Credit (Aamne)", "Debit (Kharch)", "Balance"]],
+    head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: ledger.map((item) => [
       formatDate(item.date),
       item.description,
@@ -243,7 +243,7 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
     autoTable(doc, {
       startY: y,
       theme: "grid", // Professional ledger grid lines
-      head: [["Date", "Description / Account", "Credit (+)", "Debit (-)", "Balance"]],
+      head: [["Date", "Description / Account", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
       body: transactions.map((t) => {
         const { dr, cr } = getDrCr(t);
         const bal = balancesMap[t._id] ?? 0;

@@ -20,14 +20,14 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
     const dr = debits[i] || {};
     
     formattedRows.push([
-      dr.date ? formatDate(dr.date) : "",
-      dr.accountName || "",
-      dr.name ? dr.name + (dr.description ? `\n(${dr.description})` : "") : "",
-      dr.amount ? formatMoney(dr.amount) : "",
       cr.date ? formatDate(cr.date) : "",
       cr.accountName || "",
       cr.name ? cr.name + (cr.description ? `\n(${cr.description})` : "") : "",
       cr.amount ? formatMoney(cr.amount) : "",
+      dr.date ? formatDate(dr.date) : "",
+      dr.accountName || "",
+      dr.name ? dr.name + (dr.description ? `\n(${dr.description})` : "") : "",
+      dr.amount ? formatMoney(dr.amount) : "",
     ]);
   }
 
@@ -38,13 +38,13 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
 
   formattedRows.push([
     "",
-    "TOTAL CREDITS (KHARCH)",
-    "",
-    formatMoney(grandTotalOut),
-    "",
     "TOTAL DEBITS (AAMAD)",
     "",
     formatMoney(grandTotalIn),
+    "",
+    "TOTAL CREDITS (KHARCH)",
+    "",
+    formatMoney(grandTotalOut),
   ]);
 
   // Net Movement Row (Centered across all columns)
@@ -90,18 +90,15 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   doc.setTextColor(0);
   doc.text("Previous Balance (Opening Balance)", MARGIN + 2, y + 5);
   const balStr = summary.openingBalance !== 0 ? formatMoney(Math.abs(summary.openingBalance)) : "0";
-  if (summary.openingBalance < 0) {
-    // Debit side (New Left)
-    doc.text(balStr, MARGIN + 90, y + 5, { align: "right" });
-  } else {
-    // Credit side (New Right)
-    doc.text(balStr, pageWidth - MARGIN - 2, y + 5, { align: "right" });
-  }
+  // Always draw on the Left (Credit/Kharch) side as requested
+  const xPos = MARGIN + 90; // Left column amount position
+  doc.setTextColor(summary.openingBalance > 0 ? [0, 100, 0] : [200, 0, 0]); // Emerald for surplus, Rose for deficit
+  doc.text(balStr, xPos, y + 5, { align: "right" });
   y += 7;
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Party / Ledger", "Description", "Amount", "Date", "Party / Ledger", "Description", "Amount"]],
+    head: [["Date", "Aamad (Credit) / Ledger", "Description", "Amount", "Date", "Kharch (Debit) / Ledger", "Description", "Amount"]],
     body: formattedRows,
     headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
