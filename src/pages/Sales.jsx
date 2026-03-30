@@ -151,27 +151,23 @@ export default function Sales() {
   };
 
   const addItemRow = () => {
-    setForm(prev => ({
-      ...prev,
-      items: [...prev.items, {
-        itemId: "",
-        kattay: "",
-        kgPerKata: "",
-        grossWeight: "",
-        rate: "",
-        bardanaAmount: "",
-        mazdori: "",
-        totalAmount: "",
-      }]
-    }));
+    const newItems = [...form.items, {
+      itemId: "",
+      kattay: "",
+      kgPerKata: "",
+      grossWeight: "",
+      rate: "",
+      bardanaAmount: "",
+      mazdori: "",
+      totalAmount: "",
+    }];
+    updateFormWithAutoCalc({ items: newItems });
   };
 
   const removeItemRow = (index) => {
     if (form.items.length <= 1) return;
-    setForm(prev => {
-      const newItems = prev.items.filter((_, i) => i !== index);
-      return { ...prev, items: newItems };
-    });
+    const newItems = form.items.filter((_, i) => i !== index);
+    updateFormWithAutoCalc({ items: newItems });
   };
 
   const updateFormWithAutoCalc = (updates) => {
@@ -184,19 +180,21 @@ export default function Sales() {
       const mainNet = Math.max(0, totalGross - totalCut);
       next.netWeight = String(mainNet);
 
-      // 2. Individual Items
-      next.items = next.items.map(item => {
+      // 2. Pre-calculate line grosses to avoid "item length" jumps or stuck values
+      const lineGrosses = next.items.map(item => {
         const k = Number(item.kattay) || 0;
         const kpk = Number(item.kgPerKata) || 0;
+        return (k * kpk) || Number(item.grossWeight) || 0;
+      });
+      const sumLineGross = lineGrosses.reduce((a, b) => a + b, 0);
+
+      // 3. Individual Items Calculation
+      next.items = next.items.map((item, idx) => {
+        const lineGross = lineGrosses[idx];
         
-        // Auto-calc line gross
-        // If only 1 item, FORCE it to match master gross to prevent 10x errors
-        let lineGross = (next.items.length === 1 && totalGross > 0) 
-          ? totalGross 
-          : (Number(item.grossWeight) || (k * kpk));
-        
-        // Proportional S.H Cut
-        const lineSHCut = totalGross > 0 ? (lineGross / totalGross) * totalCut : 0;
+        // Deduction (S.H Cut) distribution:
+        // We split the Total Cut proportionally based on each item's weight share
+        const lineSHCut = sumLineGross > 0 ? (lineGross / sumLineGross) * totalCut : 0;
         const lineNet = Math.max(0, lineGross - lineSHCut);
         
         const rate = Number(item.rate) || 0;
@@ -204,13 +202,11 @@ export default function Sales() {
         const mazdori = Number(item.mazdori) || 0;
 
         // Line Total: (Net / 40) * Rate + Bardana + Mazdori
-        // Recalculate from scratch to avoid cumulative errors
         const lineTotal = Math.round((lineNet / 40) * rate) + bAmt + mazdori;
 
         return {
           ...item,
           grossWeight: String(lineGross),
-          bardanaAmount: String(bAmt),
           totalAmount: String(lineTotal)
         };
       });
@@ -443,26 +439,48 @@ export default function Sales() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100">
               <div>
-                <label className="input-label font-bold text-amber-800">Total Gross Weight (Kg)</label>
-                <input type="number" value={form.totalGrossWeight} onChange={(e) => updateFormWithAutoCalc({ totalGrossWeight: e.target.value })} className="input-field border-amber-300 shadow-sm" placeholder="0" />
+                <label className="input-label font-bold text-amber-800 tracking-tight">Master Gross (Kg)</label>
+                <input type="number" value={form.totalGrossWeight} onChange={(e) => updateFormWithAutoCalc({ totalGrossWeight: e.target.value })} className="input-field border-amber-300 shadow-sm font-bold" placeholder="0" />
               </div>
               <div>
-                <label className="input-label font-bold text-amber-800">Total S.H Cut (Kg)</label>
-                <input type="number" value={form.totalSHCut} onChange={(e) => updateFormWithAutoCalc({ totalSHCut: e.target.value })} className="input-field border-amber-300 shadow-sm" placeholder="0" />
+                <label className="input-label font-bold text-rose-800 tracking-tight">Master S.H Cut (Kg)</label>
+                <input type="number" value={form.totalSHCut} onChange={(e) => updateFormWithAutoCalc({ totalSHCut: e.target.value })} className="input-field border-rose-200 shadow-sm font-bold bg-rose-50/10" placeholder="0" />
               </div>
               <div>
-                <label className="input-label font-bold text-amber-800">Net Weight (Kg)</label>
-                <div className="bg-amber-100 border border-amber-300 rounded-lg py-2.5 px-3 font-black text-amber-900 text-lg shadow-inner">
+                <label className="input-label font-black text-amber-900 tracking-tight">Master Net (Kg)</label>
+                <div className="bg-amber-100 border border-amber-300 rounded-lg h-[42px] flex items-center px-3 font-black text-amber-900 text-lg shadow-inner">
                   {form.netWeight} Kg
                 </div>
               </div>
               <div>
+                 {/* Logic to check if master gross matches sum of items */}
+                 {(() => {
+                   const sumItems = form.items.reduce((sum, it) => sum + (Number(it.grossWeight) || 0), 0);
+                   const masterGross = Number(form.totalGrossWeight) || 0;
+                   const diff = masterGross - sumItems;
+                   const totalBags = form.items.reduce((sum, it) => sum + (Number(it.kattay) || 0), 0);
+                   
+                   return (
+                     <div className={`p-2 rounded-lg border h-[42px] flex flex-col justify-center ${Math.abs(diff) > 0.1 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                        <div className="flex justify-between items-center">
+                           <span className="text-[9px] font-black uppercase tracking-widest">{Math.abs(diff) > 0.1 ? 'Mismatch!' : 'Matched'}</span>
+                           <span className="text-[10px] font-medium italic">{totalBags} Bags</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                           <p className="text-[12px] font-bold">Sum: {sumItems.toLocaleString()} Kg</p>
+                           {Math.abs(diff) > 0.1 && <p className="text-[10px] font-black">Δ {diff.toFixed(1)} Kg</p>}
+                        </div>
+                     </div>
+                   );
+                 })()}
+              </div>
+              <div>
                 <label className="input-label">GP# / Remark / Goods</label>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="GP#" value={form.gatePassNo} onChange={(e) => setForm(f => ({ ...f, gatePassNo: e.target.value }))} className="input-field w-1/2 shadow-sm" />
-                  <input type="text" placeholder="Goods" value={form.goods} onChange={(e) => setForm(f => ({ ...f, goods: e.target.value }))} className="input-field w-1/2 shadow-sm" />
+                  <input type="text" placeholder="GP#" value={form.gatePassNo} onChange={(e) => setForm(f => ({ ...f, gatePassNo: e.target.value }))} className="input-field w-1/2 shadow-sm text-sm" />
+                  <input type="text" placeholder="Goods" value={form.goods} onChange={(e) => setForm(f => ({ ...f, goods: e.target.value }))} className="input-field w-1/2 shadow-sm text-sm" />
                 </div>
               </div>
             </div>
