@@ -12,7 +12,14 @@ import { downloadUniversalLedgerPdf } from "../utils/universalLedgerPdf.js";
 
 const formatMoney = (n) => (n == null || n === 0 ? "—" : Number(n).toLocaleString("en-PK"));
 const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  d
+    ? new Date(d).toLocaleDateString("en-PK", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Karachi",
+      })
+    : "—";
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 export default function UniversalLedger() {

@@ -11,7 +11,8 @@ import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"));
-const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
+const formatTime = (d) => (d ? new Date(d).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Karachi" }) : "—");
 
 export default function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams();
