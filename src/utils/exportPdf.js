@@ -1315,9 +1315,33 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 5. Item Trading Audit (Stock Turnover)
+  // 5. Raw Material Ledger Audit
+  if (data.rawMaterials && data.rawMaterials.length > 0) {
+    addGroupHeader("4. RAW MATERIAL LEDGER AUDIT (TURNOVER)");
+    tableRows.push([
+      { content: "Material Name", styles: { fontStyle: "bold" } }, 
+      { content: "Classification", styles: { fontStyle: "bold" } }, 
+      { content: "Credit (Stock In / Aamad)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
+      { content: "Debit (Stock Out / Kharch)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
+    ]);
+    data.rawMaterials.forEach(rm => {
+      const credit = Number(rm.periodCredit || 0);
+      const debit = Number(rm.periodDebit || 0);
+
+      tableRows.push([
+        rm.name.toUpperCase(),
+        "Raw Material Head",
+        credit > 0 ? formatMoney(credit) : "—",
+        debit > 0 ? formatMoney(debit) : "—",
+      ]);
+      totalAuditCredit += credit;
+      totalAuditDebit += debit;
+    });
+  }
+
+  // 6. Item Trading Audit (Stock Turnover)
   if (data.items && data.items.length > 0) {
-    addGroupHeader("4. ITEM TRADING AUDIT (STOCK TURNOVER)");
+    addGroupHeader("5. ITEM TRADING AUDIT (STOCK TURNOVER)");
     tableRows.push([
       { content: "Item Name", styles: { fontStyle: "bold" } }, 
       { content: "Classification", styles: { fontStyle: "bold" } }, 
@@ -1342,8 +1366,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 6. Assets & Outflows
-  addGroupHeader("5. ASSETS & EXPENDITURE AUDIT (DETAILED BREAKDOWN)");
+  // 7. Assets & Outflows
+  addGroupHeader("6. ASSETS & EXPENDITURE AUDIT (DETAILED BREAKDOWN)");
   const stockVal = Number(data.totalStockValue) || 0;
   
   // Stock

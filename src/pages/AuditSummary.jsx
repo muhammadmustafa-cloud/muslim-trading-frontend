@@ -81,6 +81,7 @@ export default function AuditSummary() {
     { id: "inventory", label: "Inventory & Assets", icon: FaBoxes },
     { id: "expenses", label: "Expenses & Taxes", icon: FaMoneyBillWave },
     { id: "accounts", label: "Cash & Bank Balances", icon: FaWallet },
+    { id: "raw_materials", label: "Raw Materials Audit", icon: FaBoxes },
   ];
 
   const filteredItems = (list) => {
@@ -271,6 +272,7 @@ export default function AuditSummary() {
                       t.customerId?.name ||
                       t.supplierId?.name ||
                       t.mazdoorId?.name ||
+                      t.rawMaterialHeadId?.name ||
                       t.expenseTypeId?.name ||
                       t.taxTypeId?.name ||
                       "Manual Account";
@@ -339,6 +341,71 @@ export default function AuditSummary() {
                     </td>
                   </tr>
                 </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "raw_materials" && data && (
+          <div className="animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-[0.1em]">
+                Raw Material Ledger Audit (Turnover)
+              </h3>
+              <div className="text-xs font-bold text-slate-400 italic">
+                Total {data.rawMaterials?.length || 0} Materials Active
+              </div>
+            </div>
+            <div className="card p-0 overflow-hidden border-2 border-teal-100 shadow-xl">
+              <table className="w-full border-collapse">
+                <thead className="bg-teal-600 text-white">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest border-b border-teal-700">
+                      Material Name
+                    </th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest border-b border-teal-700 bg-white/10">
+                      Credit (Stock In / Aamad)
+                    </th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest border-b border-teal-700 bg-black/10">
+                      Debit (Stock Out / Kharch)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {filteredItems(data.rawMaterials).map((rm, i) => (
+                    <tr key={i} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-black text-slate-700 uppercase tracking-tight">
+                          {rm.name}
+                        </div>
+                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter italic">
+                          Raw Material Head
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10">
+                        {rm.periodCredit > 0 ? (
+                          `Rs. ${formatMoney(rm.periodCredit)}`
+                        ) : (
+                          <span className="text-slate-200">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10">
+                        {rm.periodDebit > 0 ? (
+                          `Rs. ${formatMoney(rm.periodDebit)}`
+                        ) : (
+                          <span className="text-slate-200">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {data.rawMaterials?.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="px-6 py-12 text-center text-slate-400 italic font-medium">
+                        Is period mein koi Raw Material activity nahi hui.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
           </div>
