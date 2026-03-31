@@ -22,6 +22,7 @@ import {
   FaReceipt,
   FaFileContract,
   FaSignOutAlt,
+  FaBookOpen,
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
@@ -50,6 +51,7 @@ const navItems = [
   { to: "/tax-types", icon: FaBalanceScale, label: "Tax Management" },
   { to: "/raw-materials", icon: FaBoxes, label: "Raw Material Setup" },
   { to: "/audit-summary", icon: FaFileContract, label: "Audit (Submail)" },
+  { to: "/consolidated-ledger", icon: FaBookOpen, label: "Daily Ledger Book" },
   { to: "/users", icon: FaUsers, label: "User Management", adminOnly: true },
 ];
 

@@ -1439,3 +1439,212 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   addPageNumbers(doc);
   doc.save(`Professional_Audit_${new Date().toISOString().slice(0,10)}.pdf`);
 }
+
+/**
+ * Consolidated Ledger Book PDF (The "Daily Book")
+ * Prints ALL active ledgers in one grouped document with Professional History UI Match.
+ */
+export function downloadConsolidatedLedgersPdf(data, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo) {
+    subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
+  }
+  subtitleLines.push(`Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium" })} ${new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}`);
+
+  let startY = addReportHeader(doc, "DAILY LEDGER BOOK (DAILY DIARY)", subtitleLines);
+
+  const categories = [
+    { key: 'accounts', label: 'BANK & CASH ACCOUNTS' },
+    { key: 'items', label: 'STOCK ITEM TRADING' },
+    { key: 'customers', label: 'CUSTOMER LEDGERS' },
+    { key: 'suppliers', label: 'SUPPLIER LEDGERS' },
+    { key: 'mazdoors', label: 'MAZDOOR WAGES' },
+    { key: 'rawMaterials', label: 'RAW MATERIAL UNITS' },
+    { key: 'expenses', label: 'GENERAL EXPENSES' },
+    { key: 'taxes', label: 'TAX PAYMENTS' },
+  ];
+
+  let firstEntity = true;
+
+  categories.forEach(cat => {
+    const list = data[cat.key] || [];
+    if (list.length === 0) return;
+
+    list.forEach(entity => {
+      if (!firstEntity) {
+        doc.addPage();
+        startY = addReportHeader(doc, "DAILY LEDGER BOOK (DAILY DIARY)", subtitleLines);
+      }
+      firstEntity = false;
+
+      // Professional Section Header
+      doc.setFontSize(14);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(30, 41, 59); // Dark blue-slate
+      doc.text(`${cat.label}: ${entity.name.toUpperCase()}`, MARGIN, startY);
+      doc.setTextColor(0, 0, 0);
+      startY += 7;
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, "bold");
+      doc.text(`Opening Balance: Rs. ${formatMoney(Math.abs(entity.openingBalance))} ${entity.openingBalance >= 0 ? 'Dr' : 'Cr'}`, MARGIN, startY);
+      startY += 8;
+
+      let tableConfig = {};
+      let runningBalance = Number(entity.openingBalance) || 0;
+      let totalDr = 0;
+      let totalCr = 0;
+
+      // CUSTOMIZE BY CATEGORY (Match historyPdf.js UI)
+      if (cat.key === 'customers' || cat.key === 'suppliers') {
+        const isBuyer = cat.key === 'customers';
+        const body = entity.ledger.map(row => {
+          const d = Number(row.debit) || 0;
+          const c = Number(row.credit) || 0;
+          totalDr += d;
+          totalCr += c;
+          runningBalance += (d - c);
+          return [
+            formatDate(row.date),
+            row.description || "—",
+            row.bags > 0 ? row.bags : "—",
+            c > 0 ? formatMoney(c) : "—",
+            d > 0 ? formatMoney(d) : "—",
+            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")
+          ];
+        });
+
+        tableConfig = {
+          head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
+          body,
+          foot: [["", "GRAND TOTALS", "", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")]],
+          columnStyles: {
+            0: { cellWidth: 22 },
+            1: { cellWidth: "auto" },
+            2: { halign: "center", cellWidth: 15 },
+            3: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+            4: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+            5: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+          }
+        };
+      } else if (cat.key === 'mazdoors') {
+        const body = entity.ledger.map(row => {
+          const d = Number(row.debit) || 0;
+          const c = Number(row.credit) || 0;
+          totalDr += d;
+          totalCr += c;
+          runningBalance += (c - d);
+          return [
+            formatDate(row.date),
+            row.description || (c > 0 ? "Work Earned" : "Payment Made"),
+            c > 0 ? formatMoney(c) : "—",
+            d > 0 ? formatMoney(d) : "—",
+            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")
+          ];
+        });
+        tableConfig = {
+          head: [["Date", "Work Detail / Payment", "Credit (Earned)", "Debit (Paid)", "Balance"]],
+          body,
+          foot: [["", "TOTAL MOVEMENT", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")]],
+          columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: "auto" },
+            2: { halign: "right", cellWidth: 30 },
+            3: { halign: "right", cellWidth: 30 },
+            4: { halign: "right", cellWidth: 30 },
+          }
+        };
+      } else if (cat.key === 'items') {
+        let totalBagsIn = 0;
+        let totalBagsOut = 0;
+        let itemBalance = 0;
+        const body = entity.ledger.map(row => {
+          const isSale = row.status === 'sold';
+          const amt = isSale ? row.debit : row.credit;
+          const bags = row.bags || 0;
+          const weight = row.weight || 0;
+          const mun = weight > 0 ? (weight / 40).toFixed(3) : "—";
+
+          if (isSale) totalBagsOut += bags; else totalBagsIn += bags;
+          if (isSale) totalDr += amt; else totalCr += amt;
+          
+          if (isSale) itemBalance += amt; // Sale = Cr
+          else itemBalance -= amt;        // Purchase = Dr
+
+          return [
+            formatDate(row.date),
+            row.description,
+            bags || "—",
+            mun,
+            isSale ? formatMoney(amt) : "—",
+            !isSale ? formatMoney(amt) : "—",
+            formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Cr" : " Dr")
+          ];
+        });
+        tableConfig = {
+          head: [["Date", "Audit Detail", "Bags", "Mun", "Sale (Cr)", "Purchase (Dr)", "Balance"]],
+          body,
+          foot: [
+            [{ content: "SOLD (OUT)", colSpan: 2, styles: { halign: "right", fillColor: [127, 29, 29] } }, { content: String(totalBagsOut), styles: { halign: "center", fillColor: [127, 29, 29] } }, "", { content: formatMoney(totalDr), styles: { halign: "right", fillColor: [127, 29, 29] } }, "", ""],
+            [{ content: "PURCHASED (IN)", colSpan: 2, styles: { halign: "right", fillColor: [6, 78, 59] } }, { content: String(totalBagsIn), styles: { halign: "center", fillColor: [6, 78, 59] } }, "", "", { content: formatMoney(totalCr), styles: { halign: "right", fillColor: [6, 78, 59] } }, ""],
+            [{ content: "REMAINING BALANCE (NET)", colSpan: 2, styles: { halign: "right", fillColor: [30, 41, 59], fontStyle: "bold" } }, { content: String(totalBagsIn - totalBagsOut), styles: { halign: "center", fillColor: [30, 41, 59], fontStyle: "bold" } }, "", "", "", { content: formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Cr" : " Dr"), styles: { halign: "right", fillColor: [30, 41, 59], fontStyle: "bold" } }]
+          ],
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: "auto" },
+            2: { cellWidth: 12, halign: "center" },
+            3: { cellWidth: 12, halign: "center" },
+            4: { cellWidth: 24, halign: "right" },
+            5: { cellWidth: 24, halign: "right" },
+            6: { cellWidth: 24, halign: "right", fontStyle: "bold" },
+          }
+        };
+      } else {
+        // Default 5-column ledger (Accounts, Raws, Expenses, Taxes)
+        const body = entity.ledger.map(row => {
+          const d = Number(row.debit) || 0;
+          const c = Number(row.credit) || 0;
+          totalDr += d;
+          totalCr += c;
+          runningBalance += (c - d);
+          return [
+            formatDate(row.date),
+            row.description || "—",
+            c > 0 ? formatMoney(c) : "—",
+            d > 0 ? formatMoney(d) : "—",
+            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")
+          ];
+        });
+        tableConfig = {
+          head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
+          body,
+          foot: [["", "NET TOTALS", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")]],
+          columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: "auto" },
+            2: { halign: "right", cellWidth: 28 },
+            3: { halign: "right", cellWidth: 28 },
+            4: { halign: "right", cellWidth: 30 },
+          }
+        };
+      }
+
+      autoTable(doc, {
+        startY,
+        ...tableConfig,
+        ...tableTheme,
+        theme: "grid",
+        styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1, textColor: [0,0,0] },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
+        footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
+        didDrawPage: (d) => { startY = d.cursor.y; }
+      });
+
+      startY = doc.lastAutoTable.finalY + 10;
+    });
+  });
+
+  addPageNumbers(doc);
+  doc.save(`Daily_Ledger_Book_${filters.dateFrom || 'report'}.pdf`);
+}
