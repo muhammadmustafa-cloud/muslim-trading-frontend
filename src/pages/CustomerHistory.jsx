@@ -4,7 +4,7 @@ import { apiGet } from "../config/api.js";
 import { FaArrowLeft, FaFilePdf, FaUsers } from "react-icons/fa";
 import { downloadCustomerHistoryPdf } from "../utils/historyPdf.js";
 
-const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
 const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
 
 export default function CustomerHistory() {

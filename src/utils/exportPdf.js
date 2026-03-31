@@ -3,7 +3,7 @@ import { autoTable } from "jspdf-autotable";
 
 const MARGIN = 14;
 const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—";
 const formatMoney = (n) =>
   n != null && n !== "" ? Math.abs(Number(n)).toLocaleString("en-PK") : "—";
 
@@ -15,7 +15,7 @@ function addReportHeader(doc, title, subtitleLines = []) {
   y += 8;
   doc.setFont(undefined, "normal");
   doc.setFontSize(9);
-  const generated = `Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium" })} ${new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}`;
+  const generated = `Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium", timeZone: "Asia/Karachi" })} ${new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Karachi" })}`;
   doc.text(generated, MARGIN, y);
   y += 5;
   subtitleLines.filter(Boolean).forEach((line) => {
@@ -419,8 +419,10 @@ export function drawSaleInvoice(doc, sale) {
   doc.text("SALE INVOICE", 75, 42);
 
   doc.setFontSize(10);
-  doc.text("Invoice No.", 145, 42);
-  const invoiceNo = `SI${new Date(sale.date).toISOString().slice(5, 7)}${new Date(sale.date).toISOString().slice(2, 4)}/${sale._id.slice(-6).toUpperCase()}`;
+  const invDate = new Date(sale.date);
+  const mm = invDate.toLocaleString("en-PK", { month: "2-digit", timeZone: "Asia/Karachi" });
+  const yy = invDate.toLocaleString("en-PK", { year: "2-digit", timeZone: "Asia/Karachi" });
+  const invoiceNo = `SI${mm}${yy}/${sale._id.toString().slice(-6).toUpperCase()}`;
   doc.text(invoiceNo, 168, 42);
 
   // Line under header
@@ -1228,16 +1230,14 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       { content: "Debit (Balance)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     auditAccounts.forEach(a => {
-      const bal = Number(a.balance || 0);
-      const isLiability = bal < 0;
-      const creditAmt = isLiability ? Math.abs(bal) : 0;
-      const debitAmt = !isLiability ? bal : 0;
+      const creditAmt = Number(a.totalIn || 0);
+      const debitAmt = Number(a.totalOut || 0);
 
       tableRows.push([
         a.name.toUpperCase(),
         "Bank/Commercial",
-        creditAmt > 0 ? formatMoney(creditAmt) : "—", // Credit (Aamad) if Liability/OD
-        debitAmt > 0 ? formatMoney(debitAmt) : "—" // Debit (Kharch) if Asset
+        creditAmt > 0 ? formatMoney(creditAmt) : "—", 
+        debitAmt > 0 ? formatMoney(debitAmt) : "—" 
       ]);
       totalAuditCredit += creditAmt;
       totalAuditDebit += debitAmt;
@@ -1257,13 +1257,12 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       { content: "Debit (Receivable)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     data.customers.forEach(c => {
-      const bal = Number(c.balance) || 0;
-      const creditAmt = bal < 0 ? Math.abs(bal) : 0;
-      const debitAmt = bal > 0 ? bal : 0;
+      const creditAmt = Number(c.periodIn || 0);
+      const debitAmt = Number(c.periodOut || 0);
 
       tableRows.push([
         c.name.toUpperCase(),
-        (bal >= 0 ? "Debit (Dr)" : "Credit (Cr)"),
+        (c.balance >= 0 ? "Debit (Dr)" : "Credit (Cr)"),
         creditAmt > 0 ? formatMoney(creditAmt) : "—",
         debitAmt > 0 ? formatMoney(debitAmt) : "—"
       ]);
@@ -1282,13 +1281,12 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     data.suppliers.forEach(s => {
-      const bal = Number(s.balance) || 0;
-      const creditAmt = bal < 0 ? Math.abs(bal) : 0;
-      const debitAmt = bal > 0 ? bal : 0;
+      const creditAmt = Number(s.periodIn || 0);
+      const debitAmt = Number(s.periodOut || 0);
 
       tableRows.push([
         s.name.toUpperCase(),
-        (bal <= 0 ? "Credit (Cr)" : "Debit (Dr)"),
+        (s.balance <= 0 ? "Credit (Cr)" : "Debit (Dr)"),
         creditAmt > 0 ? formatMoney(creditAmt) : "—",
         debitAmt > 0 ? formatMoney(debitAmt) : "—"
       ]);
@@ -1307,13 +1305,12 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
        { content: "Debit (Paid)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
     ]);
     data.mazdoors.forEach(m => {
-      const bal = Number(m.balance) || 0;
-      const earned = Number(m.earned) || 0;
-      const paid = Number(m.paid) || 0;
+      const earned = Number(m.periodEarned || 0);
+      const paid = Number(m.periodPaid || 0);
       
       tableRows.push([
         m.name.toUpperCase(),
-        (bal >= 0 ? "Net Payable" : "Advance Paid"),
+        (m.balance >= 0 ? "Net Payable" : "Advance Paid"),
         formatMoney(earned),
         formatMoney(paid),
       ]);

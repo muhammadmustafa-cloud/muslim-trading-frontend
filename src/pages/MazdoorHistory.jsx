@@ -4,7 +4,7 @@ import { API_BASE_URL, apiGet } from "../config/api.js";
 import { FaArrowLeft, FaFilePdf, FaUser } from "react-icons/fa";
 import { downloadMazdoorHistoryPdf } from "../utils/historyPdf.js";
 
-const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
 const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
 
 function getRowType(t) {

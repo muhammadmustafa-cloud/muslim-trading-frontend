@@ -10,7 +10,10 @@ import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 
-const today = new Date().toISOString().slice(0, 10);
+const today = (() => {
+  const d = new Date();
+  return d.toLocaleString("en-CA", { timeZone: "Asia/Karachi" }).slice(0, 10);
+})();
 
 export default function Sales() {
   const { isAdmin } = useAuth();
@@ -117,7 +120,7 @@ export default function Sales() {
   };
 
   const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
 
   const resetForm = () => {
     setForm({
@@ -278,7 +281,7 @@ export default function Sales() {
 
   const formatDateForInput = (d) => {
     if (!d) return "";
-    return new Date(d).toISOString().slice(0, 10);
+    return new Date(d).toLocaleString("en-CA", { timeZone: "Asia/Karachi" }).slice(0, 10);
   };
 
   const handleSubmit = async (e) => {

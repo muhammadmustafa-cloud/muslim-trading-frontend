@@ -10,7 +10,10 @@ import { FaMoneyBillWave } from "react-icons/fa";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
 
-const today = new Date().toISOString().slice(0, 10);
+const today = (() => {
+  const d = new Date();
+  return d.toLocaleString("en-CA", { timeZone: "Asia/Karachi" }).slice(0, 10);
+})();
 
 export default function Purchases() {
   const [list, setList] = useState([]);
@@ -174,7 +177,7 @@ export default function Purchases() {
 
   const formatDateForInput = (d) => {
     if (!d) return "";
-    return new Date(d).toISOString().slice(0, 10);
+    return new Date(d).toLocaleString("en-CA", { timeZone: "Asia/Karachi" }).slice(0, 10);
   };
 
   const updateFormWithAutoCalc = (updates) => {
@@ -383,7 +386,7 @@ export default function Purchases() {
     return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
   };
 
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
 
   if (view === "form") {
     return (

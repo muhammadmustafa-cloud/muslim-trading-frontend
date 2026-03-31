@@ -20,7 +20,10 @@ const formatDate = (d) =>
         timeZone: "Asia/Karachi",
       })
     : "—";
-const getToday = () => new Date().toISOString().slice(0, 10);
+const getToday = () => {
+  const d = new Date();
+  return d.toLocaleString("en-CA", { timeZone: "Asia/Karachi" }).slice(0, 10);
+};
 
 export default function UniversalLedger() {
   const today = getToday();

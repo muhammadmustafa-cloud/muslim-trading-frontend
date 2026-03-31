@@ -3,7 +3,7 @@ import { autoTable } from "jspdf-autotable";
 
 const MARGIN = 14;
 const formatDate = (d) =>
-    d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+    d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—";
 const formatMoney = (n) =>
     n != null && n !== "" && n !== 0 ? Number(n).toLocaleString("en-PK") : "";
 
@@ -137,7 +137,7 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   const lastY = doc.lastAutoTable.finalY + 10;
   doc.setFontSize(8);
   doc.setTextColor(150);
-  doc.text(`Generated: ${new Date().toLocaleString("en-PK")}`, MARGIN, lastY);
+  doc.text(`Generated: ${new Date().toLocaleString("en-PK", { timeZone: "Asia/Karachi" })}`, MARGIN, lastY);
 
   addPageNumbers(doc);
   doc.save(`universal-ledger-${(filters.dateFrom || "report")}.pdf`);

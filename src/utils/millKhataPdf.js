@@ -8,6 +8,7 @@ const formatDate = (dateStr) => {
         day: "2-digit",
         month: "short",
         year: "numeric",
+        timeZone: "Asia/Karachi",
     });
 };
 

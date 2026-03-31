@@ -3,7 +3,7 @@ import { autoTable } from "jspdf-autotable";
 
 const MARGIN = 14;
 const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—";
 const formatMoney = (n) =>
   n != null && n !== "" ? Number(n).toLocaleString("en-PK") : "—";
 
@@ -34,7 +34,7 @@ function addGeneratedLine(doc, y) {
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   doc.text(
-    `Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium" })} ${new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}`,
+    `Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium", timeZone: "Asia/Karachi" })} ${new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Karachi" })}`,
     MARGIN,
     y
   );

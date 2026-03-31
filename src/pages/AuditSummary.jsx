@@ -26,15 +26,19 @@ const formatDate = (d) =>
         day: "2-digit",
         month: "short",
         year: "numeric",
+        timeZone: "Asia/Karachi",
       })
     : "—";
-const getToday = () => new Date().toISOString().slice(0, 10);
+const getToday = () => {
+  const d = new Date();
+  return d.toLocaleString("en-CA", { timeZone: "Asia/Karachi" }).slice(0, 10);
+};
 
 export default function AuditSummary() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState({ dateFrom: "", dateTo: getToday() });
+  const [filters, setFilters] = useState({ dateFrom: getToday(), dateTo: getToday() });
   const [activeTab, setActiveTab] = useState("master_log");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -199,7 +203,10 @@ export default function AuditSummary() {
               />
             </div>
             <button
-              onClick={() => setFilters({ dateFrom: "", dateTo: getToday() })}
+              onClick={() => {
+                const today = getToday();
+                setFilters({ dateFrom: today, dateTo: today });
+              }}
               className="btn-secondary text-[10px] uppercase font-bold py-2 mb-0.5"
             >
               Today
