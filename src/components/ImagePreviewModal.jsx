@@ -14,12 +14,15 @@ export default function ImagePreviewModal({ open, onClose, imageUrl, title = "Im
 
   if (!imageUrl) return null;
 
+  const isCompleteUrl = imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
+  const fullUrl = isCompleteUrl ? imageUrl : `${BASE_URL}/uploads/${imageUrl}`;
+
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <div className="flex justify-center items-center bg-slate-100 p-2 rounded-xl border border-slate-200 min-h-[350px] sm:min-w-[400px]">
         {imageUrl && !hasError ? (
           <img
-            src={`${BASE_URL}/uploads/${imageUrl}`}
+            src={fullUrl}
             alt={title}
             className="max-w-full max-h-[65vh] object-contain rounded drop-shadow-sm"
             onError={() => setHasError(true)}
@@ -35,7 +38,7 @@ export default function ImagePreviewModal({ open, onClose, imageUrl, title = "Im
       </div>
       <div className="mt-5 flex items-center justify-center gap-4">
         <a 
-          href={`${BASE_URL}/uploads/${imageUrl}`} 
+          href={fullUrl}
           target="_blank" 
           rel="noopener noreferrer"
           className="btn-ghost-primary text-sm font-bold w-auto"
@@ -43,7 +46,7 @@ export default function ImagePreviewModal({ open, onClose, imageUrl, title = "Im
           Open in New Tab
         </a>
         <a 
-          href={`${BASE_URL}/uploads/${imageUrl}`} 
+          href={fullUrl}
           download={imageUrl}
           className="btn-primary text-sm font-bold w-auto"
         >
