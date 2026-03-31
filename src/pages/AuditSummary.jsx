@@ -97,11 +97,25 @@ export default function AuditSummary() {
     if (!data || !data.periodTransactions) return { in: 0, out: 0 };
     let totalIn = 0;
     let totalOut = 0;
+    
+    // 1. Start with natural period transactions
     data.periodTransactions.forEach((t) => {
-      // Logic for Mill-wide cash movement:
       if (t.fromAccountId) totalOut += Number(t.amount);
       else if (t.toAccountId) totalIn += Number(t.amount);
     });
+
+    // 2. Include Opening Balance on its natural side
+    const opBal = Number(data.openingBalance || 0);
+    if (opBal > 0) totalIn += opBal;
+    else if (opBal < 0) totalOut += Math.abs(opBal);
+
+    // 3. Include Closing Balance on the OPPOSITE side for balancing
+    const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
+    const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    
+    if (closingBaqaya > 0) totalOut += closingBaqaya; // Surplus (Credit) added to Debit (Out) side
+    else if (closingBaqaya < 0) totalIn += Math.abs(closingBaqaya); // Deficit (Debit) added to Credit (In) side
+
     return { in: totalIn, out: totalOut };
   }, [data]);
 
@@ -265,6 +279,25 @@ export default function AuditSummary() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
+                  {/* 1. Opening Balance Row */}
+                  {(Number(data.openingBalance) !== 0) && (
+                    <tr className="bg-indigo-50/20 italic">
+                      <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-400">—</td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-black text-indigo-800 uppercase italic">
+                          Previous Balance (Pichli Wasooli)
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600">
+                        {data.openingBalance > 0 ? `Rs. ${formatMoney(Math.abs(data.openingBalance))}` : "—"}
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-rose-600">
+                        {data.openingBalance < 0 ? `Rs. ${formatMoney(Math.abs(data.openingBalance))}` : "—"}
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* 2. Period Transactions */}
                   {filteredItems(data.periodTransactions).map((t, i) => {
                     const isOut = !!t.fromAccountId;
                     const isIn = !!t.toAccountId;
@@ -324,6 +357,35 @@ export default function AuditSummary() {
                       </tr>
                     );
                   })}
+
+                  {/* 3. Closing Balance (Balanced Row) */}
+                  {(() => {
+                    const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
+                    const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+                    if (closingBaqaya === 0) return null;
+                    const isSurplus = closingBaqaya >= 0;
+                    return (
+                      <tr className="bg-slate-50 italic">
+                        <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-400">—</td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-black text-slate-600 uppercase italic">
+                            Baqaya Balance (Closing Entry)
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                            Audit Balancing Row
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right font-black text-emerald-600">
+                          {/* Swapped: Deficit goes to Credit */}
+                          {!isSurplus ? `Rs. ${formatMoney(Math.abs(closingBaqaya))}` : <span className="text-slate-200">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-right font-black text-rose-600">
+                          {/* Swapped: Surplus goes to Debit */}
+                          {isSurplus ? `Rs. ${formatMoney(Math.abs(closingBaqaya))}` : <span className="text-slate-200">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tbody>
                 <tfoot className="bg-slate-100 border-t border-slate-200">
                   <tr className="font-black">
@@ -331,13 +393,13 @@ export default function AuditSummary() {
                       colSpan="2"
                       className="px-6 py-5 text-right text-[10px] uppercase text-slate-500 tracking-widest italic"
                     >
-                      Consolidated Audit Movement:
+                      Consolidated Audit Movement (Balanced):
                     </td>
                     <td className="px-6 py-5 text-right text-base text-emerald-700 font-black">
-                      Rs. {formatMoney(masterTotals.in)} (Total Credits)
+                      Rs. {formatMoney(masterTotals.in)} Total
                     </td>
                     <td className="px-6 py-5 text-right text-base text-rose-700 font-black">
-                      Rs. {formatMoney(masterTotals.out)} (Total Debits)
+                      Rs. {formatMoney(masterTotals.out)} Total
                     </td>
                   </tr>
                 </tfoot>

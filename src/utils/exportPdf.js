@@ -1423,8 +1423,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
   addGroupHeader("7. CLOSING BAQAYA BALANCE (MILL CASH)");
   const isSurplusClose = closingBaqaya >= 0;
-  const creditClose = isSurplusClose ? Math.abs(closingBaqaya) : 0;
-  const debitClose = !isSurplusClose ? Math.abs(closingBaqaya) : 0;
+  const creditClose = !isSurplusClose ? Math.abs(closingBaqaya) : 0;
+  const debitClose = isSurplusClose ? Math.abs(closingBaqaya) : 0;
 
   tableRows.push([
     "BAQAYA BALANCE (CLOSING)",
