@@ -1625,6 +1625,33 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
             6: { cellWidth: 24, halign: "right", fontStyle: "bold" },
           }
         };
+      } else if (cat.key === 'accounts') {
+        const body = entity.ledger.map(row => {
+          const d = Number(row.debit) || 0;
+          const c = Number(row.credit) || 0;
+          totalDr += d;
+          totalCr += c;
+          runningBalance += (d - c); // Asset account: Debit increases, Credit decreases
+          return [
+            formatDate(row.date),
+            row.description || (d > 0 ? "Deposit / Inflow" : "Withdraw / Outflow"),
+            c > 0 ? formatMoney(c) : "—",
+            d > 0 ? formatMoney(d) : "—",
+            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")
+          ];
+        });
+        tableConfig = {
+          head: [["Date", "Description", "Credit (Outflow/Payment)", "Debit (Inflow/Receipt)", "Balance"]],
+          body,
+          foot: [["", "NET TOTALS", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")]],
+          columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: "auto" },
+            2: { halign: "right", cellWidth: 32 },
+            3: { halign: "right", cellWidth: 32 },
+            4: { halign: "right", cellWidth: 30, fontStyle: "bold" },
+          }
+        };
       } else {
         // Default 5-column ledger (Accounts, Raws, Expenses, Taxes)
         const body = entity.ledger.map(row => {
