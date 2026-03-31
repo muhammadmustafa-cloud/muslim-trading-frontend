@@ -174,14 +174,20 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
        transactions.find(t => (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId))?.toAccountId?.name || "Account")
     : "All Accounts";
 
+  const rawMaterialName = transactions.length > 0 && filters.rawMaterialHeadId
+    ? (transactions.find(t => t.rawMaterialHeadId === filters.rawMaterialHeadId || t.rawMaterialHeadId?._id === filters.rawMaterialHeadId)?.rawMaterialHeadName || "Raw Material")
+    : null;
+
+  const reportTitle = rawMaterialName ? `${rawMaterialName} Ledger` : `${accountName} Ledger`;
+
   subtitleLines.push(`Total records: ${transactions.length}`);
 
-  let startY = addReportHeader(doc, `${accountName} - Ledger`, subtitleLines);
+  let startY = addReportHeader(doc, reportTitle, subtitleLines);
 
   if (!transactions.length) {
     doc.setFontSize(10);
     doc.text("No transactions in this period.", MARGIN, startY);
-    doc.save("transactions-report.pdf");
+    doc.save(`${reportTitle.replace(/\s+/g, "_")}.pdf`);
     return;
   }
 
@@ -229,16 +235,25 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
       if (row.type === 'sale') description = `Sale: ${row.itemName || ""}`;
       else if (row.type === 'purchase') description = `Purchase: ${row.itemName || ""}`;
       else if (row.mazdoorName) description = "Labor Payment / Advance";
-      else description = row.note || (row.type === 'deposit' ? "Received Funds" : "Payment Made");
+      else description = row.note || (row.type === 'deposit' ? "Funds Received" : "Payment Made");
     } else if (row.type === 'transfer') {
       participant = `${row.fromAccountId?.name || "—"} ➔ ${row.toAccountId?.name || "—"}`;
       description = "Internal Transfer";
+    } else if (row.rawMaterialHeadName) {
+      participant = row.rawMaterialHeadName;
+      description = row.note || (row.type === "deposit" || row.type === "sale" ? "Material Received" : "Material Outflow");
+    } else if (row.taxTypeName) {
+      participant = row.taxTypeName;
+      description = "Tax Payment";
+    } else if (row.expenseTypeName) {
+      participant = row.expenseTypeName;
+      description = "General Expense";
     } else {
        participant = row.fromAccountId?.name || row.toAccountId?.name || "Manual";
     }
 
-    const descriptionFinal = personName 
-      ? `${personName} ${description ? `(${description})` : ""} ${row.category ? `[${row.category}]` : ""}`
+    const descriptionFinal = participant 
+      ? `${participant} ${description ? `(${description})` : ""} ${row.category ? `[${row.category}]` : ""}`
       : `${description} ${row.category ? `[${row.category}]` : ""}`;
 
     return [
@@ -278,7 +293,7 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
   });
 
   addPageNumbers(doc);
-  doc.save(`ledger-${accountName.replace(/\s+/g, "_")}.pdf`);
+  doc.save(`${reportTitle.replace(/\s+/g, "_")}.pdf`);
 }
 
 /**

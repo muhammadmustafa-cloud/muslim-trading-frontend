@@ -117,6 +117,11 @@ export default function Transactions() {
   }, [accounts, filters.accountId]);
 
   const isTraditional = activeAccount?.isDailyKhata || activeAccount?.isMillKhata;
+  
+  const activeRawMaterial = useMemo(() => {
+    if (!filters.rawMaterialHeadId) return null;
+    return rawMaterialHeads.find(r => r._id === filters.rawMaterialHeadId);
+  }, [rawMaterialHeads, filters.rawMaterialHeadId]);
 
   const fetchList = async () => {
     setLoading(true);
@@ -175,7 +180,11 @@ export default function Transactions() {
   };
   const openAddModal = () => {
     resetForm();
-    setForm((f) => ({ ...f, date: today }));
+    setForm((f) => ({ 
+      ...f, 
+      date: today,
+      rawMaterialHeadId: filters.rawMaterialHeadId || ""
+    }));
     setModalOpen(true);
   };
 
@@ -370,10 +379,19 @@ export default function Transactions() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <FaExchangeAlt className="w-7 h-7 text-amber-500" />
-            Transactions (Lena-dena)
+            <FaExchangeAlt className={`w-7 h-7 ${activeRawMaterial ? "text-teal-500" : "text-amber-500"}`} />
+            {activeRawMaterial ? (
+              <span className="flex items-center gap-2">
+                <span className="text-teal-600">{activeRawMaterial.name}</span>
+                <span className="text-slate-400 font-light ml-1">Ledger</span>
+              </span>
+            ) : "Transactions (Lena-dena)"}
           </h1>
-          <p className="page-subtitle">Saari account movement: manual deposit/withdraw/transfer plus Sales aur Purchases jahan account select kiya ho.</p>
+          <p className="page-subtitle">
+            {activeRawMaterial 
+              ? `Showing all ledger entries specifically for ${activeRawMaterial.name}.`
+              : "Saari account movement: manual deposit/withdraw/transfer plus Sales aur Purchases jahan account select kiya ho."}
+          </p>
         </div>
         <button type="button" onClick={openAddModal} className="btn-primary">
           <FaPlus className="w-4 h-4" /> Add transaction
