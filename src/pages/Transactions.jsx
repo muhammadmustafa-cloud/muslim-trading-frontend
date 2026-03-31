@@ -16,6 +16,7 @@ const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2
 export default function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const accountIdFromUrl = searchParams.get("accountId") || "";
+  const rawMaterialHeadIdFromUrl = searchParams.get("rawMaterialHeadId") || "";
 
   const [list, setList] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -24,6 +25,7 @@ export default function Transactions() {
   const [mazdoor, setMazdoor] = useState([]);
   const [taxTypes, setTaxTypes] = useState([]);
   const [expenseTypes, setExpenseTypes] = useState([]);
+  const [rawMaterialHeads, setRawMaterialHeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -40,6 +42,7 @@ export default function Transactions() {
     mazdoorId: "",
     taxTypeId: "",
     expenseTypeId: "",
+    rawMaterialHeadId: "",
     image: null,
     paymentMethod: "cash",
     chequeNumber: "",
@@ -47,7 +50,7 @@ export default function Transactions() {
   });
   const [previewImage, setPreviewImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "" });
+  const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "", rawMaterialHeadId: rawMaterialHeadIdFromUrl });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
@@ -58,6 +61,12 @@ export default function Transactions() {
       setFilters((f) => ({ ...f, accountId: accountIdFromUrl }));
     }
   }, [accountIdFromUrl]);
+
+  useEffect(() => {
+    if (rawMaterialHeadIdFromUrl && filters.rawMaterialHeadId !== rawMaterialHeadIdFromUrl) {
+      setFilters((f) => ({ ...f, rawMaterialHeadId: rawMaterialHeadIdFromUrl }));
+    }
+  }, [rawMaterialHeadIdFromUrl]);
 
   const fetchAccounts = async () => {
     try {
@@ -95,7 +104,13 @@ export default function Transactions() {
       setExpenseTypes(data || []);
     } catch (_) { }
   };
-
+  const fetchRawMaterialHeads = async () => {
+    try {
+      const { data } = await apiGet("/raw-material-heads");
+      setRawMaterialHeads(data || []);
+    } catch (_) { }
+  };
+ 
   const activeAccount = useMemo(() => {
     if (!filters.accountId) return null;
     return accounts.find(a => a._id === filters.accountId);
@@ -110,6 +125,7 @@ export default function Transactions() {
       const data = await apiGet("/transactions", {
         unified: "true",
         accountId: filters.accountId || undefined,
+        rawMaterialHeadId: filters.rawMaterialHeadId || undefined,
         dateFrom: filters.dateFrom || undefined,
         dateTo: filters.dateTo || undefined,
       });
@@ -129,10 +145,11 @@ export default function Transactions() {
     fetchMazdoor();
     fetchTaxTypes();
     fetchExpenseTypes();
+    fetchRawMaterialHeads();
   }, []);
   useEffect(() => {
     fetchList();
-  }, [filters.accountId, filters.dateFrom, filters.dateTo]);
+  }, [filters.accountId, filters.dateFrom, filters.dateTo, filters.rawMaterialHeadId]);
 
   const resetForm = () => {
     setForm({
@@ -148,6 +165,7 @@ export default function Transactions() {
       mazdoorId: "",
       taxTypeId: "",
       expenseTypeId: "",
+      rawMaterialHeadId: "",
       image: null,
       paymentMethod: "cash",
       chequeNumber: "",
@@ -222,6 +240,7 @@ export default function Transactions() {
       if (form.mazdoorId) formData.append("mazdoorId", form.mazdoorId);
       if (form.taxTypeId) formData.append("taxTypeId", form.taxTypeId);
       if (form.expenseTypeId) formData.append("expenseTypeId", form.expenseTypeId);
+      if (form.rawMaterialHeadId) formData.append("rawMaterialHeadId", form.rawMaterialHeadId);
       if (form.image) formData.append("image", form.image);
       if (form.paymentMethod) formData.append("paymentMethod", form.paymentMethod);
       if (form.paymentMethod === "cheque") {
@@ -310,6 +329,7 @@ export default function Transactions() {
     // 6. Tax logic
     if (row.type === "tax") return row.taxTypeName || "Tax Payment";
     if (row.type === "expense") return row.expenseTypeName || "General Expense";
+    if (row.rawMaterialHeadId) return row.rawMaterialHeadName || "Raw Material";
     
     // 4. Global view fallback
     return row.fromAccountId?.name || row.toAccountId?.name || "Manual";
@@ -329,6 +349,7 @@ export default function Transactions() {
     }
     if (row.type === "tax") return `Tax Payment: ${row.taxTypeName || "—"}`;
     if (row.type === "expense") return `Expense: ${row.expenseTypeName || "—"}`;
+    if (row.rawMaterialHeadId) return `Raw Material: ${row.rawMaterialHeadName || "—"}`;
     return row.note || "—";
   };
 
@@ -429,6 +450,16 @@ export default function Transactions() {
               </div>
             )}
             <div>
+              <label className="input-label font-bold text-teal-600">Raw Material (Optional)</label>
+              <SearchableSelect
+                options={rawMaterialHeads}
+                value={form.rawMaterialHeadId}
+                onChange={(val) => setForm((f) => ({ ...f, rawMaterialHeadId: val }))}
+                placeholder="Select Bardana/Mitti etc"
+                className="border-teal-200 bg-teal-50/30"
+              />
+            </div>
+            <div>
               <label className="input-label">Amount *</label>
               <input type="number" placeholder="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} className="input-field" min="0" step="1" required />
             </div>
@@ -523,6 +554,13 @@ export default function Transactions() {
           />
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="input-field w-40" />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
+          <SearchableSelect
+            options={rawMaterialHeads}
+            value={filters.rawMaterialHeadId}
+            onChange={(val) => setFilters((f) => ({ ...f, rawMaterialHeadId: val }))}
+            placeholder="Filter by Raw Material"
+            className="w-56"
+          />
           <p className="text-sm text-slate-500">{list.length} transaction(s)</p>
           <button type="button" onClick={() => downloadTransactionsPdf(sortedList, { ...filters, isTraditional })} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
           <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "type", label: "Type" }, { key: "fromAccountId.name", label: "From Account" }, { key: "toAccountId.name", label: "To Account" }, { key: "amount", label: "Amount" }, { key: "category", label: "Category" }, { key: "note", label: "Note" }]); downloadCsv(csv, "transactions.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>

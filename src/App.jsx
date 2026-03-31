@@ -31,6 +31,7 @@ import TaxLedger from "./pages/TaxLedger";
 import ExpenseTypes from "./pages/ExpenseTypes";
 import ExpenseLedger from "./pages/ExpenseLedger";
 import AuditSummary from "./pages/AuditSummary";
+import RawMaterials from "./pages/RawMaterials";
 import Login from "./pages/Login";
 import Users from "./pages/Users";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -81,6 +82,7 @@ function App() {
           <Route path="tax-types/:id/ledger" element={<TaxLedger />} />
           <Route path="expense-types" element={<ExpenseTypes />} />
           <Route path="expense-types/:id/ledger" element={<ExpenseLedger />} />
+          <Route path="raw-materials" element={<RawMaterials />} />
           <Route path="audit-summary" element={<AuditSummary />} />
           <Route path="users" element={<Users />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -48,6 +48,7 @@ const navItems = [
   { to: "/transactions", icon: FaExchangeAlt, label: "Transactions" },
   { to: "/expense-types", icon: FaReceipt, label: "Expense Management" },
   { to: "/tax-types", icon: FaBalanceScale, label: "Tax Management" },
+  { to: "/raw-materials", icon: FaBoxes, label: "Raw Material Setup" },
   { to: "/audit-summary", icon: FaFileContract, label: "Audit (Submail)" },
   { to: "/users", icon: FaUsers, label: "User Management", adminOnly: true },
 ];
