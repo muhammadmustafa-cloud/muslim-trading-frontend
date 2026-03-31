@@ -1417,6 +1417,24 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   const totalTax = data.taxes.reduce((s, t) => s + Number(t.amount), 0);
   totalAuditDebit += (stockVal + machineVal + totalExp + totalTax);
 
+  // 8. Closing Baqaya Balance
+  const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
+  const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+
+  addGroupHeader("7. CLOSING BAQAYA BALANCE (MILL CASH)");
+  const isSurplusClose = closingBaqaya >= 0;
+  const creditClose = isSurplusClose ? Math.abs(closingBaqaya) : 0;
+  const debitClose = !isSurplusClose ? Math.abs(closingBaqaya) : 0;
+
+  tableRows.push([
+    "BAQAYA BALANCE (CLOSING)",
+    isSurplusClose ? "Cash Surplus in Hand" : "Closing Deficit/Udhaar",
+    creditClose > 0 ? formatMoney(creditClose) : "—",
+    debitClose > 0 ? formatMoney(debitClose) : "—"
+  ]);
+  totalAuditCredit += creditClose;
+  totalAuditDebit += debitClose;
+
   // Summary Totals
   const totalAssets_Final = Number(data.totalCash || 0) + Number(data.totalReceivables || 0) + stockVal + machineVal;
   const totalPayables_Final = Number(data.totalPayables || 0);
