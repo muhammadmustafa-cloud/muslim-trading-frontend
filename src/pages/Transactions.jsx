@@ -626,14 +626,12 @@ export default function Transactions() {
 
                       if (filters.accountId) {
                         if (row.type === "transfer") {
-                          if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
-                            // Receiving into this account
-                            if (isMillNature) col1 = row.amount; // Mill Receiving = Credit (Aamad)
-                            else col2 = row.amount; // Bank Receiving = Debit
-                          } else if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
-                            // Leaving from this account
-                            if (isMillNature) col2 = row.amount; // Mill Giving = Debit (Kharch)
-                            else col1 = row.amount; // Bank Giving = Credit
+                          if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
+                            // Source Account (Giver) = Credit (Aamad)
+                            col1 = row.amount;
+                          } else if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
+                            // Destination Account (Receiver) = Debit (Kharch)
+                            col2 = row.amount;
                           }
                         } else {
                           // Standard Inflow/Outflow
@@ -721,12 +719,10 @@ export default function Transactions() {
                       list.forEach((row) => {
                         if (filters.accountId) {
                           if (row.type === "transfer") {
-                            if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
-                               if (isMillNatureFooter) tAamadTotal += row.amount;
-                               else tKharchTotal += row.amount;
-                            } else if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
-                               if (isMillNatureFooter) tKharchTotal += row.amount;
-                               else tAamadTotal += row.amount;
+                            if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
+                               tAamadTotal += row.amount; // From = Credit
+                            } else if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
+                               tKharchTotal += row.amount; // To = Debit
                             }
                           } else {
                             const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";

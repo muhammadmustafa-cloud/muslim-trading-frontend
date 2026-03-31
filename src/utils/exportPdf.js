@@ -202,12 +202,12 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     const isMillNature = !filters?.accountId || filters?.isTraditional;
 
     if (row.type === "transfer") {
-      if (filters?.accountId && (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId)) {
-        if (isMillNature) credit = row.amount; // Mill Inflow = Credit
-        else debit = row.amount; // Bank Inflow = Debit
-      } else if (filters?.accountId && (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId)) {
-        if (isMillNature) debit = row.amount; // Mill Outflow = Debit
-        else credit = row.amount; // Bank Outflow = Credit
+      if (filters?.accountId && (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId)) {
+        // Source Account (Giver) = Credit
+        credit = row.amount;
+      } else if (filters?.accountId && (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId)) {
+        // Destination Account (Receiver) = Debit
+        debit = row.amount;
       } else {
         debit = row.amount;
       }
