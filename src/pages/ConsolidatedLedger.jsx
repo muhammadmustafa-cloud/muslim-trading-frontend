@@ -48,14 +48,20 @@ export default function ConsolidatedLedger() {
   };
 
   const getStats = () => {
-    if (!data) return { totalParties: 0, totalEntries: 0 };
+    if (!data) return { totalParties: 0, totalEntries: 0, salesCount: 0, purchasesCount: 0 };
     let count = 0;
     let entries = 0;
-    Object.values(data).forEach(list => {
+    Object.entries(data).forEach(([key, list]) => {
+      if (key === 'salesInvoices' || key === 'purchaseInvoices') return;
       count += list.length;
       list.forEach(item => entries += item.ledger.length);
     });
-    return { totalParties: count, totalEntries: entries };
+    return { 
+      totalParties: count, 
+      totalEntries: entries,
+      salesCount: data.salesInvoices?.length || 0,
+      purchasesCount: data.purchaseInvoices?.length || 0
+    };
   };
 
   const stats = getStats();
@@ -141,6 +147,17 @@ export default function ConsolidatedLedger() {
               <p className="text-[9px] font-black text-slate-400 uppercase leading-none">Total Entries</p>
               <p className="text-2xl font-black text-amber-600">{stats.totalEntries}</p>
             </div>
+            {data && (
+              <>
+                <div className="h-10 w-px bg-slate-100" />
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-indigo-400 uppercase leading-none flex items-center gap-1 justify-end"><FaFilePdf /> Invoices</p>
+                  <p className="text-2xl font-black text-indigo-600">
+                    {stats.salesCount + stats.purchasesCount} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded absolute -mt-3 shadow-sm">{stats.salesCount}S/{stats.purchasesCount}P</span>
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>

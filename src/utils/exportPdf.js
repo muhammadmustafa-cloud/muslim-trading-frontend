@@ -393,9 +393,7 @@ export function downloadAccountsPdf(accounts) {
  * Professional Single Sale Invoice PDF
  * Imitates the physical format provided by the user.
  */
-export function downloadSaleInvoicePdf(sale) {
-  // A5 format often works best for half-page invoices, but we can do A4 portrait and scale it.
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+export function drawSaleInvoice(doc, sale) {
 
   // --- HEADER SECTION ---
   doc.setFontSize(28);
@@ -624,7 +622,12 @@ export function downloadSaleInvoicePdf(sale) {
   doc.line(140, yPos + 35, 195, yPos + 35);
   doc.setFont("helvetica", "bold");
   doc.text("Signature", 158, yPos + 40);
+}
 
+export function downloadSaleInvoicePdf(sale) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  drawSaleInvoice(doc, sale);
+  const invoiceNo = `SI${new Date(sale.date).toISOString().slice(5, 7)}${new Date(sale.date).toISOString().slice(2, 4)}/${sale._id.slice(-6).toUpperCase()}`;
   doc.save(`invoice-${invoiceNo.replace(/\//g, "-")}.pdf`);
 }
 
@@ -632,8 +635,7 @@ export function downloadSaleInvoicePdf(sale) {
  * Professional Single Purchase Invoice PDF
  * Mimics the style of the sales invoice but for supplier purchases.
  */
-export function downloadPurchaseInvoicePdf(entry) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+export function drawPurchaseInvoice(doc, entry) {
 
   // --- HEADER SECTION ---
   doc.setFontSize(28);
@@ -826,7 +828,12 @@ export function downloadPurchaseInvoicePdf(entry) {
   doc.line(140, yPos + 35, 195, yPos + 35);
   doc.setFont("helvetica", "bold");
   doc.text("Verified By", 158, yPos + 40);
+}
 
+export function downloadPurchaseInvoicePdf(entry) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  drawPurchaseInvoice(doc, entry);
+  const entryNo = `PI${new Date(entry.date).toISOString().slice(5, 7)}${new Date(entry.date).toISOString().slice(2, 4)}/${entry._id.slice(-6).toUpperCase()}`;
   doc.save(`purchase-invoice-${entryNo.replace(/\//g, "-")}.pdf`);
 }
 
@@ -1644,6 +1651,21 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
       startY = doc.lastAutoTable.finalY + 10;
     });
   });
+
+  // APPEND INVOICES AT THE END
+  if (data.salesInvoices && data.salesInvoices.length > 0) {
+    data.salesInvoices.forEach(sale => {
+      doc.addPage();
+      drawSaleInvoice(doc, sale);
+    });
+  }
+
+  if (data.purchaseInvoices && data.purchaseInvoices.length > 0) {
+    data.purchaseInvoices.forEach(purchase => {
+      doc.addPage();
+      drawPurchaseInvoice(doc, purchase);
+    });
+  }
 
   addPageNumbers(doc);
   doc.save(`Daily_Ledger_Book_${filters.dateFrom || 'report'}.pdf`);
