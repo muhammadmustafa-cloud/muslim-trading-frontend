@@ -38,7 +38,7 @@ export default function UniversalLedger() {
   const [filters, setFilters] = useState({ dateFrom: today, dateTo: today, accountId: "" });
 
   const [showDastiModal, setShowDastiModal] = useState(false);
-  const [newDasti, setNewDasti] = useState({ name: "", type: "credit", amount: "", note: "" });
+  const [newDasti, setNewDasti] = useState({ name: "", type: "credit", amount: "", note: "", date: today });
 
   const fetchAccounts = async () => {
     try {
@@ -84,9 +84,9 @@ export default function UniversalLedger() {
   const handleAddDasti = async (e) => {
     e.preventDefault();
     try {
-      await apiPost("/daily-dasti", { ...newDasti, date: filters.dateFrom });
+      await apiPost("/daily-dasti", newDasti);
       setShowDastiModal(false);
-      setNewDasti({ name: "", type: "credit", amount: "", note: "" });
+      setNewDasti({ name: "", type: "credit", amount: "", note: "", date: today });
       fetchLedger();
     } catch (e) {
       alert(e.message);
@@ -382,6 +382,16 @@ export default function UniversalLedger() {
               <button onClick={() => setShowDastiModal(false)} className="text-white/80 hover:text-white text-2xl font-bold">&times;</button>
             </div>
             <form onSubmit={handleAddDasti} className="p-6 space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Transaction Date</label>
+                <input
+                  required
+                  type="date"
+                  className="input-field w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-amber-500 transition-all font-bold text-slate-700"
+                  value={newDasti.date}
+                  onChange={(e) => setNewDasti(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Person Name</label>
                 <input
