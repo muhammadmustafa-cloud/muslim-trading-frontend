@@ -579,6 +579,14 @@ export function drawSaleInvoice(doc, sale) {
   const mazdoriTotal = sale.items?.reduce((sum, i) => sum + (i.mazdori || 0), 0) || sale.mazdori || 0;
   doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
 
+  if (Number(sale.extras) > 0) {
+    rightY += 7;
+    doc.setFont("helvetica", "bold");
+    doc.text("EXTRAS (LESS):", 130, rightY);
+    doc.setFont("helvetica", "normal");
+    doc.text(`- ${formatMoney(sale.extras)}`, 195, rightY, { align: "right" });
+  }
+
   // Optional: separator line before Net
   doc.setLineWidth(0.1);
   doc.line(130, rightY + 2, 195, rightY + 2);
@@ -802,6 +810,14 @@ export function drawPurchaseInvoice(doc, entry) {
   doc.setFont("helvetica", "normal");
   const bardanaTotal = entry.items?.reduce((sum, i) => sum + (i.bardanaAmount || 0), 0) || entry.bardanaAmount || 0;
   doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
+
+  if (Number(entry.extras) > 0) {
+    rightY += 7;
+    doc.setFont("helvetica", "bold");
+    doc.text("EXTRAS (LESS):", 130, rightY);
+    doc.setFont("helvetica", "normal");
+    doc.text(`- ${formatMoney(entry.extras)}`, 195, rightY, { align: "right" });
+  }
 
   doc.setLineWidth(0.1);
   doc.line(130, rightY + 2, 195, rightY + 2);

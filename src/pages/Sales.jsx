@@ -38,15 +38,16 @@ export default function Sales() {
       kgPerKata: "",
       grossWeight: "",
       rate: "",
-      bardanaRate: "",
       bardanaAmount: "",
       mazdori: "",
       totalAmount: "",
+      deductionKg: "",
     }],
     truckNumber: "",
     gatePassNo: "",
     goods: "",
     amountReceived: "",
+    extras: "",
     accountId: "",
     notes: "",
     paymentTerms: "cash",
@@ -138,11 +139,13 @@ export default function Sales() {
         bardanaAmount: "",
         mazdori: "",
         totalAmount: "",
+        deductionKg: "",
       }],
       truckNumber: "",
       gatePassNo: "",
       goods: "",
       amountReceived: "",
+      extras: "",
       accountId: "",
       notes: "",
       paymentTerms: "cash",
@@ -163,6 +166,7 @@ export default function Sales() {
       bardanaAmount: "",
       mazdori: "",
       totalAmount: "",
+      deductionKg: "",
     }];
     updateFormWithAutoCalc({ items: newItems });
   };
@@ -187,7 +191,9 @@ export default function Sales() {
       const lineGrosses = next.items.map(item => {
         const k = Number(item.kattay) || 0;
         const kpk = Number(item.kgPerKata) || 0;
-        return (k * kpk) || Number(item.grossWeight) || 0;
+        const dKg = Number(item.deductionKg) || 0;
+        if (k > 0 && kpk > 0) return Math.max(0, (k * kpk) - dKg);
+        return Math.max(0, Number(item.grossWeight) || 0);
       });
       const sumLineGross = lineGrosses.reduce((a, b) => a + b, 0);
 
@@ -256,6 +262,7 @@ export default function Sales() {
         bardanaAmount: String(item.bardanaAmount || ""),
         mazdori: String(item.mazdori || ""),
         totalAmount: String(item.totalAmount || ""),
+        deductionKg: String(item.deductionKg || ""),
       })) : [{
         itemId: "",
         kattay: "",
@@ -265,11 +272,13 @@ export default function Sales() {
         bardanaAmount: "",
         mazdori: "",
         totalAmount: "",
+        deductionKg: "",
       }],
       truckNumber: row.truckNumber || "",
       gatePassNo: row.gatePassNo || "",
       goods: row.goods || "",
       amountReceived: String(row.amountReceived || ""),
+      extras: String(row.extras || ""),
       accountId: row.accountId?._id || row.accountId || "",
       notes: row.notes || "",
       paymentTerms: "custom",
@@ -314,11 +323,13 @@ export default function Sales() {
           bardanaAmount: Number(item.bardanaAmount) || 0,
           mazdori: Number(item.mazdori) || 0,
           totalAmount: Number(item.totalAmount) || 0,
+          deductionKg: Number(item.deductionKg) || 0,
         })),
         truckNumber: (form.truckNumber || "").trim(),
         gatePassNo: (form.gatePassNo || "").trim(),
         goods: (form.goods || "").trim(),
         amountReceived: Number(form.amountReceived) || 0,
+        extras: Number(form.extras) || 0,
         accountId: form.accountId || undefined,
         notes: form.notes || "",
         dueDate: form.dueDate || undefined,
@@ -501,6 +512,7 @@ export default function Sales() {
                     <th className="px-4 py-3 text-left w-64">Item *</th>
                     <th className="px-4 py-3 text-left w-20">Bags</th>
                     <th className="px-4 py-3 text-left w-20">Kg/Bag</th>
+                    <th className="px-4 py-3 text-left w-20 text-rose-800">Less (Kg)</th>
                     <th className="px-4 py-3 text-left w-24 bg-amber-50">Total KG</th>
                     <th className="px-4 py-3 text-left w-24 bg-amber-100/50">Total MUN</th>
                     <th className="px-4 py-3 text-left w-32">Rate (MUN)</th>
@@ -538,6 +550,13 @@ export default function Sales() {
                           newItems[idx].kgPerKata = e.target.value;
                           updateFormWithAutoCalc({ items: newItems });
                         }} className="input-field py-1.5 px-2 text-center" placeholder="0" />
+                      </td>
+                      <td className="p-3">
+                        <input type="number" value={item.deductionKg} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].deductionKg = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2 text-center border-rose-200 bg-rose-50 placeholder:text-rose-300" placeholder="0" title="Weight deduction in kg" />
                       </td>
                       <td className="p-3 bg-amber-50/50">
                         <div className="font-bold text-amber-900 text-center">
@@ -613,6 +632,10 @@ export default function Sales() {
                     <option value="custom">Custom Date</option>
                   </select>
                 </div>
+                <div>
+                  <label className="input-label text-rose-600 font-bold">Extras (Deduction)</label>
+                  <input type="number" value={form.extras} onChange={(e) => setForm(f => ({ ...f, extras: e.target.value }))} className="input-field border-rose-300 bg-rose-50" placeholder="e.g. 870" />
+                </div>
               </div>
               <div>
                 <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label>
@@ -636,10 +659,18 @@ export default function Sales() {
                     <span>Total Items:</span>
                     <span className="text-white font-bold">{form.items.length}</span>
                   </div>
+                  <div className="flex justify-between text-slate-400 text-sm pt-1">
+                    <span>Gross Items Sum:</span>
+                    <span className="text-white font-bold">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</span>
+                  </div>
+                  <div className="flex justify-between text-rose-400 text-sm border-b border-slate-800 pb-2">
+                    <span>Extras Deduction:</span>
+                    <span className="font-bold">- Rs. {formatMoney(form.extras || 0)}</span>
+                  </div>
                 </div>
                 <div className="pt-2">
                   <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Total Receivable</p>
-                  <p className="text-4xl font-black">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</p>
+                  <p className="text-4xl font-black">Rs. {formatMoney(Math.max(0, form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) - (Number(form.extras) || 0)))}</p>
                 </div>
               </div>
 
