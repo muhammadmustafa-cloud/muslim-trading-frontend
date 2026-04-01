@@ -22,7 +22,7 @@ const TYPE_LABELS = {
 /**
  * Download Daily Khata PDF — Professional T-Account (Daily Cash Memo)
  */
-export function downloadDailyKhataPdf(rows, summary, filters = {}) {
+export function downloadDailyKhataPdf(rows, summary, filters = {}, dastiEntries = [], dastiSummary = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
   const credits = rows.filter((r) => r.amountType === "in");
@@ -34,6 +34,10 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
 
   const grandTotalIn = Number(summary.openingBalance || 0) + Number(summary.totalIn || 0);
   const grandTotalOut = Number(summary.totalOut || 0);
+  
+  const openingBal = Number(summary.openingBalance || 0);
+  const openingIn = openingBal > 0 ? openingBal : 0;
+  const openingOut = openingBal < 0 ? Math.abs(openingBal) : 0;
 
   // Opening Balance Row
   formattedRows.push([
@@ -58,6 +62,7 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
     ]);
   }
 
+  // Row for totals
   formattedRows.push([
     "TOTAL",
     "(Wasooli + Aamad)",
@@ -67,7 +72,7 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
     formatMoney(grandTotalOut),
   ]);
 
-  // Add the final Closing Balance (Net Baqaya) as a single emphasized row
+  // NET BAQAYA row
   formattedRows.push([
     "",
     "NET BAQAYA (Cash in Box)",
@@ -170,6 +175,57 @@ export function downloadDailyKhataPdf(rows, summary, filters = {}) {
     },
     margin: { left: margin, right: margin },
   });
+
+  // --- Dasti Entries Section ---
+  if (dastiEntries && dastiEntries.length > 0) {
+    const dastiY = doc.lastAutoTable.finalY + 12;
+    pageWidth = doc.internal.pageSize.getWidth();
+
+    // Check if we need a new page for Dasti Section
+    if (dastiY > doc.internal.pageSize.getHeight() - 40) {
+      doc.addPage();
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(180, 83, 9); // Amber-800
+    doc.text("DASTI HISAAB (MANUAL ENTRIES)", margin, dastiY - 4);
+
+    const dastiRows = dastiEntries.map(d => [
+      formatDate(d.date),
+      d.name,
+      d.note || "—",
+      d.type === 'credit' ? formatMoney(d.amount) : "0",
+      d.type === 'debit' ? formatMoney(d.amount) : "0"
+    ]);
+
+    // Add Dasti Totals Row
+    dastiRows.push([
+      { content: "TOTAL DASTI", colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 251, 235] } },
+      { content: formatMoney(dastiSummary.totalIn || 0), styles: { fontStyle: 'bold', fillColor: [240, 253, 244] } },
+      { content: formatMoney(dastiSummary.totalOut || 0), styles: { fontStyle: 'bold', fillColor: [254, 242, 242] } }
+    ]);
+
+    // Add Dasti Net Balance Row
+    dastiRows.push([
+      { content: "DASTI NET BALANCE", colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 251, 235] } },
+      { content: `Rs. ${formatMoney(dastiSummary.net || 0)}`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [254, 252, 232], textColor: [180, 83, 9] } }
+    ]);
+
+    autoTable(doc, {
+      startY: dastiY,
+      head: [["Date", "Name", "Note", "Credit (In)", "Debit (Out)"]],
+      body: dastiRows,
+      theme: "grid",
+      headStyles: { fillColor: [180, 83, 9], textColor: [255, 255, 255], fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        3: { halign: "right", fontStyle: "bold", textColor: [16, 122, 100] },
+        4: { halign: "right", fontStyle: "bold", textColor: [185, 28, 28] },
+      },
+      margin: { left: margin, right: margin },
+    });
+  }
 
   // Footer generated line
   const lastY = doc.lastAutoTable.finalY + 10;

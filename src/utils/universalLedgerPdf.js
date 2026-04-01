@@ -7,7 +7,7 @@ const formatDate = (d) =>
 const formatMoney = (n) =>
     n != null && n !== "" && n !== 0 ? Number(n).toLocaleString("en-PK") : "";
 
-export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
+export function downloadUniversalLedgerPdf(list, summary, filters = {}, dastiList = [], dastiSummary = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
   const credits = list.filter((r) => r.amountType === "in");
@@ -72,13 +72,12 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   doc.text(dateStr, MARGIN, y);
   
   if (filters.accountId) {
-    // If filtered by account, we can mention it
     const accName = list.length > 0 ? list[0].accountName : "Specific Account";
     doc.text(`Filtered for: ${accName}`, doc.internal.pageSize.getWidth() - MARGIN, y, { align: "right" });
   }
   y += 6;
 
-  // Draw "Previous Balance" row manually above the table
+  // Row Manually before table
   const pageWidth = doc.internal.pageSize.getWidth();
   const tableWidth = pageWidth - MARGIN * 2;
   doc.setFillColor(242, 242, 242);
@@ -90,51 +89,124 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}) {
   doc.setTextColor(80);
 
   const balVal = Number(summary.openingBalance || 0);
-  const isSurplus = balVal >= 0;
-  const label = isSurplus ? "Previous Balance (Cash In Hand)" : "Opening Deficit (Previous Udhaar)";
   const balStr = balVal !== 0 ? formatMoney(Math.abs(balVal)) : "0";
 
-  if (isSurplus) {
-    doc.text(label, MARGIN + 2, y + 5);
-    doc.setTextColor(0, 120, 0); // Darker emerald
+  if (balVal >= 0) {
+    doc.text("Previous Balance (Pichli Wasooli)", MARGIN + 2, y + 5);
+    doc.setTextColor(0, 100, 0);
     doc.text(balStr, MARGIN + 91, y + 5, { align: "right" });
   } else {
-    doc.text(label, MARGIN + 93, y + 5);
-    doc.setTextColor(180, 0, 0); // Darker rose
+    doc.text("Opening Deficit (Previous Udhaar)", MARGIN + 93, y + 5);
+    doc.setTextColor(150, 0, 0);
     doc.text(balStr, MARGIN + 182, y + 5, { align: "right" });
   }
   y += 7;
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Aamad (Credit) / Ledger", "Description", "Amount", "Date", "Kharch (Debit) / Ledger", "Description", "Amount"]],
+    head: [["Date", "Aamad (Credit)", "From/Note", "Amount", "Date", "Kharch (Debit)", "To/Note", "Amount"]],
     body: formattedRows,
-    headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: 14 },
-      1: { cellWidth: 22 },
-      2: { cellWidth: 36 },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 38 },
       3: { cellWidth: 19, halign: "right", fontStyle: "bold" },
       4: { cellWidth: 14 },
-      5: { cellWidth: 22 },
-      6: { cellWidth: 36 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 38 },
       7: { cellWidth: 19, halign: "right", fontStyle: "bold" },
     },
     didParseCell: function (data) {
-      // Styling summary rows (Totals and Net)
       if (data.row.index >= formattedRows.length - 2) {
-        data.cell.styles.fillColor = [240, 240, 255];
+        data.cell.styles.fillColor = [245, 245, 250];
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 8;
       }
     },
     margin: { left: MARGIN, right: MARGIN },
     theme: "grid",
   });
 
-  // Footer footer
-  const lastY = doc.lastAutoTable.finalY + 10;
+  // Dasti Table Section
+  if (dastiList && dastiList.length > 0) {
+    let finalY = doc.lastAutoTable.finalY + 10;
+    
+    // Check for page break
+    if (finalY > 250) {
+      doc.addPage();
+      finalY = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(180, 83, 9); // Amber-800
+    doc.text("Dasti Hisaab (Manual Informal Entries)", MARGIN, finalY);
+    finalY += 6;
+
+    // Format Dasti into T-Account Rows
+    const dastiCredits = dastiList.filter(d => d.type === 'credit');
+    const dastiDebits = dastiList.filter(d => d.type === 'debit');
+    const dastiMax = Math.max(dastiCredits.length, dastiDebits.length);
+    const dastiFormattedRows = [];
+
+    for (let i = 0; i < dastiMax; i++) {
+        const cr = dastiCredits[i] || {};
+        const dr = dastiDebits[i] || {};
+        dastiFormattedRows.push([
+            cr.date ? formatDate(cr.date) : "",
+            cr.name || "",
+            cr.note || "",
+            cr.amount ? formatMoney(cr.amount) : "",
+            dr.date ? formatDate(dr.date) : "",
+            dr.name || "",
+            dr.note || "",
+            dr.amount ? formatMoney(dr.amount) : "",
+        ]);
+    }
+
+    // Dasti Totals Row
+    dastiFormattedRows.push([
+        "", "TOTAL DASTI CREDIT", "", formatMoney(dastiSummary.totalIn || 0),
+        "", "TOTAL DASTI DEBIT", "", formatMoney(dastiSummary.totalOut || 0)
+    ]);
+
+    // Dasti Net Balance Row
+    dastiFormattedRows.push([{
+        content: `DASTI NET BAQAYA: ${formatMoney(dastiSummary.net || 0)}`,
+        colSpan: 8,
+        styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [255, 251, 235] }
+    }]);
+
+    autoTable(doc, {
+      startY: finalY,
+      head: [["Date", "Dasti Name", "Note", "Amount", "Date", "Dasti Name", "Note", "Amount"]],
+      body: dastiFormattedRows,
+      headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
+      bodyStyles: { fontSize: 7, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 14 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 38 },
+        3: { cellWidth: 19, halign: "right", fontStyle: "bold" },
+        4: { cellWidth: 14 },
+        5: { cellWidth: 20 },
+        6: { cellWidth: 38 },
+        7: { cellWidth: 19, halign: "right", fontStyle: "bold" },
+      },
+      didParseCell: function (data) {
+        if (data.row.index >= dastiFormattedRows.length - 2) {
+          data.cell.styles.fillColor = [255, 253, 240];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+      margin: { left: MARGIN, right: MARGIN },
+      theme: "grid",
+    });
+  }
+
+  // Footer
+  const lastY = doc.lastAutoTable.finalY + 12;
   doc.setFontSize(8);
   doc.setTextColor(150);
   doc.text(`Generated: ${new Date().toLocaleString("en-PK", { timeZone: "Asia/Karachi" })}`, MARGIN, lastY);

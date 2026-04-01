@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { apiGet } from "../config/api.js";
+import { apiGet, apiPost, apiDelete } from "../config/api.js";
 import {
   FaBook,
   FaArrowDown,
   FaArrowUp,
   FaFilePdf,
   FaFilter,
+  FaPlus,
+  FaTrash,
 } from "react-icons/fa";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import { downloadUniversalLedgerPdf } from "../utils/universalLedgerPdf.js";
@@ -28,11 +30,15 @@ const getToday = () => {
 export default function UniversalLedger() {
   const today = getToday();
   const [list, setList] = useState([]);
+  const [dastiList, setDastiList] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [summary, setSummary] = useState({ openingBalance: 0, totalIn: 0, totalOut: 0, net: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ dateFrom: today, dateTo: today, accountId: "" });
+
+  const [showDastiModal, setShowDastiModal] = useState(false);
+  const [newDasti, setNewDasti] = useState({ name: "", type: "credit", amount: "", note: "" });
 
   const fetchAccounts = async () => {
     try {
@@ -50,10 +56,12 @@ export default function UniversalLedger() {
       
       const data = await apiGet("/daily-memo", params);
       setList(data.data || []);
+      setDastiList(data.dastiEntries || []);
       setSummary(data.summary || { openingBalance: 0, totalIn: 0, totalOut: 0, net: 0 });
     } catch (e) {
       setError(e.message);
       setList([]);
+      setDastiList([]);
     } finally {
       setLoading(false);
     }
@@ -66,6 +74,34 @@ export default function UniversalLedger() {
   useEffect(() => {
     fetchLedger();
   }, [filters.dateFrom, filters.dateTo, filters.accountId]);
+
+  const dastiSummary = useMemo(() => {
+    const totalIn = dastiList.filter(d => d.type === 'credit').reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    const totalOut = dastiList.filter(d => d.type === 'debit').reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    return { totalIn, totalOut, net: totalIn - totalOut };
+  }, [dastiList]);
+
+  const handleAddDasti = async (e) => {
+    e.preventDefault();
+    try {
+      await apiPost("/daily-dasti", { ...newDasti, date: filters.dateFrom });
+      setShowDastiModal(false);
+      setNewDasti({ name: "", type: "credit", amount: "", note: "" });
+      fetchLedger();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const handleDeleteDasti = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this Dasti entry?")) return;
+    try {
+      await apiDelete(`/daily-dasti/${id}`);
+      fetchLedger();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   // Separate credits and debits for T-Account layout
   const credits = useMemo(() => list.filter(r => r.amountType === "in"), [list]);
@@ -91,14 +127,23 @@ export default function UniversalLedger() {
             <p className="text-slate-500 text-sm">Mukammal Hisaab Kitab — Full Account & Participant Traceability</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => downloadUniversalLedgerPdf(list, summary, filters)}
-          className="btn-primary flex items-center gap-1.5 shadow-indigo-200"
-          disabled={list.length === 0}
-        >
-          <FaFilePdf className="w-4 h-4" /> Export Report
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowDastiModal(true)}
+            className="btn-secondary flex items-center gap-1.5"
+          >
+            <FaPlus className="w-3 h-3" /> Add Dasti
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadUniversalLedgerPdf(list, summary, filters, dastiList, dastiSummary)}
+            className="btn-primary flex items-center gap-1.5 shadow-indigo-200"
+            disabled={list.length === 0 && dastiList.length === 0}
+          >
+            <FaFilePdf className="w-4 h-4" /> Export Report
+          </button>
+        </div>
       </header>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">{error}</div>}
@@ -273,6 +318,122 @@ export default function UniversalLedger() {
           </div>
         )}
       </section>
+
+      {/* Dasti Entries Section */}
+      {(dastiList.length > 0 || showDastiModal) && (
+        <section className="card overflow-hidden border-t-4 border-t-amber-600 mt-8">
+          <div className="bg-amber-600 text-white px-4 py-3 flex justify-between items-center">
+            <h2 className="font-bold uppercase tracking-widest text-sm">Dasti Hisaab (Manual Entries)</h2>
+            <div className="text-xs font-medium space-x-6">
+              <span>Credit Total: {formatMoney(dastiSummary.totalIn || 0)}</span>
+              <span>Debit Total: {formatMoney(dastiSummary.totalOut || 0)}</span>
+              <span className="bg-white/20 px-2 py-0.5 rounded">Baqaya: {formatMoney(dastiSummary.net || 0)}</span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-widest font-black">
+                <tr>
+                  <th className="py-3 px-4 text-left">Date</th>
+                  <th className="py-3 px-4 text-left">Person Name</th>
+                  <th className="py-3 px-4 text-left">Note</th>
+                  <th className="py-3 px-4 text-right">Credit (In)</th>
+                  <th className="py-3 px-4 text-right">Debit (Out)</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {dastiList.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-8 text-center text-slate-400 italic font-medium uppercase tracking-widest text-[11px]">No Dasti entries found for this range.</td>
+                  </tr>
+                ) : (
+                  dastiList.map((d) => (
+                    <tr key={d._id} className="hover:bg-amber-50/30 transition-colors">
+                      <td className="py-2 px-4 text-slate-400 text-xs">{formatDate(d.date)}</td>
+                      <td className="py-2 px-4 font-bold text-slate-700">{d.name}</td>
+                      <td className="py-2 px-4 text-slate-500 text-xs opacity-80">{d.note || "—"}</td>
+                      <td className="py-2 px-4 text-right font-black text-emerald-600 bg-emerald-50/10">
+                        {d.type === "credit" ? formatMoney(d.amount) : "—"}
+                      </td>
+                      <td className="py-2 px-4 text-right font-black text-rose-600 bg-rose-50/10">
+                        {d.type === "debit" ? formatMoney(d.amount) : "—"}
+                      </td>
+                      <td className="py-2 px-4 text-center">
+                        <button onClick={() => handleDeleteDasti(d._id)} className="text-slate-300 hover:text-rose-600 transition-colors">
+                          <FaTrash className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Add Dasti Modal */}
+      {showDastiModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in duration-200">
+            <div className="bg-amber-600 px-6 py-4 flex justify-between items-center text-white shadow-lg">
+              <h3 className="text-lg font-black uppercase tracking-tighter">Add Dasti Entry</h3>
+              <button onClick={() => setShowDastiModal(false)} className="text-white/80 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            <form onSubmit={handleAddDasti} className="p-6 space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Person Name</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Aslam Hand-to-Hand"
+                  className="input-field w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-amber-500 transition-all font-bold text-slate-700"
+                  value={newDasti.name}
+                  onChange={(e) => setNewDasti(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Type</label>
+                  <select
+                    className="input-field w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-amber-500 transition-all font-bold text-slate-700 appearance-none"
+                    value={newDasti.type}
+                    onChange={(e) => setNewDasti(prev => ({ ...prev, type: e.target.value }))}
+                  >
+                    <option value="credit">Credit (Aamad)</option>
+                    <option value="debit">Debit (Kharch)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Amount (Rs.)</label>
+                  <input
+                    required
+                    type="number"
+                    placeholder="0"
+                    className="input-field w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-amber-500 transition-all font-black text-slate-800"
+                    value={newDasti.amount}
+                    onChange={(e) => setNewDasti(prev => ({ ...prev, amount: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Note (Informal Details)</label>
+                <textarea
+                  className="input-field w-full border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 transition-all h-24 resize-none text-sm text-slate-600 font-medium italic"
+                  placeholder="Write a small note about this hand-to-hand transaction..."
+                  value={newDasti.note}
+                  onChange={(e) => setNewDasti(prev => ({ ...prev, note: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowDastiModal(false)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-500 font-black rounded-xl uppercase text-xs transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl uppercase text-xs shadow-lg shadow-amber-500/20 transition-all">Save Entry</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
