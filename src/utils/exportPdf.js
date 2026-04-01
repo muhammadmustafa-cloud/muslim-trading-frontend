@@ -504,24 +504,21 @@ export function drawSaleInvoice(doc, sale) {
       doc.text(itName, 18, yPos);
       doc.text(String(it.kattay || 0), 95, yPos);
       
-      // MUN calculation: Net weight of the item divided by 40
       const itMun = it.quantity ? (it.quantity / 40).toFixed(3) : "0.000";
       doc.text(String(itMun), 120, yPos);
       doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
-      const baseAmt = it.quantity && it.rate ? Math.round((it.quantity / 40) * it.rate) : 0;
-      doc.text(formatMoney(baseAmt), 175, yPos);
+      
+      // Use the actual totalAmount from DB (which now has proportional extras)
+      doc.text(formatMoney(it.totalAmount), 175, yPos);
       
       yPos += 7;
-      
-      // If we are reaching end of page (brief check)
-      if (yPos > 190) {
-          doc.addPage();
-          yPos = 20;
+      if (yPos > 190) { 
+        doc.addPage(); 
+        yPos = 20; 
       }
     });
   } else {
-    // Fallback if no items array (old data)
     doc.text(sale.itemName || "Product", 18, yPos);
     doc.text(String(sale.kattay || 0), 95, yPos);
     doc.text((sale.quantity / 40).toFixed(3), 120, yPos);
@@ -530,17 +527,17 @@ export function drawSaleInvoice(doc, sale) {
     doc.text(formatMoney(sale.totalAmount), 175, yPos);
   }
 
-  let grossSum = sale.items?.reduce((sum, i) => sum + Math.round(((i.quantity || 0) / 40) * (i.rate || 0)), 0) || 0;
+  // Summary logic
+  const itemsTotalSum = sale.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || sale.totalAmount || 0;
 
-  // Bottom line for table box (moved below memo)
-  yPos = 200; // base y for summary
+  yPos = 200; 
 
   // --- SUMMARY SECTION ---
   yPos += 8;
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
 
-  // Left calculations
+  // Left side weights
   doc.text("Total Weight", 15, yPos);
   const grossWeight = sale.totalGrossWeight || 0;
   doc.setFont("helvetica", "normal");
@@ -558,23 +555,23 @@ export function drawSaleInvoice(doc, sale) {
   doc.setFont("helvetica", "normal");
   doc.text(formatMoney(sale.netWeight || (grossWeight - (sale.totalSHCut || 0))), 45, yPos);
 
-  // Right calculations
+  // Right side amounts
   let rightY = 200 + 8;
   doc.setFont("helvetica", "bold");
-  doc.text("GROSS AMOUNT:", 130, rightY);
+  doc.text("INVOICE TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(grossSum), 195, rightY, { align: "right" });
+  doc.text(formatMoney(itemsTotalSum), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
-  doc.text("BARDANA TOTAL:", 130, rightY);
+  doc.text("BARDANA (INC):", 130, rightY);
   doc.setFont("helvetica", "normal");
   const bardanaTotal = sale.items?.reduce((sum, i) => sum + (i.bardanaAmount || 0), 0) || sale.bardanaAmount || 0;
   doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
-  doc.text("MAZDOORI TOTAL:", 130, rightY);
+  doc.text("MAZDOORI (INC):", 130, rightY);
   doc.setFont("helvetica", "normal");
   const mazdoriTotal = sale.items?.reduce((sum, i) => sum + (i.mazdori || 0), 0) || sale.mazdori || 0;
   doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
@@ -582,19 +579,18 @@ export function drawSaleInvoice(doc, sale) {
   if (Number(sale.extras) > 0) {
     rightY += 7;
     doc.setFont("helvetica", "bold");
-    doc.text("EXTRAS (LESS):", 130, rightY);
+    doc.text("DISCOUNT (DIST):", 130, rightY);
     doc.setFont("helvetica", "normal");
     doc.text(`- ${formatMoney(sale.extras)}`, 195, rightY, { align: "right" });
   }
 
-  // Optional: separator line before Net
   doc.setLineWidth(0.1);
   doc.line(130, rightY + 2, 195, rightY + 2);
 
   rightY += 9;
   doc.setFont("helvetica", "bold");
-  doc.text("NET AMOUNT:", 130, rightY);
-  doc.setFontSize(11); // make net amount slightly bigger
+  doc.text("NET PAYABLE:", 130, rightY);
+  doc.setFontSize(11);
   doc.text(formatMoney(sale.totalAmount), 195, rightY, { align: "right" });
   doc.setFontSize(9);
 

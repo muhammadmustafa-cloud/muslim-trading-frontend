@@ -187,7 +187,7 @@ export default function Sales() {
       const mainNet = Math.max(0, totalGross - totalCut);
       next.netWeight = String(mainNet);
 
-      // 2. Pre-calculate line grosses to avoid "item length" jumps or stuck values
+      // 2. Pre-calculate line grosses
       const lineGrosses = next.items.map(item => {
         const k = Number(item.kattay) || 0;
         const kpk = Number(item.kgPerKata) || 0;
@@ -197,30 +197,40 @@ export default function Sales() {
       });
       const sumLineGross = lineGrosses.reduce((a, b) => a + b, 0);
 
-      // 3. Individual Items Calculation
-      next.items = next.items.map((item, idx) => {
+      // 3. Pre-calculate BASE Line Totals and Total MUN
+      const baseLineInfo = next.items.map((item, idx) => {
         const lineGross = lineGrosses[idx];
-        
-        // Deduction (S.H Cut) distribution:
-        // We split the Total Cut proportionally based on each item's weight share
         const lineSHCut = sumLineGross > 0 ? (lineGross / sumLineGross) * totalCut : 0;
         const lineNet = Math.max(0, lineGross - lineSHCut);
+        const lineMun = lineNet / 40;
         
         const rate = Number(item.rate) || 0;
         const bAmt = Number(item.bardanaAmount) || 0;
         const mazdori = Number(item.mazdori) || 0;
 
-        // Line Total: (Net / 40) * Rate + Bardana + Mazdori
-        const lineTotal = Math.round((lineNet / 40) * rate) + bAmt + mazdori;
+        const lineTotalBase = Math.round(lineMun * rate) + bAmt + mazdori;
+        
+        return { lineNet, lineMun, lineTotalBase, lineGross };
+      });
+
+      const totalInvoiceMun = baseLineInfo.reduce((sum, info) => sum + info.lineMun, 0);
+      const totalExtras = Number(next.extras) || 0;
+      const extraPerMun = totalInvoiceMun > 0 ? (totalExtras / totalInvoiceMun) : 0;
+
+      // 4. Final Items with Proportional Extras
+      next.items = next.items.map((item, idx) => {
+        const info = baseLineInfo[idx];
+        const itemProportionalExtra = info.lineMun * extraPerMun;
+        const adjustedLineTotal = Math.round(info.lineTotalBase - itemProportionalExtra);
 
         return {
           ...item,
-          grossWeight: String(lineGross),
-          totalAmount: String(lineTotal)
+          grossWeight: String(info.lineGross),
+          totalAmount: String(Math.max(0, adjustedLineTotal))
         };
       });
 
-      // 3. Payment Terms & Due Date
+      // 5. Payment Terms & Due Date
       if ("paymentTerms" in updates || "date" in updates) {
         if (next.paymentTerms === "cash") {
           next.dueDate = next.date;
@@ -660,17 +670,21 @@ export default function Sales() {
                     <span className="text-white font-bold">{form.items.length}</span>
                   </div>
                   <div className="flex justify-between text-slate-400 text-sm pt-1">
-                    <span>Gross Items Sum:</span>
-                    <span className="text-white font-bold">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</span>
+                    <span>Items Subtotal:</span>
+                    <span className="text-white font-bold">Rs. {formatMoney(form.items.reduce((sum, i, idx) => {
+                      // We need the BASE total here for the summary display
+                      // Instead of recalculating, we can just sum the current totals and add extras back
+                      return sum + (Number(i.totalAmount) || 0);
+                    }, 0) + (Number(form.extras) || 0))}</span>
                   </div>
                   <div className="flex justify-between text-rose-400 text-sm border-b border-slate-800 pb-2">
-                    <span>Extras Deduction:</span>
+                    <span>Extras (Distributed):</span>
                     <span className="font-bold">- Rs. {formatMoney(form.extras || 0)}</span>
                   </div>
                 </div>
                 <div className="pt-2">
                   <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Total Receivable</p>
-                  <p className="text-4xl font-black">Rs. {formatMoney(Math.max(0, form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) - (Number(form.extras) || 0)))}</p>
+                  <p className="text-4xl font-black">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</p>
                 </div>
               </div>
 
