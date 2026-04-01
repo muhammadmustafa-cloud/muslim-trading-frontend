@@ -1392,53 +1392,31 @@ export default function AuditSummary() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {data.periodTransactions
-                              ?.filter(
-                                (t) =>
-                                  t.toAccountId?._id === acc._id ||
-                                  t.toAccountId === acc._id,
-                              )
-                              .map((t, idx) => (
-                                <tr
-                                  key={`in-${idx}`}
-                                  className="hover:bg-slate-50/50 transition-colors"
-                                >
-                                  <td className="py-3 px-3 text-[10px] font-bold text-slate-400 whitespace-nowrap">
-                                    {formatDate(t.date)}
-                                  </td>
-                                  <td className="py-3 px-3">
-                                    <div className="font-bold text-slate-700 text-xs">
-                                      {t.customerId
-                                        ? t.customerId.name
-                                        : t.supplierId
-                                          ? t.supplierId.name
-                                          : t.mazdoorId
-                                            ? t.mazdoorId.name
-                                            : t.note ||
-                                              t.category ||
-                                              "Manual Deposit"}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3 text-right font-black text-emerald-600">
-                                    Rs. {formatMoney(t.amount)}
+                            {(() => {
+                              const isMill = !!(acc.isDailyKhata || acc.isMillKhata);
+                              const list = (data.periodTransactions || []).filter((t) => {
+                                const targetId = isMill ? (t.toAccountId?._id || t.toAccountId) : (t.fromAccountId?._id || t.fromAccountId);
+                                return targetId === acc._id;
+                              });
+                              if (list.length === 0) return (
+                                <tr>
+                                  <td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">
+                                    No Credits Recorded
                                   </td>
                                 </tr>
-                              ))}
-                            {(!data.periodTransactions ||
-                              data.periodTransactions.filter(
-                                (t) =>
-                                  t.toAccountId?._id === acc._id ||
-                                  t.toAccountId === acc._id,
-                              ).length === 0) && (
-                              <tr>
-                                <td
-                                  colSpan="3"
-                                  className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled"
-                                >
-                                  No Credits Recorded
-                                </td>
-                              </tr>
-                            )}
+                              );
+                              return list.map((t, idx) => (
+                                <tr key={`in-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="py-3 px-3 text-[10px] font-bold text-slate-400 whitespace-nowrap">{formatDate(t.date)}</td>
+                                  <td className="py-3 px-3">
+                                    <div className="font-bold text-slate-700 text-xs">
+                                      {t.customerId ? t.customerId.name : t.supplierId ? t.supplierId.name : t.mazdoorId ? t.mazdoorId.name : t.note || t.category || "Manual Entry"}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-3 text-right font-black text-emerald-600">Rs. {formatMoney(t.amount)}</td>
+                                </tr>
+                              ));
+                            })()}
                           </tbody>
                           <tfoot className="bg-emerald-50/30 border-t border-emerald-100">
                             <tr>
@@ -1449,7 +1427,7 @@ export default function AuditSummary() {
                                 Total Aamad (Credit):
                               </td>
                               <td className="py-3 px-3 text-right text-sm font-black text-emerald-700">
-                                Rs. {formatMoney(acc.totalIn || 0)}
+                                Rs. {formatMoney(!!(acc.isDailyKhata || acc.isMillKhata) ? (acc.totalIn || 0) : (acc.totalOut || 0))}
                               </td>
                             </tr>
                           </tfoot>
@@ -1476,55 +1454,31 @@ export default function AuditSummary() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {data.periodTransactions
-                              ?.filter(
-                                (t) =>
-                                  t.fromAccountId?._id === acc._id ||
-                                  t.fromAccountId === acc._id,
-                              )
-                              .map((t, idx) => (
-                                <tr
-                                  key={`out-${idx}`}
-                                  className="hover:bg-slate-50/50 transition-colors"
-                                >
-                                  <td className="py-3 px-3 text-[10px] font-bold text-slate-400 whitespace-nowrap">
-                                    {formatDate(t.date)}
-                                  </td>
-                                  <td className="py-3 px-3">
-                                    <div className="font-bold text-slate-700 text-xs text-rose-800">
-                                      {t.customerId
-                                        ? t.customerId.name
-                                        : t.supplierId
-                                          ? t.supplierId.name
-                                          : t.mazdoorId
-                                            ? t.mazdoorId.name
-                                            : t.expenseTypeId
-                                              ? t.expenseTypeId.name
-                                              : t.note ||
-                                                t.category ||
-                                                "Manual Outflow"}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3 text-right font-black text-rose-600">
-                                    Rs. {formatMoney(t.amount)}
+                            {(() => {
+                              const isMillRight = !!(acc.isDailyKhata || acc.isMillKhata);
+                              const listRight = (data.periodTransactions || []).filter((t) => {
+                                const targetId = isMillRight ? (t.fromAccountId?._id || t.fromAccountId) : (t.toAccountId?._id || t.toAccountId);
+                                return targetId === acc._id;
+                              });
+                              if (listRight.length === 0) return (
+                                <tr>
+                                  <td colSpan="3" className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled">
+                                    No Debits Recorded
                                   </td>
                                 </tr>
-                              ))}
-                            {(!data.periodTransactions ||
-                              data.periodTransactions.filter(
-                                (t) =>
-                                  t.fromAccountId?._id === acc._id ||
-                                  t.fromAccountId === acc._id,
-                              ).length === 0) && (
-                              <tr>
-                                <td
-                                  colSpan="3"
-                                  className="py-4 text-center text-[10px] text-slate-400 font-bold uppercase disabled"
-                                >
-                                  No Debits Recorded
-                                </td>
-                              </tr>
-                            )}
+                              );
+                              return listRight.map((t, idx) => (
+                                <tr key={`out-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="py-3 px-3 text-[10px] font-bold text-slate-400 whitespace-nowrap">{formatDate(t.date)}</td>
+                                  <td className="py-3 px-3">
+                                    <div className="font-bold text-slate-700 text-xs text-rose-800">
+                                      {t.customerId ? t.customerId.name : t.supplierId ? t.supplierId.name : t.mazdoorId ? t.mazdoorId.name : t.expenseTypeId ? t.expenseTypeId.name : t.note || t.category || "Manual Entry"}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-3 text-right font-black text-rose-600">Rs. {formatMoney(t.amount)}</td>
+                                </tr>
+                              ));
+                            })()}
                           </tbody>
                           <tfoot className="bg-rose-50/30 border-t border-rose-100">
                             <tr>
@@ -1535,7 +1489,7 @@ export default function AuditSummary() {
                                 Total Kharch (Debit):
                               </td>
                               <td className="py-3 px-3 text-right text-sm font-black text-rose-700">
-                                Rs. {formatMoney(acc.totalOut || 0)}
+                                Rs. {formatMoney(!!(acc.isDailyKhata || acc.isMillKhata) ? (acc.totalOut || 0) : (acc.totalIn || 0))}
                               </td>
                             </tr>
                           </tfoot>

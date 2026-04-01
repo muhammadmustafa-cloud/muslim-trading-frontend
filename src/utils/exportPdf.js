@@ -1246,8 +1246,11 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       { content: "Debit (Balance)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
     auditAccounts.forEach(a => {
-      const creditAmt = Number(a.totalIn || 0);
-      const debitAmt = Number(a.totalOut || 0);
+      const isTraditional = !!(a.isDailyKhata || a.isMillKhata);
+      // For Mill Nature (Cash Box): Inflow = Credit, Outflow = Debit
+      // For Bank Nature: Inflow = Debit, Outflow = Credit
+      const creditAmt = isTraditional ? Number(a.totalIn || 0) : Number(a.totalOut || 0);
+      const debitAmt = isTraditional ? Number(a.totalOut || 0) : Number(a.totalIn || 0);
 
       tableRows.push([
         a.name.toUpperCase(),
