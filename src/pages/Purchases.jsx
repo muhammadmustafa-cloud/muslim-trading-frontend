@@ -38,9 +38,10 @@ export default function Purchases() {
       kgPerKata: "",
       grossWeight: "",
       rate: "",
-      bardanaAmount: "",
       totalAmount: "",
+      itemNetWeight: "",
       deductionKg: "",
+      addKg: "",
     }],
     truckNumber: "",
     gatePassNo: "",
@@ -122,14 +123,17 @@ export default function Purchases() {
         kgPerKata: "",
         grossWeight: "",
         rate: "",
-        bardanaAmount: "",
         totalAmount: "",
+        itemNetWeight: "",
         deductionKg: "",
+        addKg: "",
       }],
       truckNumber: "",
       gatePassNo: "",
       goods: "",
       amountPaid: "",
+      totalBardanaAmount: "",
+      totalMazdori: "",
       extras: "",
       accountId: "",
       notes: "",
@@ -155,28 +159,30 @@ export default function Purchases() {
         kgPerKata: String(it.kgPerKata || ""),
         grossWeight: String(it.itemGrossWeight || ""),
         rate: String(it.rate || ""),
-        bardanaAmount: String(it.bardanaAmount || ""),
-        totalAmount: String(it.totalAmount || ""),
+        itemNetWeight: String(it.itemNetWeight || ""),
         deductionKg: String(it.deductionKg || ""),
+        addKg: String(it.addKg || ""),
       })) || [{
         itemId: row.itemId?._id || row.itemId || "",
         kattay: String(row.kattay || ""),
         kgPerKata: String(row.kgPerKata || ""),
         grossWeight: String((row.kattay || 0) * (row.kgPerKata || 0)),
         rate: String(row.rate || ""),
-        bardanaAmount: String(row.bardanaAmount || ""),
-        totalAmount: String(row.amount || ""),
+        itemNetWeight: String(row.itemNetWeight || ""),
         deductionKg: String(row.deductionKg || ""),
+        addKg: String(row.addKg || ""),
       }],
       truckNumber: row.truckNumber || "",
       gatePassNo: row.gatePassNo || "",
       goods: row.goods || "",
       amountPaid: String(row.amountPaid || ""),
+      totalBardanaAmount: String(row.totalBardanaAmount || ""),
+      totalMazdori: String(row.totalMazdori || ""),
       extras: String(row.extras || ""),
       accountId: row.accountId?._id || row.accountId || "",
       dueDate: row.dueDate ? formatDateForInput(row.dueDate) : "",
       notes: row.notes || "",
-      paymentTerms: "custom",
+      paymentTerms: row.paymentTerms || "custom",
       image: null,
     });
     setView("form");
@@ -197,11 +203,12 @@ export default function Purchases() {
         const kattay = Number(it.kattay) || 0;
         const kgPerBag = Number(it.kgPerKata) || 0;
         const dKg = Number(it.deductionKg) || 0;
+        const aKg = Number(it.addKg) || 0;
         let itemGross = 0;
         if (kattay > 0 && kgPerBag > 0) {
-            itemGross = Math.max(0, (kattay * kgPerBag) - dKg);
+            itemGross = Math.max(0, (kattay * kgPerBag) - dKg + aKg);
         } else {
-            itemGross = Math.max(0, Number(it.grossWeight) || 0);
+            itemGross = Math.max(0, (Number(it.grossWeight) || 0));
         }
         totalItemsGross += itemGross;
         return { ...it, grossWeight: itemGross };
@@ -213,31 +220,40 @@ export default function Purchases() {
           next.totalGrossWeight = totalItemsGross > 0 ? String(totalItemsGross) : next.totalGrossWeight;
       }
 
-      const totalGross = Number(next.totalGrossWeight) || 0;
+      // 2. MASTER TOTALS (Source of Truth)
+      const totalGross = Number(next.totalGrossWeight) || totalItemsGross;
+      if (updates.items && (!next.totalGrossWeight || Number(next.totalGrossWeight) === 0)) {
+        next.totalGrossWeight = totalGross > 0 ? String(totalGross) : "";
+      }
 
-      // 3. Purchase Rule: 0.25kg S.H cut per 40kg (MUN)
+      // Purchase Rule: 0.25kg S.H cut per 40kg (MUN)
       if (!("totalSHCut" in updates)) {
           next.totalSHCut = totalGross > 0 ? String(Number(((totalGross / 40) * 0.25).toFixed(2))) : next.totalSHCut;
       }
 
-      const totalSHCut = Number(next.totalSHCut) || 0;
-      next.netWeight = Math.max(0, totalGross - totalSHCut);
+      const totalCut = Number(next.totalSHCut) || 0;
+      const totalNet = Math.max(0, totalGross - totalCut);
+      const totalMun = totalNet / 40;
 
-      // 4. Distribute S.H Cut proportionally and calc item totals
+      next.netWeight = Math.max(0, totalNet);
+
+      // 3. Proportional Distribution to Items
       next.items = next.items.map(it => {
         const itemGross = Number(it.grossWeight) || 0;
-        const ratio = totalGross > 0 ? itemGross / totalGross : 0;
-        const itemSHCut = totalSHCut * ratio;
-        const itemNet = Math.max(0, itemGross - itemSHCut);
+        const ratio = totalItemsGross > 0 ? itemGross / totalItemsGross : (next.items.length === 1 ? 1 : 0);
+        
+        const itemMun = totalMun * ratio;
+        const itemNet = totalNet * ratio;
+        const itemSHCut = totalCut * ratio;
         
         const rate = Number(it.rate) || 0;
-        const bardana = Number(it.bardanaAmount) || 0;
-        const totalLine = Math.round((itemNet / 40) * rate + bardana);
+        const totalLine = Math.round(itemMun * rate);
         
         return {
           ...it,
+          shCut: String(itemSHCut.toFixed(2)),
+          itemNetWeight: String(itemNet.toFixed(3)),
           totalAmount: totalLine > 0 ? String(totalLine) : "",
-          itemNetWeight: itemNet // internal use for aggregation
         };
       });
 
@@ -268,9 +284,10 @@ export default function Purchases() {
         kgPerKata: "",
         grossWeight: "",
         rate: "",
-        bardanaAmount: "",
         totalAmount: "",
+        itemNetWeight: "",
         deductionKg: "",
+        addKg: "",
       }]
     }));
   };
@@ -310,18 +327,20 @@ export default function Purchases() {
           kgPerKata: Number(it.kgPerKata) || 0,
           grossWeight: Number(it.grossWeight) || 0,
           rate: Number(it.rate) || 0,
-          bardanaAmount: Number(it.bardanaAmount) || 0,
           totalAmount: Number(it.totalAmount) || 0,
-          deductionKg: Number(it.deductionKg) || 0
+          deductionKg: Number(it.deductionKg) || 0,
+          addKg: Number(it.addKg) || 0,
         }))),
         truckNumber: (form.truckNumber || "").trim(),
         gatePassNo: (form.gatePassNo || "").trim(),
         goods: (form.goods || "").trim(),
         amountPaid: Number(form.amountPaid) || 0,
+        totalBardanaAmount: Number(form.totalBardanaAmount) || 0,
+        totalMazdori: Number(form.totalMazdori) || 0,
         extras: Number(form.extras) || 0,
         dueDate: form.dueDate || undefined,
         accountId: form.accountId || undefined,
-        notes: form.notes || "",
+        notes: (form.notes || "").trim(),
       };
 
       const formData = new FormData();
@@ -481,8 +500,9 @@ export default function Purchases() {
                     <th className="px-4 py-3 text-left w-24">Bags</th>
                     <th className="px-4 py-3 text-left w-24">Kg/Bag</th>
                     <th className="px-4 py-3 text-left w-24 text-rose-800">Less (Kg)</th>
-                    <th className="px-4 py-3 text-left w-36">Rate (MUN)</th>
-                    <th className="px-4 py-3 text-left w-36">Bardana Amount</th>
+                    <th className="px-4 py-3 text-left w-24 text-emerald-800">Add (Kg)</th>
+                    <th className="px-4 py-3 text-left w-24 bg-amber-50 font-black text-amber-900 border-x border-amber-100">Net MUN</th>
+                    <th className="px-4 py-3 text-left w-36">Rate (MUN) *</th>
                     <th className="px-4 py-3 text-right font-bold bg-slate-200/50">Line Total</th>
                     <th className="px-4 py-3 text-center w-12"></th>
                   </tr>
@@ -524,18 +544,21 @@ export default function Purchases() {
                         }} className="input-field py-1.5 px-2 bg-rose-50 border-rose-200 placeholder:text-rose-300 text-center" placeholder="0" />
                       </td>
                       <td className="p-3">
+                        <input type="number" value={item.addKg} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].addKg = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2 bg-emerald-50 border-emerald-200 placeholder:text-emerald-300 text-center" placeholder="0" />
+                      </td>
+                      <td className="p-3 text-center bg-amber-50 font-black text-amber-900 border-x border-amber-100">
+                        {item.itemNetWeight !== undefined && item.itemNetWeight !== "" ? (Number(item.itemNetWeight) / 40).toFixed(4) : "—"}
+                      </td>
+                      <td className="p-3">
                         <input type="number" value={item.rate} onChange={(e) => {
                           const newItems = [...form.items];
                           newItems[idx].rate = e.target.value;
                           updateFormWithAutoCalc({ items: newItems });
                         }} className="input-field py-1.5 px-2 font-bold text-amber-700 bg-amber-50/50" placeholder="0" />
-                      </td>
-                      <td className="p-3">
-                        <input type="number" value={item.bardanaAmount} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].bardanaAmount = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2" placeholder="0" />
                       </td>
                       <td className="p-3 text-right font-black text-indigo-700 bg-slate-50/50 text-base">
                         {item.totalAmount ? Number(item.totalAmount).toLocaleString("en-PK") : "—"}
@@ -581,6 +604,14 @@ export default function Purchases() {
                   </select>
                 </div>
                 <div>
+                  <label className="input-label font-bold text-slate-600">Total Bardana (Truck)</label>
+                  <input type="number" value={form.totalBardanaAmount} onChange={(e) => setForm(f => ({ ...f, totalBardanaAmount: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" />
+                </div>
+                <div>
+                  <label className="input-label font-bold text-slate-600">Total Mazdori (Truck)</label>
+                  <input type="number" value={form.totalMazdori} onChange={(e) => setForm(f => ({ ...f, totalMazdori: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" />
+                </div>
+                <div>
                   <label className="input-label text-rose-600 font-bold">Extras (Deduction)</label>
                   <input type="number" value={form.extras} onChange={(e) => setForm(f => ({ ...f, extras: e.target.value }))} className="input-field border-rose-300 bg-rose-50" placeholder="e.g. 500" />
                 </div>
@@ -604,26 +635,46 @@ export default function Purchases() {
                     <span className="text-white font-bold">{form.items.length}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
-                    <span>Net Weight:</span>
+                    <span>Total Net MUN:</span>
+                    <span className="text-white font-bold">{(Number(form.netWeight) / 40).toFixed(4)} MUN</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Net Weight (Kg):</span>
                     <span className="text-white font-bold">{form.netWeight} Kg</span>
                   </div>
                   <div className="flex justify-between text-slate-400 pt-1">
-                    <span>Gross Items Sum:</span>
+                    <span>Items Sum:</span>
                     <span className="text-white font-bold">Rs. {form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0).toLocaleString("en-PK")}</span>
+                  </div>
+                  <div className="flex justify-between text-amber-400">
+                    <span>Total Bardana:</span>
+                    <span className="font-bold">+ Rs. {Number(form.totalBardanaAmount || 0).toLocaleString("en-PK")}</span>
+                  </div>
+                  <div className="flex justify-between text-blue-400">
+                    <span>Total Mazdori:</span>
+                    <span className="font-bold">+ Rs. {Number(form.totalMazdori || 0).toLocaleString("en-PK")}</span>
                   </div>
                   <div className="flex justify-between text-rose-400 border-b border-slate-800 pb-2">
                     <span>Extras Deduction:</span>
                     <span className="font-bold">- Rs. {Number(form.extras || 0).toLocaleString("en-PK")}</span>
                   </div>
-                  <div className="flex justify-between text-slate-400 pt-2 pb-2">
-                    <span className="text-emerald-400 font-bold text-lg">Grand Total:</span>
-                    <span className="text-emerald-400 font-black text-xl">Rs. {Math.max(0, form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) - (Number(form.extras) || 0)).toLocaleString("en-PK")}</span>
+                  <div className="flex justify-between text-slate-400 pt-2 pb-2 border-b border-slate-800">
+                    <span className="text-emerald-400 font-bold text-lg uppercase tracking-tight">Grand Total:</span>
+                    <span className="text-3xl font-black text-white">Rs. {
+                      (form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) + 
+                      (Number(form.totalBardanaAmount) || 0) + 
+                      (Number(form.totalMazdori) || 0) - 
+                      (Number(form.extras) || 0)).toLocaleString("en-PK")
+                    }</span>
                   </div>
                 </div>
                 <div className="pt-2">
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Status Preview</p>
                   <p className="text-lg font-black text-amber-500">
-                    {Number(form.amountPaid) >= Math.max(0, form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) - (Number(form.extras) || 0)) ? "PAID" : "CREDIT / PARTIAL"}
+                    {Number(form.amountPaid) >= (form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) + 
+                      (Number(form.totalBardanaAmount) || 0) + 
+                      (Number(form.totalMazdori) || 0) - 
+                      (Number(form.extras) || 0)) ? "PAID" : "CREDIT / PARTIAL"}
                   </p>
                 </div>
               </div>

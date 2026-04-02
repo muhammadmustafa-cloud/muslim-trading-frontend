@@ -564,16 +564,16 @@ export function drawSaleInvoice(doc, sale) {
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
-  doc.text("BARDANA (INC):", 130, rightY);
+  doc.text("BARDANA TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  const bardanaTotal = sale.items?.reduce((sum, i) => sum + (i.bardanaAmount || 0), 0) || sale.bardanaAmount || 0;
+  const bardanaTotal = sale.totalBardanaAmount || 0;
   doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
-  doc.text("MAZDOORI (INC):", 130, rightY);
+  doc.text("MAZDOORI TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  const mazdoriTotal = sale.items?.reduce((sum, i) => sum + (i.mazdori || 0), 0) || sale.mazdori || 0;
+  const mazdoriTotal = sale.totalMazdori || 0;
   doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
 
   if (Number(sale.extras) > 0) {
@@ -804,8 +804,15 @@ export function drawPurchaseInvoice(doc, entry) {
   doc.setFont("helvetica", "bold");
   doc.text("BARDANA TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  const bardanaTotal = entry.items?.reduce((sum, i) => sum + (i.bardanaAmount || 0), 0) || entry.bardanaAmount || 0;
+  const bardanaTotal = entry.totalBardanaAmount || 0;
   doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
+
+  rightY += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("MAZDOORI TOTAL:", 130, rightY);
+  doc.setFont("helvetica", "normal");
+  const mazdoriTotal = entry.totalMazdori || 0;
+  doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
 
   if (Number(entry.extras) > 0) {
     rightY += 7;
