@@ -1248,22 +1248,23 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
       { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
       { content: "Debit (Balance)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
-    auditAccounts.forEach(a => {
-      const isTraditional = !!(a.isDailyKhata || a.isMillKhata);
-      // For Mill Nature (Cash Box): Inflow = Credit, Outflow = Debit
-      // For Bank Nature: Inflow = Debit, Outflow = Credit
-      const creditAmt = isTraditional ? Number(a.totalIn || 0) : Number(a.totalOut || 0);
-      const debitAmt = isTraditional ? Number(a.totalOut || 0) : Number(a.totalIn || 0);
+    // NAYA (SAHI) — accounts section:
+auditAccounts.forEach(a => {
+  const bal = Number(a.balance || 0);
+  // Bank account: balance negative = paisa gaya (credit side) = zyada kharch
+  // balance positive = paisa bacha (debit side) = asset
+  const creditAmt = bal < 0 ? Math.abs(bal) : 0;
+  const debitAmt = bal >= 0 ? Math.abs(bal) : 0;
 
-      tableRows.push([
-        a.name.toUpperCase(),
-        "Bank/Commercial",
-        creditAmt > 0 ? formatMoney(creditAmt) : "—", 
-        debitAmt > 0 ? formatMoney(debitAmt) : "—" 
-      ]);
-      totalAuditCredit += creditAmt;
-      totalAuditDebit += debitAmt;
-    });
+  tableRows.push([
+    a.name.toUpperCase(),
+    bal < 0 ? "Bank Outflow (Net)" : bal > 0 ? "Bank Balance (Asset)" : "Nil",
+    creditAmt > 0 ? formatMoney(creditAmt) : "—",
+    debitAmt > 0 ? formatMoney(debitAmt) : "—"
+  ]);
+  totalAuditCredit += creditAmt;
+  totalAuditDebit += debitAmt;
+});
   }
 
   // Divider
