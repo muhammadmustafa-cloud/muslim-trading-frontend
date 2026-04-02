@@ -8,6 +8,8 @@ import {
   FaFilter,
   FaPlus,
   FaTrash,
+  FaSearch,
+  FaSpinner,
 } from "react-icons/fa";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import { downloadUniversalLedgerPdf } from "../utils/universalLedgerPdf.js";
@@ -16,11 +18,11 @@ const formatMoney = (n) => (n == null || n === 0 ? "—" : Number(n).toLocaleStr
 const formatDate = (d) =>
   d
     ? new Date(d).toLocaleDateString("en-PK", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        timeZone: "Asia/Karachi",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Karachi",
+    })
     : "—";
 const getToday = () => {
   const d = new Date();
@@ -44,7 +46,7 @@ export default function UniversalLedger() {
     try {
       const data = await apiGet("/accounts");
       setAccounts(data.data || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const fetchLedger = async () => {
@@ -53,7 +55,7 @@ export default function UniversalLedger() {
     try {
       const params = { dateFrom: filters.dateFrom, dateTo: filters.dateTo };
       if (filters.accountId) params.accountId = filters.accountId;
-      
+
       const data = await apiGet("/daily-memo", params);
       setList(data.data || []);
       setDastiList(data.dastiEntries || []);
@@ -69,11 +71,8 @@ export default function UniversalLedger() {
 
   useEffect(() => {
     fetchAccounts();
+    fetchLedger(); // initial load on mount
   }, []);
-
-  useEffect(() => {
-    fetchLedger();
-  }, [filters.dateFrom, filters.dateTo, filters.accountId]);
 
   const dastiSummary = useMemo(() => {
     const totalIn = dastiList.filter(d => d.type === 'credit').reduce((s, d) => s + (Number(d.amount) || 0), 0);
@@ -168,7 +167,27 @@ export default function UniversalLedger() {
             <label className="input-label text-xs">To</label>
             <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
           </div>
-          <button type="button" onClick={() => setFilters({ dateFrom: today, dateTo: today, accountId: "" })} className="btn-secondary text-sm">Reset</button>
+          {/* ──  ── */}
+          <button
+            type="button"
+            onClick={fetchLedger}
+            disabled={loading}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md shadow-indigo-500/25 active:scale-95 cursor-pointer"
+          >
+            {loading ? (
+              <FaSpinner className="w-4 h-4 animate-spin" />
+            ) : (
+              <FaSearch className="w-3.5 h-3.5" />
+            )}
+            {loading ? "Searching..." : "Search"}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setFilters({ dateFrom: today, dateTo: today, accountId: "" }); }}
+            className="inline-flex items-center btn-secondary text-sm cursor-pointer"
+          >
+            Reset
+          </button>
         </div>
       </section>
 
@@ -273,7 +292,7 @@ export default function UniversalLedger() {
                         {cr && (
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-slate-700 leading-tight">
-                                {cr.accountName} <span className="text-emerald-500">➔</span> {cr.name}
+                              {cr.accountName} <span className="text-emerald-500">➔</span> {cr.name}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate max-w-[200px]">{cr.description}</span>
                           </div>
@@ -289,7 +308,7 @@ export default function UniversalLedger() {
                         {dr && (
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-slate-700 leading-tight">
-                                {dr.accountName} <span className="text-rose-500">➔</span> {dr.name}
+                              {dr.accountName} <span className="text-rose-500">➔</span> {dr.name}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate max-w-[200px]">{dr.description}</span>
                           </div>
@@ -304,14 +323,14 @@ export default function UniversalLedger() {
               </tbody>
               <tfoot className="bg-slate-50 font-black border-t-2 border-slate-300">
                 <tr>
-                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px] border-r border-slate-200">GRAND TOTAL CREDITS (Aamad):</td>
-                   <td className="py-4 px-4 text-right text-emerald-700 border-r border-slate-200 text-lg">
-                      {formatMoney(Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0))}
-                   </td>
-                   <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px]">GRAND TOTAL DEBITS (Kharch):</td>
-                   <td className="py-4 px-4 text-right text-rose-700 text-lg">
-                      {formatMoney(Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0))}
-                   </td>
+                  <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px] border-r border-slate-200">GRAND TOTAL CREDITS (Aamad):</td>
+                  <td className="py-4 px-4 text-right text-emerald-700 border-r border-slate-200 text-lg">
+                    {formatMoney(Number(summary.totalIn || 0) + (summary.openingBalance > 0 ? Number(summary.openingBalance) : 0))}
+                  </td>
+                  <td colSpan="2" className="py-4 px-4 text-right text-slate-500 uppercase text-[10px]">GRAND TOTAL DEBITS (Kharch):</td>
+                  <td className="py-4 px-4 text-right text-rose-700 text-lg">
+                    {formatMoney(Number(summary.totalOut || 0) + (summary.openingBalance < 0 ? Math.abs(Number(summary.openingBalance)) : 0))}
+                  </td>
                 </tr>
               </tfoot>
             </table>
