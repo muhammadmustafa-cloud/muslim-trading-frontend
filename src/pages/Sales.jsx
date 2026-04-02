@@ -649,13 +649,16 @@ export default function Sales() {
                   </div>
                 </div>
                 <div>
-                  <label className="input-label">Payment Terms</label>
-                  <select value={form.paymentTerms} onChange={(e) => updateFormWithAutoCalc({ paymentTerms: e.target.value })} className="input-field">
-                    <option value="cash">Full Cash (Aaj)</option>
-                    <option value="15">15 Din baad</option>
-                    <option value="30">30 Din baad</option>
-                    <option value="custom">Custom Date</option>
-                  </select>
+                  <label className="input-label">Payment Terms & Due Date</label>
+                  <div className="flex gap-2">
+                    <select value={form.paymentTerms} onChange={(e) => updateFormWithAutoCalc({ paymentTerms: e.target.value })} className="input-field w-1/2">
+                      <option value="cash">Full Cash (Aaj)</option>
+                      <option value="15">15 Din baad</option>
+                      <option value="30">30 Din baad</option>
+                      <option value="custom">Custom Date</option>
+                    </select>
+                    <input type="date" value={form.dueDate} onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value, paymentTerms: 'custom' }))} className="input-field w-1/2" />
+                  </div>
                 </div>
                 <div>
                   <label className="input-label font-bold text-slate-600">Total Bardana (Truck)</label>
