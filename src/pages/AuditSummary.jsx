@@ -102,10 +102,26 @@ export default function AuditSummary() {
     let totalIn = 0;
     let totalOut = 0;
     
+    const millAccIds = (data.accounts || [])
+      .filter(a => a.isDailyKhata || a.isMillKhata)
+      .map(a => (a._id || a).toString());
+
     // 1. Start with natural period transactions
     data.periodTransactions.forEach((t) => {
-      if (t.fromAccountId) totalOut += Number(t.amount);
-      else if (t.toAccountId) totalIn += Number(t.amount);
+      const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
+      const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+
+      const isToMill = toId && millAccIds.includes(toId);
+      const isFromMill = fromId && millAccIds.includes(fromId);
+
+      // Rule: Money entering Mill (and NOT from another Mill account) = Credit/Aamad
+      if (isToMill && !isFromMill) {
+        totalIn += Number(t.amount);
+      } 
+      // Rule: Money leaving Mill (and NOT to another Mill account) = Debit/Kharch
+      else if (isFromMill && !isToMill) {
+        totalOut += Number(t.amount);
+      }
     });
 
     // 2. Include Opening Balance on its natural side
@@ -306,8 +322,15 @@ export default function AuditSummary() {
 
                   {/* 2. Period Transactions */}
                   {filteredItems(data.periodTransactions).map((t, i) => {
-                    const isOut = !!t.fromAccountId;
-                    const isIn = !!t.toAccountId;
+                    const millAccIds = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata).map(a => (a._id || a).toString());
+                    const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
+                    const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+
+                    // Logic: Money entering Mill = Aamad (Credit)
+                    const isIn = toId && millAccIds.includes(toId) && !(fromId && millAccIds.includes(fromId));
+                    // Logic: Money leaving Mill = Kharch (Debit)
+                    const isOut = fromId && millAccIds.includes(fromId) && !isIn;
+
                     const participant =
                       t.customerId?.name ||
                       t.supplierId?.name ||
@@ -315,7 +338,7 @@ export default function AuditSummary() {
                       t.rawMaterialHeadId?.name ||
                       t.expenseTypeId?.name ||
                       t.taxTypeId?.name ||
-                      "Manual Account";
+                      (t.type === "deposit" ? "DIRECT MILL DEPOSIT (AAMAD)" : "Manual Account");
                     const description =
                       t.note ||
                       t.category ||

@@ -1437,11 +1437,40 @@ auditAccounts.forEach(a => {
   const totalTax = data.taxes.reduce((s, t) => s + Number(t.amount), 0);
   totalAuditDebit += (stockVal + machineVal + totalExp + totalTax);
 
-  // 8. Closing Baqaya Balance
+  // 8. Manual Mill Deposits (Direct Aamad/Income)
+  const manualDeposits = (data.periodTransactions || []).filter(t => {
+    const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
+    const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+    const millAccIds = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata).map(a => (a._id || a).toString());
+    
+    const isToMill = toId && millAccIds.includes(toId);
+    const isFromMill = fromId && millAccIds.includes(fromId);
+
+    // Identify if it's a direct deposit into a Mill account NOT linked to a party/category
+    return t.type === 'deposit' && isToMill && !isFromMill && 
+           !t.customerId && !t.supplierId && !t.mazdoorId && 
+           !t.rawMaterialHeadId && !t.expenseTypeId && !t.taxTypeId;
+  });
+
+  if (manualDeposits.length > 0) {
+    addGroupHeader("7. MANUAL MILL DEPOSITS (DIRECT AAMAD)");
+    manualDeposits.forEach(t => {
+      const amt = Number(t.amount) || 0;
+      tableRows.push([
+        (t.category || "DIRECT DEPOSIT").toUpperCase(),
+        t.note || "Direct Credit to Mill",
+        formatMoney(amt),
+        "—"
+      ]);
+      totalAuditCredit += amt;
+    });
+  }
+
+  // 9. Closing Baqaya Balance
   const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
   const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
 
-  addGroupHeader("7. CLOSING BAQAYA BALANCE (MILL CASH)");
+  addGroupHeader("8. CLOSING BAQAYA BALANCE (MILL CASH)");
   const isSurplusClose = closingBaqaya >= 0;
   const creditClose = !isSurplusClose ? Math.abs(closingBaqaya) : 0;
   const debitClose = isSurplusClose ? Math.abs(closingBaqaya) : 0;
