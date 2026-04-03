@@ -34,7 +34,7 @@ export default function UniversalLedger() {
   const [list, setList] = useState([]);
   const [dastiList, setDastiList] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [summary, setSummary] = useState({ openingBalance: 0, totalIn: 0, totalOut: 0, net: 0 });
+  const [summary, setSummary] = useState({ openingBalance: 0, totalIn: 0, totalOut: 0, net: 0, closingBalance: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ dateFrom: today, dateTo: today, accountId: "" });
@@ -59,7 +59,7 @@ export default function UniversalLedger() {
       const data = await apiGet("/daily-memo", params);
       setList(data.data || []);
       setDastiList(data.dastiEntries || []);
-      setSummary(data.summary || { openingBalance: 0, totalIn: 0, totalOut: 0, net: 0 });
+      setSummary(data.summary || { openingBalance: 0, totalIn: 0, totalOut: 0, net: 0, closingBalance: 0 });
     } catch (e) {
       setError(e.message);
       setList([]);
@@ -71,7 +71,7 @@ export default function UniversalLedger() {
 
   useEffect(() => {
     fetchAccounts();
-    fetchLedger(); // initial load on mount
+    fetchLedger();
   }, []);
 
   const dastiSummary = useMemo(() => {
@@ -102,17 +102,9 @@ export default function UniversalLedger() {
     }
   };
 
-  // Separate credits and debits for T-Account layout
   const credits = useMemo(() => list.filter(r => r.amountType === "in"), [list]);
   const debits = useMemo(() => list.filter(r => r.amountType === "out"), [list]);
   const maxRows = Math.max(credits.length, debits.length);
-
-  const getFullDesc = (row) => {
-    const acc = row.accountName || "Manual";
-    const part = row.name || "General";
-    if (row.type === "transfer") return row.description; // Transfers already have good descriptions
-    return `${acc} ➔ ${part}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -147,7 +139,6 @@ export default function UniversalLedger() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">{error}</div>}
 
-      {/* Filters */}
       <section className="card p-4 border-l-4 border-l-indigo-500">
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-full sm:w-64">
@@ -167,7 +158,6 @@ export default function UniversalLedger() {
             <label className="input-label text-xs">To</label>
             <input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="input-field w-40" />
           </div>
-          {/* ──  ── */}
           <button
             type="button"
             onClick={fetchLedger}
@@ -191,7 +181,6 @@ export default function UniversalLedger() {
         </div>
       </section>
 
-      {/* Summary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="card p-4 border-l-4 border-l-slate-400 bg-slate-50/50">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pichli Wasooli (Prev)</p>
@@ -219,7 +208,6 @@ export default function UniversalLedger() {
         </div>
       </div>
 
-      {/* T-Account Table */}
       <section className="card overflow-hidden">
         {loading ? (
           <div className="p-10 text-center"><div className="loading-spinner mb-3" /></div>
@@ -246,9 +234,7 @@ export default function UniversalLedger() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {/* Opening Balance Row: Now Dynamic Based on Value Nature */}
                 <tr className="bg-slate-50 border-b-2 border-slate-200 shadow-sm">
-                  {/* LEFT: CREDIT (Aamad) SIDE */}
                   <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
                   <td className="py-2 px-3 border-r border-slate-100">
                     {summary.openingBalance > 0 ? (
@@ -263,8 +249,6 @@ export default function UniversalLedger() {
                   <td className={`py-2 px-3 text-right font-black border-r border-slate-200 ${summary.openingBalance > 0 ? "text-emerald-700 bg-emerald-100/30" : "text-slate-300"}`}>
                     {summary.openingBalance > 0 ? formatMoney(summary.openingBalance) : "—"}
                   </td>
-
-                  {/* RIGHT: DEBIT (Kharch) SIDE */}
                   <td className="py-2 px-3 text-[11px] text-slate-400">—</td>
                   <td className="py-2 px-3">
                     {summary.openingBalance < 0 ? (
@@ -280,13 +264,11 @@ export default function UniversalLedger() {
                     {summary.openingBalance < 0 ? formatMoney(Math.abs(summary.openingBalance)) : "—"}
                   </td>
                 </tr>
-
                 {[...Array(maxRows)].map((_, i) => {
                   const cr = credits[i];
                   const dr = debits[i];
                   return (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                      {/* Credit Side (Aamad) */}
                       <td className="py-2 px-3 text-[11px] text-slate-400">{cr ? formatDate(cr.date) : ""}</td>
                       <td className="py-2 px-3">
                         {cr && (
@@ -301,8 +283,6 @@ export default function UniversalLedger() {
                       <td className="py-2 px-3 text-right font-black text-emerald-600 border-r border-slate-200 bg-emerald-50/10">
                         {cr ? formatMoney(cr.amount) : ""}
                       </td>
-
-                      {/* Debit Side (Kharch) */}
                       <td className="py-2 px-3 text-[11px] text-slate-400">{dr ? formatDate(dr.date) : ""}</td>
                       <td className="py-2 px-3">
                         {dr && (
@@ -338,7 +318,6 @@ export default function UniversalLedger() {
         )}
       </section>
 
-      {/* Dasti Entries Section */}
       {(dastiList.length > 0 || showDastiModal) && (
         <section className="card overflow-hidden border-t-4 border-t-amber-600 mt-8">
           <div className="bg-amber-600 text-white px-4 py-3 flex justify-between items-center">
@@ -392,7 +371,6 @@ export default function UniversalLedger() {
         </section>
       )}
 
-      {/* Add Dasti Modal */}
       {showDastiModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in duration-200">

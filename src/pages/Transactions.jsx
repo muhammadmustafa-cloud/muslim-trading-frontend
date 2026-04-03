@@ -229,7 +229,12 @@ export default function Transactions() {
       return;
     }
     if (form.type === "transfer" && (!form.fromAccountId || !form.toAccountId)) {
-      setError("Transfer ke liye dono accounts select karein.");
+      setError("Standard Transfer ke liye dono accounts select karein.");
+      setSubmitting(false);
+      return;
+    }
+    if (form.type === "journal" && (!form.customerId || (!form.supplierId && !form.mazdoorId))) {
+      setError("Party Transfer ke liye Source (Customer) aur Destination (Supplier/Mazdoor) select karein.");
       setSubmitting(false);
       return;
     }
@@ -242,7 +247,7 @@ export default function Transactions() {
     try {
       const formData = new FormData();
       formData.append("date", form.date);
-      formData.append("type", form.type);
+      formData.append("type", form.type === "journal" ? "transfer" : form.type);
       if (form.fromAccountId) formData.append("fromAccountId", form.fromAccountId);
       if (form.toAccountId) formData.append("toAccountId", form.toAccountId);
       if (form.amount) formData.append("amount", amt);
@@ -375,6 +380,7 @@ export default function Transactions() {
     if (t === "expense") return "Expense Paid";
     if (t === "sale") return "Sale";
     if (t === "purchase") return "Purchase";
+    if (t === "transfer") return "Transfer";
     return t;
   };
 
@@ -422,7 +428,8 @@ export default function Transactions() {
                 <option value="tax">Tax Payment (Audit)</option>
                 <option value="expense">General Expense (Kharcha)</option>
                 <option value="salary">Salary (Payment)</option>
-                <option value="transfer">Transfer</option>
+                <option value="transfer">Standard Transfer (Acc to Acc)</option>
+                <option value="journal">Direct Party Transfer (Journal)</option>
               </select>
             </div>
             {form.type === "tax" && (
@@ -469,6 +476,41 @@ export default function Transactions() {
                   onChange={(val) => setForm((f) => ({ ...f, toAccountId: val }))}
                   placeholder="Select account"
                 />
+              </div>
+            )}
+
+            {form.type === "journal" && (
+              <div className="sm:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 mb-2">
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">Party-to-Party Transfer Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="input-label text-emerald-600 font-black">Source: Customer (Credit) *</label>
+                    <SearchableSelect
+                      options={customers}
+                      value={form.customerId}
+                      onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
+                      placeholder="Select customer who paid"
+                    />
+                  </div>
+                  <div>
+                    <label className="input-label text-rose-600 font-black">Destination: Recipient (Debit) *</label>
+                    <div className="space-y-2">
+                      <SearchableSelect
+                        options={suppliers}
+                        value={form.supplierId}
+                        onChange={(val) => setForm((f) => ({ ...f, supplierId: val, mazdoorId: "" }))}
+                        placeholder="Select supplier"
+                      />
+                      <SearchableSelect
+                        options={mazdoor}
+                        value={form.mazdoorId}
+                        onChange={(val) => setForm((f) => ({ ...f, mazdoorId: val, supplierId: "" }))}
+                        placeholder="OR Select mazdoor"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[9px] text-slate-400 mt-3 italic">* This entry records direct payment from Customer to Supplier. **Cash balance will not change.**</p>
               </div>
             )}
             <div>
