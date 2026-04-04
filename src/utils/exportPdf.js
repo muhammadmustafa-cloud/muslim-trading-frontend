@@ -202,13 +202,17 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     const isMillNature = !filters?.accountId || filters?.isTraditional;
 
     if (row.type === "transfer") {
-      if (filters?.accountId && (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId)) {
-        // Source Account (Giver) = Credit
-        credit = row.amount;
-      } else if (filters?.accountId && (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId)) {
-        // Destination Account (Receiver) = Debit
-        debit = row.amount;
+      const fromId = (row.fromAccountId?._id || row.fromAccountId)?.toString();
+      const toId = (row.toAccountId?._id || row.toAccountId)?.toString();
+      const filterId = filters?.accountId?.toString();
+
+      if (filterId) {
+        // Outflow Priority Logic: if it's both, count as Credit (Aamad)
+        if (fromId === filterId) credit = row.amount;
+        else if (toId === filterId) debit = row.amount;
       } else {
+        // Global view: From = Credit, To = Debit
+        credit = row.amount;
         debit = row.amount;
       }
     } else {
@@ -1192,7 +1196,7 @@ export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filte
   });
 
   addPageNumbers(doc);
-  doc.save(`expense-ledger-${expenseType.name.replace(/\s+/g, "_")}.pdf`);
+  doc.save(`expe  nse-ledger-${expenseType.name.replace(/\s+/g, "_")}.pdf`);
 }
 
 /**
@@ -1200,183 +1204,100 @@ export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filte
  * Lists all entities in a single Debit/Credit format.
  */
 export function downloadAuditSummaryPdf(data, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let totalAuditCredit = 0;
   let totalAuditDebit = 0;
+  const tableRows = [];
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const subtitleLines = [];
-  if (filters.dateFrom || filters.dateTo) {
-    subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
-  }
-  
-  const isPeriodAudit = !!(filters.dateFrom || filters.dateTo);
-  const reportTitle = isPeriodAudit ? "Professional Submail Audit (Periodic)" : "Master Audit Balance Sheet";
+  const addAuditRow = (name, desc, credit = 0, debit = 0) => {
+    const c = Number(credit) || 0;
+    const d = Number(debit) || 0;
+    if (c === 0 && d === 0) return; // Skip zero rows
 
-  addReportHeader(doc, reportTitle, subtitleLines);
-
- const tableRows = [];
-
-// Totals are calculated once at the top from periodTransactions and openingBalance.
-// Section code below handles the table rows without double counting.
- 
-
-
+    totalAuditCredit += c;
+    totalAuditDebit += d;
+    tableRows.push([
+      name.toUpperCase(),
+      desc.toUpperCase(),
+      c > 0 ? formatMoney(c) : "—",
+      d > 0 ? formatMoney(d) : "—"
+    ]);
+  };
 
   const addGroupHeader = (title) => {
     tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
   };
 
-  // 1. Previous Balance (Opening)
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo) {
+    subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
+  }
+  subtitleLines.push(`Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium" })}`);
+  addReportHeader(doc, "PROFESSIONAL SUBMAIL AUDIT (PERIODIC)", subtitleLines);
+
+  // 1. Previous Balance (Ground Zero)
   const opBal = Number(data.openingBalance || 0);
   if (opBal !== 0) {
     addGroupHeader("0. PREVIOUS BALANCE (OPENING)");
-    const isSurplus = opBal > 0;
-    const creditAmt = isSurplus ? Math.abs(opBal) : 0;
-    const debitAmt = !isSurplus ? Math.abs(opBal) : 0;
-
-    tableRows.push([
-      "PREVIOUS BALANCE (BAQAYA)",
-      (isSurplus ? "Cash Surplus Forward" : "Opening Deficit/Udhaar"),
-      creditAmt > 0 ? formatMoney(creditAmt) : "—", 
-      debitAmt > 0 ? formatMoney(debitAmt) : "—"
-    ]);
-    totalAuditCredit += creditAmt;
-    totalAuditDebit += debitAmt;
+    addAuditRow("PREVIOUS BALANCE (BAQAYA)", opBal > 0 ? "Surplus Forward" : "Opening Deficit", opBal > 0 ? Math.abs(opBal) : 0, opBal < 0 ? Math.abs(opBal) : 0);
   }
 
-  // 2. Bank & Cash Audit
-  const auditAccounts = (data.accounts || []).filter(a => !a.isDailyKhata && !a.isMillKhata);
-
-  if (auditAccounts && auditAccounts.length > 0) {
-    addGroupHeader("1. BANK & CASH ACCOUNTS (TOTAL FUNDS)");
-    tableRows.push([
-      { content: "Account Name", styles: { fontStyle: "bold" } }, 
-      { content: "Account Type", styles: { fontStyle: "bold" } },
-      { content: "Credit (Aamad)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Balance)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
-    ]);
-    // NAYA (SAHI) — accounts section:
-auditAccounts.forEach(a => {
-  const bal = Number(a.periodBalance ?? a.balance ?? 0);
-  const creditAmt = bal < 0 ? Math.abs(bal) : 0;
-  const debitAmt  = bal >= 0 ? Math.abs(bal) : 0;
-
-  tableRows.push([
-    a.name.toUpperCase(),
-    bal < 0 ? "Net Outflow (Period)" : bal > 0 ? "Net Inflow (Period)" : "Nil",
-    creditAmt > 0 ? formatMoney(creditAmt) : "—",
-    debitAmt > 0 ? formatMoney(debitAmt) : "—"
-  ]);
-  totalAuditCredit += creditAmt;
-  totalAuditDebit += debitAmt;
-});
-  }
-
-  // Divider
-  tableRows.push([{ content: "", colSpan: 4, styles: { cellPadding: 1 } }]);
-
-  // 3. Customers Audit
-  if (data.customers.length > 0) {
-    addGroupHeader("2. CUSTOMER AUDIT (RECEIVABLES)");
-    tableRows.push([
-      { content: "Customer Name", styles: { fontStyle: "bold" } }, 
-      { content: "Net Standing", styles: { fontStyle: "bold" } },
-      { content: "Credit (Received)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Receivable)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
-    ]);
- // ✅ SAHI — period ki actual movements
-data.customers.forEach(c => {
-  const creditAmt = Number(c.periodIn || 0);   // Received in period
-  const debitAmt = Number(c.periodOut || 0);   // Sale/billed in period
-  const net = debitAmt - creditAmt;
-
-  tableRows.push([
-    c.name.toUpperCase(),
-    net > 0 ? "Receivable (Dr)" : net < 0 ? "Overpaid (Cr)" : "Settled",
-    creditAmt > 0 ? formatMoney(creditAmt) : "—",
-    debitAmt > 0 ? formatMoney(debitAmt) : "—"
-  ]);
-  totalAuditCredit += creditAmt;
-  totalAuditDebit += debitAmt;
-});
-  }
-
-  // 3. Suppliers Audit
-  if (data.suppliers.length > 0) {
-    addGroupHeader("2. SUPPLIER AUDIT (PAYABLES)");
-    tableRows.push([
-      { content: "Supplier Name", styles: { fontStyle: "bold" } }, 
-      { content: "Net Standing", styles: { fontStyle: "bold" } },
-      { content: "Credit (Payable)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
-    ]);
- // ✅ SAHI
-data.suppliers.forEach(s => {
-  const creditAmt = Number(s.periodIn || 0);   // Purchase/payable in period
-  const debitAmt = Number(s.periodOut || 0);   // Paid in period
-  const net = creditAmt - debitAmt;
-
-  tableRows.push([
-    s.name.toUpperCase(),
-    net > 0 ? "Payable (Cr)" : net < 0 ? "Advance (Dr)" : "Settled",
-    creditAmt > 0 ? formatMoney(creditAmt) : "—",
-    debitAmt > 0 ? formatMoney(debitAmt) : "—"
-  ]);
-  totalAuditCredit += creditAmt;
-  totalAuditDebit += debitAmt;
-});
-  }
-
-  // 4. Mazdoor Audit
-  if (data.mazdoors && data.mazdoors.length > 0) {
-    addGroupHeader("3. MAZDOOR AUDIT (OUTSTANDING WAGES)");
-    tableRows.push([
-       { content: "Worker Name", styles: { fontStyle: "bold" } }, 
-       { content: "Classification", styles: { fontStyle: "bold" } }, 
-       { content: "Credit (Earned)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
-       { content: "Debit (Paid)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
-    ]);
-  // ✅ SAHI
-data.mazdoors.forEach(m => {
-  const earned = Number(m.periodEarned || 0);
-  const paid = Number(m.periodPaid || 0);
-
-  tableRows.push([
-    m.name.toUpperCase(),
-    earned > paid ? "Net Payable" : "Advance Paid",
-    formatMoney(earned),
-    formatMoney(paid),
-  ]);
-  totalAuditCredit += earned;
-  totalAuditDebit += paid;
-});
-  }
-
-  // 5. Raw Material Ledger Audit
-  if (data.rawMaterials && data.rawMaterials.length > 0) {
-    addGroupHeader("4. RAW MATERIAL LEDGER AUDIT (TURNOVER)");
-    tableRows.push([
-      { content: "Material Name", styles: { fontStyle: "bold" } }, 
-      { content: "Classification", styles: { fontStyle: "bold" } }, 
-      { content: "Credit (Stock In / Aamad)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
-      { content: "Debit (Stock Out / Kharch)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
-    ]);
-    data.rawMaterials.forEach(rm => {
-      const credit = Number(rm.periodCredit || 0);
-      const debit = Number(rm.periodDebit || 0);
-
-      tableRows.push([
-        rm.name.toUpperCase(),
-        "Raw Material Head",
-        credit > 0 ? formatMoney(credit) : "—",
-        debit > 0 ? formatMoney(debit) : "—",
-      ]);
-      totalAuditCredit += credit;
-      totalAuditDebit += debit;
+  // 1. Bank Accounts (Net Movements for Audit)
+  const bankAccs = (data.accounts || []).filter(a => !a.isMillKhata && !a.isDailyKhata);
+  if (bankAccs.length > 0) {
+    addGroupHeader("1. BANK & CASH ACCOUNTS (PERIODIC NET)");
+    bankAccs.forEach(a => {
+      const net = (Number(a.tOut) || 0) - (Number(a.tIn) || 0);
+      if (net === 0) return;
+      
+      const isNetCredit = net > 0;
+      addAuditRow(a.name, (a.type || "Ledger"), isNetCredit ? Math.abs(net) : 0, !isNetCredit ? Math.abs(net) : 0);
     });
   }
 
-  // 6. Item Trading Audit (Stock Turnover)
+  // 2. Customers (Net Periodic Audit)
+  if (data.customers && data.customers.length > 0) {
+    addGroupHeader("2. CUSTOMER AUDIT (RECEIVABLES)");
+    data.customers.forEach(c => {
+      // Net = Money In (Cr) - Goods Out (Dr). 
+      // If Positive => Net Receipt (Credit). If Negative => Net Sale/Receivable (Debit).
+      const net = (Number(c.periodIn) || 0) - (Number(c.periodOut) || 0);
+      if (net === 0) return;
+      
+      const isNetCr = net > 0;
+      addAuditRow(c.name, "Customer Net", isNetCr ? Math.abs(net) : 0, !isNetCr ? Math.abs(net) : 0);
+    });
+  }
+
+  // 3. Suppliers (Net Periodic Audit)
+  if (data.suppliers && data.suppliers.length > 0) {
+    addGroupHeader("3. SUPPLIER AUDIT (PAYABLES)");
+    data.suppliers.forEach(s => {
+      // Net = Goods In (Cr/Liability) - Cash Out (Dr/Asset).
+      // If Positive => Net Purchase/Payable (Credit). If Negative => Net Payment/Advance (Debit).
+      const net = (Number(s.periodIn) || 0) - (Number(s.periodOut) || 0);
+      if (net === 0) return;
+      
+      const isNetCr = net > 0;
+      addAuditRow(s.name, "Supplier Net", isNetCr ? Math.abs(net) : 0, !isNetCr ? Math.abs(net) : 0);
+    });
+  }
+
+  // 4. Mazdoor (Net Wages Audit)
+  if (data.mazdoors && data.mazdoors.length > 0) {
+    addGroupHeader("4. MAZDOOR AUDIT (WAGES)");
+    data.mazdoors.forEach(m => {
+      // Net = Work Done (Cr/Liability) - Paid (Dr/Asset).
+      // If Positive => Net Unpaid/Payable (Credit). If Negative => Net Overpaid/Advance (Debit).
+      const net = (Number(m.periodEarned) || 0) - (Number(m.periodPaid) || 0);
+      if (net === 0) return;
+
+      const isNetCr = net > 0;
+      addAuditRow(m.name, "Worker Net", isNetCr ? Math.abs(net) : 0, !isNetCr ? Math.abs(net) : 0);
+    });
+  }
+
+  // 5. Item Trading Audit (Stock Turnover)
   if (data.items && data.items.length > 0) {
     addGroupHeader("5. ITEM TRADING AUDIT (STOCK TURNOVER)");
     tableRows.push([
@@ -1388,120 +1309,77 @@ data.mazdoors.forEach(m => {
     data.items.forEach(item => {
       const sale = Number(item.saleVolume || 0);
       const purchase = Number(item.purchaseVolume || 0);
-      const netValue = sale - purchase;
-      const isNetInflow = netValue >= 0;
-
-      tableRows.push([
-        item.name.toUpperCase(),
-        isNetInflow ? "Net Stock Sale (Revenue)" : "Net Stock Purchase (Investment)",
-        isNetInflow && netValue !== 0 ? formatMoney(netValue) : "—",
-        !isNetInflow ? formatMoney(Math.abs(netValue)) : "—",
-      ]);
-      
-      if (isNetInflow) totalAuditCredit += netValue;
-      else totalAuditDebit += Math.abs(netValue);
+      addAuditRow(item.name, "Stock Movement", sale, purchase);
     });
   }
 
-  // 7. Assets & Outflows
-  addGroupHeader("6. ASSETS & EXPENDITURE AUDIT (DETAILED BREAKDOWN)");
+  // 6. Assets & Inventory & Expenses
+  addGroupHeader("6. ASSETS & EXPENDITURE AUDIT");
   const stockVal = Number(data.totalStockValue) || 0;
-  
-  // Stock
-  tableRows.push(["GODAM STOCK VALUATION", "Inventory Asset", "—", formatMoney(stockVal)]);
+  addAuditRow("GODAM STOCK VALUATION", "Inventory Snapshot", 0, stockVal);
 
-  // Detailed Machinery
-  if (data.machinery && data.machinery.length > 0) {
-    data.machinery.forEach(m => {
-      tableRows.push([
-        (m.machineryItemId?.name || "Machinery").toUpperCase(),
-        "Fixed Asset Purchase",
-        "—",
-        formatMoney(m.amount)
-      ]);
-    });
-  }
+  (data.machinery || []).forEach(m => {
+    addAuditRow(m.machineryItemId?.name || "Machinery", "Fixed Asset", 0, m.amount);
+  });
 
-  // Detailed Expenses (Grouped by Head)
-  const expenseGroups = {};
+  // Detailed Expense Heads (No aggregation)
   data.expenses.forEach(e => {
     const name = e.expenseTypeId?.name || "General Expense";
-    expenseGroups[name] = (expenseGroups[name] || 0) + Number(e.amount);
-  });
-  Object.entries(expenseGroups).forEach(([name, amt]) => {
-    tableRows.push([name.toUpperCase(), "Operational Expense", "—", formatMoney(amt)]);
+    addAuditRow(name, "Operational Expense", 0, e.amount);
   });
 
-  // Detailed Taxes (Grouped by Head)
-  const taxGroups = {};
+  // Detailed Tax Heads (No aggregation)
   data.taxes.forEach(t => {
     const name = t.taxTypeId?.name || "General Tax";
-    taxGroups[name] = (taxGroups[name] || 0) + Number(t.amount);
-  });
-  Object.entries(taxGroups).forEach(([name, amt]) => {
-    tableRows.push([name.toUpperCase(), "Government Tax", "—", formatMoney(amt)]);
+    addAuditRow(name, "Government Tax", 0, t.amount);
   });
 
-  const machineVal = data.machinery.reduce((s, m) => s + Number(m.amount), 0);
-  const totalExp = data.expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const totalTax = data.taxes.reduce((s, t) => s + Number(t.amount), 0);
-  totalAuditDebit += (stockVal + machineVal + totalExp + totalTax);
-
-  // 8. Manual Mill Deposits (Direct Aamad/Income)
+  // 7. Manual Deposits & Incomes
   const manualDeposits = (data.periodTransactions || []).filter(t => {
-    const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
     const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
-    const millAccIds = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata).map(a => (a._id || a).toString());
-    
-    const isToMill = toId && millAccIds.includes(toId);
-    const isFromMill = fromId && millAccIds.includes(fromId);
-
-    // Identify if it's a direct deposit into a Mill account NOT linked to a party/category
-    return t.type === 'deposit' && isToMill && !isFromMill && 
-           !t.customerId && !t.supplierId && !t.mazdoorId && 
-           !t.rawMaterialHeadId && !t.expenseTypeId && !t.taxTypeId;
+    const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
+    const accounts = data.accounts || [];
+    const fromAcc = accounts.find(a => (a._id || a).toString() === fromId);
+    const toAcc   = accounts.find(a => (a._id || a).toString() === toId);
+    const isToMill = toAcc?.isMillKhata || toAcc?.isDailyKhata;
+    const isFromMill = fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
+    return (t.type === 'income' || t.type === 'deposit') && isToMill && !isFromMill && !t.customerId && !t.supplierId && !t.mazdoorId && !t.expenseTypeId && !t.taxTypeId;
   });
 
   if (manualDeposits.length > 0) {
-    addGroupHeader("7. MANUAL MILL DEPOSITS (DIRECT AAMAD)");
+    addGroupHeader("6. MANUAL MILL DEPOSITS (DIRECT AAMAD)");
     manualDeposits.forEach(t => {
-      const amt = Number(t.amount) || 0;
-      tableRows.push([
-        (t.category || "DIRECT DEPOSIT").toUpperCase(),
-        t.note || "Direct Credit to Mill",
-        formatMoney(amt),
-        "—"
-      ]);
-      totalAuditCredit += amt;
+      addAuditRow(t.category || "INCOME", t.note || "Direct Credit", t.amount, 0);
     });
   }
 
-  // 9. Closing Baqaya Balance
-  const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
-  const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+  // 7b. Manual Transfers (Specifically from Mill Khata)
+  const manualTransfers = (data.periodTransactions || []).filter(t => {
+    if (t.type !== 'transfer') return false;
+    const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+    const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
+    return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
+  });
 
+  if (manualTransfers.length > 0) {
+    addGroupHeader("7. MILL KHATA TRANSFERS (SPECIFIC)");
+    manualTransfers.forEach(t => {
+      // Placing officially in Credit (Aamad) column to perfectly balance against the Bank Account's Debit
+      addAuditRow("TRANSFER SUMMARY", t.note || "Mill Khata Outflow", t.amount, 0);
+    });
+  }
+
+  // 8. Closing Baqaya Balance (The Counterweight)
+  const closingBaqaya = Number(data.universalBaqaya || 0);
   addGroupHeader("8. CLOSING BAQAYA BALANCE (MILL CASH)");
-  const isSurplusClose = closingBaqaya >= 0;
-  const creditClose = !isSurplusClose ? Math.abs(closingBaqaya) : 0;
-  const debitClose = isSurplusClose ? Math.abs(closingBaqaya) : 0;
+  const isSurplus_cl = closingBaqaya >= 0;
+  // Surplus is a Debit balance (Cash in hand), Deficit is a Credit balance (Udhaar)
+  addAuditRow("BAQAYA BALANCE (CLOSING)", "Mill Desk Position", isSurplus_cl ? 0 : Math.abs(closingBaqaya), isSurplus_cl ? Math.abs(closingBaqaya) : 0);
 
-  tableRows.push([
-    "BAQAYA BALANCE (CLOSING)",
-    isSurplusClose ? "Cash Surplus in Hand" : "Closing Deficit/Udhaar",
-    creditClose > 0 ? formatMoney(creditClose) : "—",
-    debitClose > 0 ? formatMoney(debitClose) : "—"
-  ]);
-  totalAuditCredit += creditClose;
-  totalAuditDebit += debitClose;
-
-  // Summary Totals
-  const totalAssets_Final = Number(data.totalCash || 0) + Number(data.totalReceivables || 0) + stockVal + machineVal;
-  const totalPayables_Final = Number(data.totalPayables || 0);
-  const netPosition_Final = totalAssets_Final - totalPayables_Final;
-
+  // Summary Table
   autoTable(doc, {
     startY: 40,
-    head: [["SUBMAIL CLASSIFICATION", "DETAIL / CATEGORY", "CREDIT (AAMAD)", "DEBIT (KHARCH)"]],
+    head: [["SUBMAIL CLASSIFICATION", "DETAIL / CATEGORY", "CREDIT (Aam)", "DEBIT (Khar)"]],
     body: tableRows,
     foot: [
       [
@@ -1515,15 +1393,13 @@ data.mazdoors.forEach(m => {
     columnStyles: {
       0: { cellWidth: 70 },
       1: { cellWidth: 60 },
-      2: { cellWidth: 25, halign: "right" },
-      3: { cellWidth: 25, halign: "right" }
+      2: { cellWidth: 30, halign: "right" },
+      3: { cellWidth: 30, halign: "right" }
     }
   });
 
   addPageNumbers(doc);
   doc.save(`Professional_Audit_${new Date().toISOString().slice(0,10)}.pdf`);
-
-  
 }
 
 
@@ -1585,7 +1461,6 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
 
       // CUSTOMIZE BY CATEGORY (Match historyPdf.js UI)
       if (cat.key === 'customers' || cat.key === 'suppliers') {
-        const isBuyer = cat.key === 'customers';
         const body = entity.ledger.map(row => {
           const d = Number(row.debit) || 0;
           const c = Number(row.credit) || 0;

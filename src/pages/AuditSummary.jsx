@@ -98,43 +98,52 @@ export default function AuditSummary() {
   };
 
   const masterTotals = useMemo(() => {
-    if (!data || !data.periodTransactions) return { in: 0, out: 0 };
+    if (!data) return { in: 0, out: 0 };
     let totalIn = 0;
     let totalOut = 0;
     
-    const millAccIds = (data.accounts || [])
-      .filter(a => a.isDailyKhata || a.isMillKhata)
-      .map(a => (a._id || a).toString());
+    const accounts = data.accounts || [];
 
-    // 1. Start with natural period transactions
-    data.periodTransactions.forEach((t) => {
-      const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
-      const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
-
-      const isToMill = toId && millAccIds.includes(toId);
-      const isFromMill = fromId && millAccIds.includes(fromId);
-
-      // Rule: Money entering Mill (and NOT from another Mill account) = Credit/Aamad
-      if (isToMill && !isFromMill) {
-        totalIn += Number(t.amount);
-      } 
-      // Rule: Money leaving Mill (and NOT to another Mill account) = Debit/Kharch
-      else if (isFromMill && !isToMill) {
-        totalOut += Number(t.amount);
-      }
-    });
-
-    // 2. Include Opening Balance on its natural side
+    // 1. Opening Balance Row
     const opBal = Number(data.openingBalance || 0);
     if (opBal > 0) totalIn += opBal;
     else if (opBal < 0) totalOut += Math.abs(opBal);
 
-    // 3. Include Closing Balance on the OPPOSITE side for balancing
-    const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
-    const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    // 2. Period Transactions (Sum of Register Rows)
+    (data.periodTransactions || []).forEach((t) => {
+      const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+      const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
+
+      const fromAcc = accounts.find(a => (a._id || a).toString() === fromId);
+      const toAcc   = accounts.find(a => (a._id || a).toString() === toId);
+
+      const is_toMill = toAcc?.isMillKhata || toAcc?.isDailyKhata;
+      const is_fromMill = fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
+
+      const isMillToBankHack = is_fromMill && toAcc && !is_toMill;
+
+      // SAHI Visibility Logic (Same as register row mapping)
+      const is_in = (is_toMill && !is_fromMill) || (!fromAcc && is_toMill) || isMillToBankHack;
+      const is_out = (is_fromMill && !is_toMill) || (fromAcc && !toAcc && is_fromMill);
+
+      // Isolation Rule: Ignore internal bank-to-bank and mill-to-mill transfers
+      if (fromAcc && toAcc) {
+        const bothBanks = !is_fromMill && !is_toMill;
+        const bothMill = is_fromMill && is_toMill;
+        if (bothBanks || bothMill) return;
+      }
+
+      if (is_in) totalIn += Number(t.amount);
+      if (is_out) totalOut += Number(t.amount);
+    });
+
+    // 3. STRICT UNIVERSAL BAQAYA
+    const closingBaqaya = Number(data.universalBaqaya || 0);
+    const isSurplus = closingBaqaya >= 0;
     
-    if (closingBaqaya > 0) totalOut += closingBaqaya; // Surplus (Credit) added to Debit (Out) side
-    else if (closingBaqaya < 0) totalIn += Math.abs(closingBaqaya); // Deficit (Debit) added to Credit (In) side
+    // Balanced Row: Surplus goes to Out side, Deficit goes to In side
+    if (isSurplus) totalOut += Math.abs(closingBaqaya);
+    else totalIn += Math.abs(closingBaqaya);
 
     return { in: totalIn, out: totalOut };
   }, [data]);
@@ -322,14 +331,26 @@ export default function AuditSummary() {
 
                   {/* 2. Period Transactions */}
                   {filteredItems(data.periodTransactions).map((t, i) => {
-                    const millAccIds = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata).map(a => (a._id || a).toString());
                     const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
                     const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+                    const fromAcc = data.accounts?.find(a => (a._id || a).toString() === fromId);
+                    const toAcc = data.accounts?.find(a => (a._id || a).toString() === toId);
+                    
+                    const isToGroup = toAcc?.isMillKhata || toAcc?.isDailyKhata;
+                    const isFromGroup = fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
+                    const isMillToBank = isFromGroup && toAcc && !isToGroup;
 
-                    // Logic: Money entering Mill = Aamad (Credit)
-                    const isIn = toId && millAccIds.includes(toId) && !(fromId && millAccIds.includes(fromId));
-                    // Logic: Money leaving Mill = Kharch (Debit)
-                    const isOut = fromId && millAccIds.includes(fromId) && !isIn;
+                    // 1. Movement is Inflow if: (To Mill-Desk from Bank/Outside) OR (To Bank from Outside)
+                    const isIn = (isToGroup && !isFromGroup) || (!fromAcc && isToGroup) || isMillToBank;
+                    // 2. Movement is Outflow if: (From Mill-Desk to Bank/Outside) OR (From Bank to Outside)
+                    const isOut = (isFromGroup && !isToGroup) || (fromAcc && !toAcc && isFromGroup);
+
+                    // 3. SAHI Isolation Rule: Ignore internal bank-to-bank and internal mill-to-mill
+                    if (fromAcc && toAcc) {
+                      const bothBanks = !isFromGroup && !isToGroup;
+                      const bothMill = isFromGroup && isToGroup;
+                      if (bothBanks || bothMill) return null;
+                    }
 
                     const participant =
                       t.customerId?.name ||
@@ -390,8 +411,7 @@ export default function AuditSummary() {
 
                   {/* 3. Closing Balance (Balanced Row) */}
                   {(() => {
-                    const millAccounts = (data.accounts || []).filter(a => a.isDailyKhata || a.isMillKhata);
-                    const closingBaqaya = millAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+                    const closingBaqaya = Number(data.universalBaqaya || 0);
                     if (closingBaqaya === 0) return null;
                     const isSurplus = closingBaqaya >= 0;
                     return (
@@ -1549,6 +1569,71 @@ export default function AuditSummary() {
           </div>
         )}
       </div>
+
+      {/* FINAL GRAND SUMMARY: BANK & CASH ACCOUNTS (TOTAL FUNDS) */}
+      {data && (
+        <section className="mt-12 space-y-4 animate-in slide-in-from-bottom-6 duration-700">
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white shadow-lg">
+              <FaWallet className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-[0.1em]">
+              1. BANK & CASH ACCOUNTS <span className="text-indigo-600">(TOTAL FUNDS)</span>
+            </h2>
+          </div>
+
+          <div className="card p-0 overflow-hidden border-none shadow-2xl ring-1 ring-slate-200">
+            <table className="w-full">
+              <thead className="bg-slate-900 text-white">
+                <tr className="text-[10px] font-black uppercase tracking-widest">
+                  <th className="px-6 py-4 text-left">Account Name</th>
+                  <th className="px-6 py-4 text-right bg-emerald-500/20">Credit (Aamad/Out)</th>
+                  <th className="px-6 py-4 text-right bg-rose-500/20">Debit (Kharch/In)</th>
+                  <th className="px-6 py-4 text-right bg-indigo-500/20">Net Period (Baqaya)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {data.accounts
+                  .filter((acc) => !acc.isMillKhata) // SAHI: Don't show Mill Khata desk cash in Audit ledger list
+                  .map((acc, i) => {
+                    const tOut = Number(acc.tOut || 0);
+                    const tIn = Number(acc.tIn || 0);
+                    const netMovement = tOut - tIn; // Standard Mill Perspective: Withdrawal - Deposit
+                    
+                    return (
+                      <tr key={i} className="hover:bg-slate-50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-black text-slate-700 uppercase">{acc.name}</div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase italic">{acc.type} Ledger</div>
+                        </td>
+                        <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10">
+                          {tOut > 0 ? `Rs. ${formatMoney(tOut)}` : <span className="text-slate-200">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10">
+                          {tIn > 0 ? `Rs. ${formatMoney(tIn)}` : <span className="text-slate-200">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-right font-black text-indigo-700 bg-indigo-50/10">
+                          Rs. {formatMoney(Math.abs(netMovement))}
+                          <span className={`text-[10px] ml-1 px-1 rounded ${netMovement >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                            {netMovement >= 0 ? "CR" : "DR"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                <tr className="text-sm font-black text-slate-800">
+                  <td className="px-6 py-5 uppercase text-[10px] tracking-widest text-slate-400 italic">Consolidated Cash Flow:</td>
+                  <td colSpan="3" className="px-6 py-5 text-right text-2xl text-indigo-900 tracking-tight">
+                    Rs. {formatMoney(data.totalCash)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      )}
 
       <footer className="pt-10 pb-6 text-center border-t border-slate-100">
         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em]">

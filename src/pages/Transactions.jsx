@@ -757,47 +757,75 @@ export default function Transactions() {
                     {(() => {
                       let tKharchTotal = 0;
                       let tAamadTotal = 0;
+
+                      // Use consistent logic with PDF export
                       const isMillNatureFooter = !filters.accountId || isTraditional;
+
                       list.forEach((row) => {
+                        let rowAamad = 0;
+                        let rowKharch = 0;
+
                         if (filters.accountId) {
                           if (row.type === "transfer") {
-                            if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
-                               tAamadTotal += row.amount; // From = Credit
-                            } else if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
-                               tKharchTotal += row.amount; // To = Debit
-                            }
+                            const fromId = (row.fromAccountId?._id || row.fromAccountId)?.toString();
+                            const toId = (row.toAccountId?._id || row.toAccountId)?.toString();
+                            const filterId = filters.accountId.toString();
+
+                            // SAHI: Ignore internal self-transfers for net total
+                            if (fromId === filterId && toId === filterId) return;
+
+                            if (fromId === filterId) rowAamad = row.amount;
+                            if (toId === filterId) rowKharch = row.amount;
                           } else {
                             const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
                             if (isMillNatureFooter) {
-                               if (isInflow) tAamadTotal += row.amount;
-                               else tKharchTotal += row.amount;
+                               if (isInflow) rowAamad = row.amount;
+                               else rowKharch = row.amount;
                             } else {
-                               if (isInflow) tKharchTotal += row.amount;
-                               else tAamadTotal += row.amount;
+                               if (isInflow) rowKharch = row.amount;
+                               else rowAamad = row.amount;
                             }
                           }
                         } else {
                           // Global (Mill Standard)
-                          if (row.type === "deposit" || row.type === "sale" || row.type === "income") tAamadTotal += row.amount;
-                          else tKharchTotal += row.amount;
+                          if (row.type === "deposit" || row.type === "sale" || row.type === "income") rowAamad = row.amount;
+                          else rowKharch = row.amount;
                         }
+
+                        tAamadTotal += rowAamad;
+                        tKharchTotal += rowKharch;
                       });
+
+                      const netBal = tAamadTotal - tKharchTotal;
+                      const isCredit = netBal >= 0;
+
                       return (
-                        <tr className="font-bold text-slate-900 border-b-2 border-slate-200">
-                          <td
-                            colSpan="3"
-                            className="px-5 py-5 text-right uppercase tracking-wider text-xs text-slate-500 font-bold"
-                          >
-                            Total Account Movements:
-                          </td>
-                          <td className="px-5 py-5 text-right text-emerald-700 bg-emerald-50/30">
-                            {formatMoney(tAamadTotal)}
-                          </td>
-                          <td className="px-5 py-5 text-right text-rose-700 bg-rose-50/30">
-                            {formatMoney(tKharchTotal)}
-                          </td>
-                          <td className="bg-slate-50/30"></td>
-                        </tr>
+                        <>
+                          <tr className="font-black text-slate-800 border-b border-slate-200">
+                            <td colSpan="3" className="px-5 py-4 text-right uppercase tracking-[0.2em] text-[10px] text-slate-500 font-black">
+                              Total Account Movements:
+                            </td>
+                            <td className="px-5 py-4 text-right text-emerald-800 bg-emerald-50/50 border-x border-slate-200">
+                              {formatMoney(tAamadTotal)}
+                            </td>
+                            <td className="px-5 py-4 text-right text-rose-800 bg-rose-50/50 border-x border-slate-200">
+                              {formatMoney(tKharchTotal)}
+                            </td>
+                            <td className="bg-slate-50/30"></td>
+                          </tr>
+                          <tr className="font-black text-slate-800 bg-slate-200/50">
+                            <td colSpan="3" className="px-5 py-3 text-right uppercase tracking-[0.2em] text-[10px] text-slate-600 font-black">
+                              Net Period Balance (Standing):
+                            </td>
+                            <td colSpan="2" className="px-5 py-3 text-center text-indigo-900 border-x border-slate-300">
+                              <span className="text-lg mr-2">{formatMoney(Math.abs(netBal))}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs ${isCredit ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
+                                {isCredit ? 'CR' : 'DR'}
+                              </span>
+                            </td>
+                            <td className="bg-white"></td>
+                          </tr>
+                        </>
                       );
                     })()}
                   </tfoot>
