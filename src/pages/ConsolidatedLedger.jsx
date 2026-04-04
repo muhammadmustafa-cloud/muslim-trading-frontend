@@ -281,8 +281,10 @@ function EntityCard({ title, icon: Icon, color, list, type }) {
           <tbody className="divide-y divide-slate-50">
             {list.map((item, i) => {
               // Calculate closing for preview
-              const net = item.ledger.reduce((s, l) => s + (l.debit - l.credit), 0);
-              const closing = item.openingBalance + net;
+          const totalDr = item.ledger.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+const totalCr = item.ledger.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+const net = totalDr - totalCr;
+
 
               return (
                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
@@ -296,7 +298,7 @@ function EntityCard({ title, icon: Icon, color, list, type }) {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="text-xs font-black text-slate-800">
-                      Rs. {Math.abs(closing).toLocaleString()} {closing >= 0 ? "Dr" : "Cr"}
+                     Rs. {Math.abs(net).toLocaleString()} {net >= 0 ? "Dr" : "Cr"}
                     </div>
                   </td>
                 </tr>

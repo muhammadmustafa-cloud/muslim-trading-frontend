@@ -1200,6 +1200,9 @@ export function downloadExpenseLedgerPdf(expenseType, sessions, totalPaid, filte
  * Lists all entities in a single Debit/Credit format.
  */
 export function downloadAuditSummaryPdf(data, filters = {}) {
+  let totalAuditCredit = 0;
+  let totalAuditDebit = 0;
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) {
@@ -1211,9 +1214,13 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 
   addReportHeader(doc, reportTitle, subtitleLines);
 
-  const tableRows = [];
-  let totalAuditCredit = 0;
-  let totalAuditDebit = 0;
+ const tableRows = [];
+
+// Totals are calculated once at the top from periodTransactions and openingBalance.
+// Section code below handles the table rows without double counting.
+ 
+
+
 
   const addGroupHeader = (title) => {
     tableRows.push([{ content: title, colSpan: 4, styles: { fontStyle: "bold", fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]);
@@ -1250,15 +1257,13 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     ]);
     // NAYA (SAHI) — accounts section:
 auditAccounts.forEach(a => {
-  const bal = Number(a.balance || 0);
-  // Bank account: balance negative = paisa gaya (credit side) = zyada kharch
-  // balance positive = paisa bacha (debit side) = asset
+  const bal = Number(a.periodBalance ?? a.balance ?? 0);
   const creditAmt = bal < 0 ? Math.abs(bal) : 0;
-  const debitAmt = bal >= 0 ? Math.abs(bal) : 0;
+  const debitAmt  = bal >= 0 ? Math.abs(bal) : 0;
 
   tableRows.push([
     a.name.toUpperCase(),
-    bal < 0 ? "Bank Outflow (Net)" : bal > 0 ? "Bank Balance (Asset)" : "Nil",
+    bal < 0 ? "Net Outflow (Period)" : bal > 0 ? "Net Inflow (Period)" : "Nil",
     creditAmt > 0 ? formatMoney(creditAmt) : "—",
     debitAmt > 0 ? formatMoney(debitAmt) : "—"
   ]);
@@ -1279,19 +1284,21 @@ auditAccounts.forEach(a => {
       { content: "Credit (Received)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
       { content: "Debit (Receivable)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
-    data.customers.forEach(c => {
-      const creditAmt = Number(c.periodIn || 0);
-      const debitAmt = Number(c.periodOut || 0);
+ // ✅ SAHI — period ki actual movements
+data.customers.forEach(c => {
+  const creditAmt = Number(c.periodIn || 0);   // Received in period
+  const debitAmt = Number(c.periodOut || 0);   // Sale/billed in period
+  const net = debitAmt - creditAmt;
 
-      tableRows.push([
-        c.name.toUpperCase(),
-        (c.balance >= 0 ? "Debit (Dr)" : "Credit (Cr)"),
-        creditAmt > 0 ? formatMoney(creditAmt) : "—",
-        debitAmt > 0 ? formatMoney(debitAmt) : "—"
-      ]);
-      totalAuditCredit += creditAmt;
-      totalAuditDebit += debitAmt;
-    });
+  tableRows.push([
+    c.name.toUpperCase(),
+    net > 0 ? "Receivable (Dr)" : net < 0 ? "Overpaid (Cr)" : "Settled",
+    creditAmt > 0 ? formatMoney(creditAmt) : "—",
+    debitAmt > 0 ? formatMoney(debitAmt) : "—"
+  ]);
+  totalAuditCredit += creditAmt;
+  totalAuditDebit += debitAmt;
+});
   }
 
   // 3. Suppliers Audit
@@ -1303,19 +1310,21 @@ auditAccounts.forEach(a => {
       { content: "Credit (Payable)", styles: { fontStyle: "bold", halign: "right", fillColor: [240, 253, 244] } }, 
       { content: "Debit (Paid)", styles: { fontStyle: "bold", halign: "right", fillColor: [254, 242, 242] } }
     ]);
-    data.suppliers.forEach(s => {
-      const creditAmt = Number(s.periodIn || 0);
-      const debitAmt = Number(s.periodOut || 0);
+ // ✅ SAHI
+data.suppliers.forEach(s => {
+  const creditAmt = Number(s.periodIn || 0);   // Purchase/payable in period
+  const debitAmt = Number(s.periodOut || 0);   // Paid in period
+  const net = creditAmt - debitAmt;
 
-      tableRows.push([
-        s.name.toUpperCase(),
-        (s.balance <= 0 ? "Credit (Cr)" : "Debit (Dr)"),
-        creditAmt > 0 ? formatMoney(creditAmt) : "—",
-        debitAmt > 0 ? formatMoney(debitAmt) : "—"
-      ]);
-      totalAuditCredit += creditAmt;
-      totalAuditDebit += debitAmt;
-    });
+  tableRows.push([
+    s.name.toUpperCase(),
+    net > 0 ? "Payable (Cr)" : net < 0 ? "Advance (Dr)" : "Settled",
+    creditAmt > 0 ? formatMoney(creditAmt) : "—",
+    debitAmt > 0 ? formatMoney(debitAmt) : "—"
+  ]);
+  totalAuditCredit += creditAmt;
+  totalAuditDebit += debitAmt;
+});
   }
 
   // 4. Mazdoor Audit
@@ -1327,19 +1336,20 @@ auditAccounts.forEach(a => {
        { content: "Credit (Earned)", styles: { halign: "right", fontStyle: "bold", fillColor: [240, 253, 244] } }, 
        { content: "Debit (Paid)", styles: { halign: "right", fontStyle: "bold", fillColor: [254, 242, 242] } }
     ]);
-    data.mazdoors.forEach(m => {
-      const earned = Number(m.periodEarned || 0);
-      const paid = Number(m.periodPaid || 0);
-      
-      tableRows.push([
-        m.name.toUpperCase(),
-        (m.balance >= 0 ? "Net Payable" : "Advance Paid"),
-        formatMoney(earned),
-        formatMoney(paid),
-      ]);
-      totalAuditCredit += earned;
-      totalAuditDebit += paid;
-    });
+  // ✅ SAHI
+data.mazdoors.forEach(m => {
+  const earned = Number(m.periodEarned || 0);
+  const paid = Number(m.periodPaid || 0);
+
+  tableRows.push([
+    m.name.toUpperCase(),
+    earned > paid ? "Net Payable" : "Advance Paid",
+    formatMoney(earned),
+    formatMoney(paid),
+  ]);
+  totalAuditCredit += earned;
+  totalAuditDebit += paid;
+});
   }
 
   // 5. Raw Material Ledger Audit
@@ -1512,7 +1522,10 @@ auditAccounts.forEach(a => {
 
   addPageNumbers(doc);
   doc.save(`Professional_Audit_${new Date().toISOString().slice(0,10)}.pdf`);
+
+  
 }
+
 
 /**
  * Consolidated Ledger Book PDF (The "Daily Book")
@@ -1563,10 +1576,10 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
       doc.setFontSize(10);
       doc.setFont(undefined, "bold");
       doc.text(`Opening Balance: Rs. ${formatMoney(Math.abs(entity.openingBalance))} ${entity.openingBalance >= 0 ? 'Dr' : 'Cr'}`, MARGIN, startY);
-      startY += 8;
+      startY += 2;
 
       let tableConfig = {};
-      let runningBalance = Number(entity.openingBalance) || 0;
+      let runningBalance = 0;
       let totalDr = 0;
       let totalCr = 0;
 
