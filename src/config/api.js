@@ -5,12 +5,34 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+/**
+ * Get the current client ID.
+ * Priority: localStorage (set at login) → VITE_CLIENT_ID env var
+ * This is the value sent as the 'x-client-id' header to the backend.
+ */
+export const getClientId = () => {
+  return localStorage.getItem("mill_client_id") || import.meta.env.VITE_CLIENT_ID || "";
+};
+
+/**
+ * Build all required request headers including:
+ * - Authorization Bearer token
+ * - x-client-id for multi-tenant routing
+ */
 const getAuthHeaders = (extraHeaders = {}) => {
   const token = localStorage.getItem("mill_token");
+  const clientId = getClientId();
+
   const headers = { ...extraHeaders };
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+
+  if (clientId) {
+    headers["x-client-id"] = clientId;
+  }
+
   return headers;
 };
 
@@ -50,7 +72,7 @@ export async function apiPut(path, body) {
 }
 
 export async function apiDelete(path) {
-  const res = await fetch(API_BASE_URL + path, { 
+  const res = await fetch(API_BASE_URL + path, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -62,8 +84,8 @@ export async function apiDelete(path) {
 export async function apiPostFormData(path, formData) {
   const res = await fetch(API_BASE_URL + path, {
     method: "POST",
-    headers: getAuthHeaders(),
-    body: formData, // No Content-Type header; browser sets multipart/form-data with boundary
+    headers: getAuthHeaders(), // No Content-Type; browser sets multipart/form-data+boundary
+    body: formData,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || res.statusText);

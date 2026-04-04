@@ -56,7 +56,7 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, clientId } = useAuth();
   return (
     <div className="min-h-screen flex bg-slate-100/80">
       {/* Sidebar */}
@@ -68,10 +68,18 @@ export default function AdminLayout() {
             </div>
             <div>
               <h1 className="font-bold text-lg tracking-tight">Mill Admin</h1>
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-0.5">
                 <p className="text-xs text-amber-400 font-medium">{user?.username || 'Guest'}</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{user?.role || 'user'}</p>
               </div>
+              {clientId && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    {clientId}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
