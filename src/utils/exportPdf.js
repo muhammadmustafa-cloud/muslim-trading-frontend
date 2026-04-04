@@ -1353,9 +1353,10 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 7b. Manual Transfers (Specifically from Mill Khata)
+  // 7b. Manual Transfers (Specifically from Mill Khata to Outside/Bank)
   const manualTransfers = (data.periodTransactions || []).filter(t => {
     if (t.type !== 'transfer') return false;
+    if (t.supplierId) return false; // Crucial: Exclude direct supplier clearings to avoid double-counting
     const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
     const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
     return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
@@ -1369,9 +1370,31 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 8. Closing Baqaya Balance (The Counterweight)
+  // 7c. Direct Supplier Payments (Triple-Lock Safety)
+  const supplierTransfers = (data.periodTransactions || []).filter(t => {
+    // Lock 1: Must be explicitly an outflow (Withdraw OR Journal/Transfer)
+    if (t.type !== 'withdraw' && t.type !== 'transfer') return false; 
+    // Lock 2: Must rigidly belong to an authenticated supplier database ID.
+    if (!t.supplierId) return false;
+    // Lock 3: The physical asset source MUST distinctly be the Mill or Daily Khata.
+    const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
+    const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
+    return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
+  });
+
+  if (supplierTransfers.length > 0) {
+    addGroupHeader("8. MILL TO SUPPLIER (DIRECT CLEARANCE)");
+    supplierTransfers.forEach(t => {
+      // PRO MODE: Using addAuditRow to officially include this in the Credit total.
+      // This fulfills your request for "Sumup" in the Credit column for all Mill transfers.
+      const particName = (typeof t.supplierId === 'object' ? t.supplierId.name : "SUPPLIER PAYMENT") || "SUPPLIER PAYMENT";
+      addAuditRow("CASH SETTLEMENT", (t.note || `Paid directly to ${particName}`), t.amount, 0);
+    });
+  }
+
+  // 9. Closing Baqaya Balance (The Counterweight)
   const closingBaqaya = Number(data.universalBaqaya || 0);
-  addGroupHeader("8. CLOSING BAQAYA BALANCE (MILL CASH)");
+  addGroupHeader("9. CLOSING BAQAYA BALANCE (MILL CASH)");
   const isSurplus_cl = closingBaqaya >= 0;
   // Surplus is a Debit balance (Cash in hand), Deficit is a Credit balance (Udhaar)
   addAuditRow("BAQAYA BALANCE (CLOSING)", "Mill Desk Position", isSurplus_cl ? 0 : Math.abs(closingBaqaya), isSurplus_cl ? Math.abs(closingBaqaya) : 0);

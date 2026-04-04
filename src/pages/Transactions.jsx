@@ -233,8 +233,8 @@ export default function Transactions() {
       setSubmitting(false);
       return;
     }
-    if (form.type === "journal" && (!form.customerId || (!form.supplierId && !form.mazdoorId))) {
-      setError("Party Transfer ke liye Source (Customer) aur Destination (Supplier/Mazdoor) select karein.");
+    if (form.type === "journal" && ((!form.customerId && !form.fromAccountId) || (!form.supplierId && !form.mazdoorId))) {
+      setError("Party Transfer ke liye Source (Customer ya Mill Account) aur Destination (Supplier/Mazdoor) dono zaroori hain.");
       setSubmitting(false);
       return;
     }
@@ -484,13 +484,21 @@ export default function Transactions() {
                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">Party-to-Party Transfer Details</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="input-label text-emerald-600 font-black">Source: Customer (Credit) *</label>
-                    <SearchableSelect
-                      options={customers}
-                      value={form.customerId}
-                      onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
-                      placeholder="Select customer who paid"
-                    />
+                    <label className="input-label text-emerald-600 font-black">Source (Giver) *</label>
+                    <div className="space-y-2">
+                       <SearchableSelect
+                         options={customers}
+                         value={form.customerId}
+                         onChange={(val) => setForm((f) => ({ ...f, customerId: val, fromAccountId: "" }))}
+                         placeholder="Select customer"
+                       />
+                       <SearchableSelect
+                         options={accounts.filter(a => a.isMillKhata || a.isDailyKhata)}
+                         value={form.fromAccountId}
+                         onChange={(val) => setForm((f) => ({ ...f, fromAccountId: val, customerId: "" }))}
+                         placeholder="OR Select Mill Account"
+                       />
+                    </div>
                   </div>
                   <div>
                     <label className="input-label text-rose-600 font-black">Destination: Recipient (Debit) *</label>
