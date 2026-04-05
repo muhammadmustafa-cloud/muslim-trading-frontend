@@ -1334,6 +1334,15 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     addAuditRow(name, "Government Tax", 0, t.amount);
   });
 
+  // 7. Raw Material Activity (Unified for Both Bank & Mill)
+  if (data.rawMaterials && data.rawMaterials.length > 0) {
+    addGroupHeader("7. RAW MATERIAL ACTIVITY (HEAD-WISE)");
+    data.rawMaterials.forEach(rm => {
+      // Periodic Activity: Credit = Aamad, Debit = Kharch
+      addAuditRow(rm.name, "Unit Audit", rm.periodCredit, rm.periodDebit);
+    });
+  }
+
   // 7. Manual Deposits & Incomes
   const manualDeposits = (data.periodTransactions || []).filter(t => {
     const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
@@ -1343,7 +1352,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     const toAcc   = accounts.find(a => (a._id || a).toString() === toId);
     const isToMill = toAcc?.isMillKhata || toAcc?.isDailyKhata;
     const isFromMill = fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
-    return (t.type === 'income' || t.type === 'deposit') && isToMill && !isFromMill && !t.customerId && !t.supplierId && !t.mazdoorId && !t.expenseTypeId && !t.taxTypeId;
+    // CRITICAL FIX: Exclude Raw Material heads here to avoid double-counting with Section 7
+    return (t.type === 'income' || t.type === 'deposit') && isToMill && !isFromMill && !t.customerId && !t.supplierId && !t.mazdoorId && !t.expenseTypeId && !t.taxTypeId && !t.rawMaterialHeadId;
   });
 
   if (manualDeposits.length > 0) {
@@ -1356,39 +1366,38 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   // 7b. Manual Transfers (Specifically from Mill Khata to Outside/Bank)
   const manualTransfers = (data.periodTransactions || []).filter(t => {
     if (t.type !== 'transfer') return false;
-    if (t.supplierId) return false; // Crucial: Exclude direct supplier clearings to avoid double-counting
+    // CRITICAL: Exclude all categorical entities to avoid double-counting
+    if (t.customerId || t.supplierId || t.mazdoorId || t.rawMaterialHeadId || t.expenseTypeId || t.taxTypeId) return false;
+    
     const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
     const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
     return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
   });
 
   if (manualTransfers.length > 0) {
-    addGroupHeader("7. MILL KHATA TRANSFERS (SPECIFIC)");
+    addGroupHeader("7b. INTERNAL MILL CASH TRANSFERS (SPECIFIC)");
     manualTransfers.forEach(t => {
-      // Placing officially in Credit (Aamad) column to perfectly balance against the Bank Account's Debit
-      addAuditRow("TRANSFER SUMMARY", t.note || "Mill Khata Outflow", t.amount, 0);
+      // Placing in Credit (Aamad) column to balance against the recipient account's Debit (Kharch)
+      addAuditRow("CASH MOVEMENT", t.note || "Mill Khata Outflow", t.amount, 0);
     });
   }
 
-  // 7c. Direct Supplier Payments (Triple-Lock Safety)
-  const supplierTransfers = (data.periodTransactions || []).filter(t => {
-    // Lock 1: Must be explicitly an outflow (Withdraw OR Journal/Transfer)
-    if (t.type !== 'withdraw' && t.type !== 'transfer') return false; 
-    // Lock 2: Must rigidly belong to an authenticated supplier database ID.
-    if (!t.supplierId) return false;
-    // Lock 3: The physical asset source MUST distinctly be the Mill or Daily Khata.
+  // 8. Direct Party Transfers (The "Perfect" Condition)
+  const partyTransfers = (data.periodTransactions || []).filter(t => {
+    // CRITICAL: Only include transfer types here, exclude withdraw (which are counted in categoricals)
+    if (t.type !== 'transfer') return false; 
+    if (!t.customerId && !t.supplierId && !t.mazdoorId) return false;
+    
     const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
     const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
     return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
   });
 
-  if (supplierTransfers.length > 0) {
-    addGroupHeader("8. MILL TO SUPPLIER (DIRECT CLEARANCE)");
-    supplierTransfers.forEach(t => {
-      // PRO MODE: Using addAuditRow to officially include this in the Credit total.
-      // This fulfills your request for "Sumup" in the Credit column for all Mill transfers.
-      const particName = (typeof t.supplierId === 'object' ? t.supplierId.name : "SUPPLIER PAYMENT") || "SUPPLIER PAYMENT";
-      addAuditRow("CASH SETTLEMENT", (t.note || `Paid directly to ${particName}`), t.amount, 0);
+  if (partyTransfers.length > 0) {
+    addGroupHeader("8. MILL TO PARTY (DIRECT SETTLEMENT)");
+    partyTransfers.forEach(t => {
+      const particName = (t.customerId?.name || t.supplierId?.name || t.mazdoorId?.name || "PARTY");
+      addAuditRow("DIRECT SETTLEMENT", (t.note || `Paid to ${particName}`), t.amount, 0);
     });
   }
 

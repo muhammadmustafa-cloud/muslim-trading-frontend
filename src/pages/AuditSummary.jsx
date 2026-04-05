@@ -340,10 +340,10 @@ export default function AuditSummary() {
                     const isFromGroup = fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
                     const isMillToBank = isFromGroup && toAcc && !isToGroup;
 
-                    // 1. Movement is Inflow if: (To Mill-Desk from Bank/Outside) OR (To Bank from Outside)
-                    const isIn = (isToGroup && !isFromGroup) || (!fromAcc && isToGroup) || isMillToBank;
-                    // 2. Movement is Outflow if: (From Mill-Desk to Bank/Outside) OR (From Bank to Outside)
-                    const isOut = (isFromGroup && !isToGroup) || (fromAcc && !toAcc && isFromGroup);
+                    // 1. Movement is Credit (Aamad)
+                    const isIn = ((isToGroup && !isFromGroup) || (!fromAcc && isToGroup) || isMillToBank) || (!!t.rawMaterialHeadId && !!toAcc && !isToGroup);
+                    // 2. Movement is Debit (Kharch)
+                    const isOut = ((isFromGroup && !isToGroup) || (fromAcc && !toAcc && isFromGroup)) || (!!t.rawMaterialHeadId && !!fromAcc && !isFromGroup);
 
                     // 3. SAHI Isolation Rule: Ignore internal bank-to-bank and internal mill-to-mill
                     if (fromAcc && toAcc) {
