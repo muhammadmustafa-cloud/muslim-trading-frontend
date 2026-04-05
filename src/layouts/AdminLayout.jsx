@@ -53,6 +53,7 @@ const navItems = [
   { to: "/audit-summary", icon: FaFileContract, label: "Audit (Submail)" },
   { to: "/consolidated-ledger", icon: FaBookOpen, label: "Daily Ledger Book" },
   { to: "/users", icon: FaUsers, label: "User Management", adminOnly: true },
+  { to: "/setup-opening-balances", icon: FaTools, label: "Initial Migration Setup", adminOnly: true },
 ];
 
 export default function AdminLayout() {

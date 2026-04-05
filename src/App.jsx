@@ -35,6 +35,7 @@ import RawMaterials from "./pages/RawMaterials";
 import ConsolidatedLedger from "./pages/ConsolidatedLedger";
 import Login from "./pages/Login";
 import Users from "./pages/Users";
+import SetupOpeningBalances from "./pages/SetupOpeningBalances";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function ProtectedRoute({ children }) {
@@ -88,6 +89,7 @@ function App() {
           <Route path="audit-summary" element={<AuditSummary />} />
           <Route path="consolidated-ledger" element={<ConsolidatedLedger />} />
           <Route path="users" element={<Users />} />
+          <Route path="setup-opening-balances" element={<SetupOpeningBalances />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
