@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { apiGet, apiPost, apiPostFormData, apiDelete } from "../config/api.js";
+import { apiGet, apiPost, apiPostFormData, apiPutFormData, apiDelete } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadTransactionsPdf } from "../utils/exportPdf.js";
-import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaImage } from "react-icons/fa";
+import { FaExchangeAlt, FaPlus, FaSort, FaSortUp, FaSortDown, FaFileExport, FaFilePdf, FaImage, FaEdit, FaTrash } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
@@ -59,6 +59,7 @@ export default function Transactions() {
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     if (accountIdFromUrl && filters.accountId !== accountIdFromUrl) {
@@ -180,6 +181,7 @@ export default function Transactions() {
       chequeNumber: "",
       chequeDate: "",
     });
+    setEditingId(null);
     setModalOpen(false);
   };
   const openAddModal = () => {
@@ -190,6 +192,48 @@ export default function Transactions() {
       rawMaterialHeadId: filters.rawMaterialHeadId || ""
     }));
     setModalOpen(true);
+  };
+
+  const handleEdit = (row) => {
+    if (row.source !== 'transaction') {
+      alert("System-generated transactions (Sales/Purchases) ko yahan se edit nahi kiya ja sakta.");
+      return;
+    }
+    setEditingId(row._id);
+    setForm({
+      date: row.date ? new Date(row.date).toISOString().split('T')[0] : today,
+      type: row.type || "deposit",
+      fromAccountId: row.fromAccountId?._id || row.fromAccountId || "",
+      toAccountId: row.toAccountId?._id || row.toAccountId || "",
+      amount: row.amount || "",
+      category: row.category || "",
+      note: row.note || "",
+      customerId: row.customerId?._id || row.customerId || "",
+      supplierId: row.supplierId?._id || row.supplierId || "",
+      mazdoorId: row.mazdoorId?._id || row.mazdoorId || "",
+      taxTypeId: row.taxTypeId?._id || row.taxTypeId || "",
+      expenseTypeId: row.expenseTypeId?._id || row.expenseTypeId || "",
+      rawMaterialHeadId: row.rawMaterialHeadId?._id || row.rawMaterialHeadId || "",
+      image: null,
+      paymentMethod: row.paymentMethod || "cash",
+      chequeNumber: row.chequeNumber || "",
+      chequeDate: row.chequeDate ? new Date(row.chequeDate).toISOString().split('T')[0] : "",
+    });
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id, source) => {
+    if (source !== 'transaction') {
+      alert("System-generated transactions (Sales/Purchases) ko yahan se delete nahi kiya ja sakta.");
+      return;
+    }
+    if (!window.confirm("Kya aap waqai is transaction ko delete karna chahte hain?")) return;
+    try {
+      await apiDelete(`/transactions/${id}`);
+      fetchList();
+    } catch (e) {
+      alert(e.message);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -271,7 +315,11 @@ export default function Transactions() {
         if (form.chequeDate) formData.append("chequeDate", form.chequeDate);
       }
 
-      await apiPostFormData("/transactions", formData);
+      if (editingId) {
+        await apiPutFormData(`/transactions/${editingId}`, formData);
+      } else {
+        await apiPostFormData("/transactions", formData);
+      }
       resetForm();
       fetchList();
     } catch (e) {
@@ -408,7 +456,7 @@ export default function Transactions() {
         </button>
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title="Naya transaction add karein">
+      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Transaction update karein" : "Naya transaction add karein"}>
         {accounts.length === 0 && (
           <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm mb-4">
             Pehle <strong>Accounts</strong> page se kam az kam ek account (e.g. Cash ya Bank) add karein, phir yahan transaction add kar sakte hain.
@@ -605,7 +653,7 @@ export default function Transactions() {
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Saving...
                 </span>
-              ) : ("Save Transaction")}
+              ) : (editingId ? "Update Transaction" : "Save Transaction")}
             </button>
             <button type="button" onClick={resetForm} className="btn-secondary px-6" disabled={submitting}>
               Cancel
@@ -756,6 +804,31 @@ export default function Transactions() {
                                 <FaImage className="w-4 h-4" />
                               </button>
                             )}
+                          </td>
+                          <td className="table-cell">
+                            <div className="flex items-center justify-center gap-2">
+                              {row.source === 'transaction' && (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(row)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    title="Edit"
+                                  >
+                                    <FaEdit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(row._id, row.source)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Delete"
+                                  >
+                                    <FaTrash className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                              {row.source !== 'transaction' && (
+                                <span className="text-[10px] text-slate-400 italic">System</span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
