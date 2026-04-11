@@ -236,13 +236,18 @@ export default function Sales() {
         };
       });
 
-      // 4. Distribute Extras (NO LONGER subtracting from line totals)
-      // We still keep the items with their base line totals
+      // 4. Distribute Extras (if any)
+      const totalExtras = Number(next.extras) || 0;
+      const extraPerMun = totalMun > 0 ? (totalExtras / totalMun) : 0;
+
       next.items = nextItems.map(item => {
+        const itemProportionalExtra = item._calcInfo.itemMun * extraPerMun;
+        const finalTotal = Math.round(item._calcInfo.lineTotalBase - itemProportionalExtra);
+        
         const { _calcInfo, ...rest } = item;
         return {
           ...rest,
-          totalAmount: String(Math.max(0, Math.round(_calcInfo.lineTotalBase)))
+          totalAmount: String(Math.max(0, finalTotal))
         };
       });
 
@@ -696,7 +701,7 @@ export default function Sales() {
                   </div>
                   <div className="flex justify-between text-slate-400 text-sm pt-1">
                     <span>Items Subtotal:</span>
-                    <span className="text-white font-bold">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</span>
+                    <span className="text-white font-bold">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) + (Number(form.extras) || 0))}</span>
                   </div>
                   <div className="flex justify-between text-amber-400 text-sm">
                     <span>Bardana:</span>
@@ -707,7 +712,7 @@ export default function Sales() {
                     <span className="font-bold">+ Rs. {formatMoney(form.totalMazdori || 0)}</span>
                   </div>
                   <div className="flex justify-between text-rose-400 text-sm border-b border-slate-800 pb-2">
-                    <span>Extras (Deduction):</span>
+                    <span>Extras (Distributed):</span>
                     <span className="font-bold">- Rs. {formatMoney(form.extras || 0)}</span>
                   </div>
                 </div>
@@ -716,8 +721,7 @@ export default function Sales() {
                   <p className="text-4xl font-black">Rs. {formatMoney(
                     form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) + 
                     (Number(form.totalBardanaAmount) || 0) + 
-                    (Number(form.totalMazdori) || 0) -
-                    (Number(form.extras) || 0)
+                    (Number(form.totalMazdori) || 0)
                   )}</p>
                 </div>
               </div>
