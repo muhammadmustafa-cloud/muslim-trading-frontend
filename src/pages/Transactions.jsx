@@ -540,12 +540,12 @@ export default function Transactions() {
                          onChange={(val) => setForm((f) => ({ ...f, customerId: val, fromAccountId: "" }))}
                          placeholder="Select customer"
                        />
-                       <SearchableSelect
-                         options={accounts.filter(a => a.isMillKhata || a.isDailyKhata)}
-                         value={form.fromAccountId}
-                         onChange={(val) => setForm((f) => ({ ...f, fromAccountId: val, customerId: "" }))}
-                         placeholder="OR Select Mill Account"
-                       />
+                        <SearchableSelect
+                          options={accounts}
+                          value={form.fromAccountId}
+                          onChange={(val) => setForm((f) => ({ ...f, fromAccountId: val, customerId: "" }))}
+                          placeholder="OR Select Account"
+                        />
                     </div>
                   </div>
                   <div>
