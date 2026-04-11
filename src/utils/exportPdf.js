@@ -513,8 +513,9 @@ export function drawSaleInvoice(doc, sale) {
       doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
       
-      // Use the actual totalAmount from DB (which now has proportional extras)
-      doc.text(formatMoney(it.totalAmount), 175, yPos);
+      // Show Gross Amount (before proportional deduction)
+      const itGross = Math.round((Number(it.quantity || 0) / 40) * Number(it.rate || 0));
+      doc.text(formatMoney(itGross), 175, yPos);
       
       yPos += 7;
       if (yPos > 190) { 
@@ -528,11 +529,14 @@ export function drawSaleInvoice(doc, sale) {
     doc.text((sale.quantity / 40).toFixed(3), 120, yPos);
     doc.text("40", 140, yPos);
     doc.text(formatMoney(sale.rate), 155, yPos);
-    doc.text(formatMoney(sale.totalAmount), 175, yPos);
+    
+    const itGrossFallback = Math.round((Number(sale.quantity || 0) / 40) * Number(sale.rate || 0));
+    doc.text(formatMoney(itGrossFallback), 175, yPos);
   }
 
   // Summary logic
-  const itemsTotalSum = sale.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || sale.totalAmount || 0;
+  const itemsSubtotalNet = sale.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || sale.totalAmount || 0;
+  const itemsSubtotalGross = itemsSubtotalNet + (Number(sale.extras) || 0);
 
   yPos = 200; 
 
@@ -564,7 +568,7 @@ export function drawSaleInvoice(doc, sale) {
   doc.setFont("helvetica", "bold");
   doc.text("INVOICE TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(itemsTotalSum), 195, rightY, { align: "right" });
+  doc.text(formatMoney(itemsSubtotalGross), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
@@ -771,7 +775,7 @@ export function drawPurchaseInvoice(doc, entry) {
     doc.text(formatMoney(entry.amount), 175, yPos);
   }
 
-  const baseTotal = entry.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || entry.amount;
+  const baseTotal = entry.items?.reduce((sum, i) => sum + (i.amount || 0), 0) || entry.amount;
 
   yPos = 200; // base y for summary
 
