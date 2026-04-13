@@ -16,7 +16,7 @@ export default function Accounts() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "" });
+  const [form, setForm] = useState({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "", showMirrorInDailyMemo: true });
   const [depositModal, setDepositModal] = useState({ open: false, account: null, amount: "", note: "" });
   const [submitting, setSubmitting] = useState(false);
   const [sortKey, setSortKey] = useState("name");
@@ -41,7 +41,7 @@ export default function Accounts() {
   useEffect(() => { fetchList(); }, [search]);
 
   const resetForm = () => {
-    setForm({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "" });
+    setForm({ name: "", type: "Cash", accountNumber: "", openingBalance: "", notes: "", showMirrorInDailyMemo: true });
     setEditingId(null);
     setModalOpen(false);
   };
@@ -54,6 +54,7 @@ export default function Accounts() {
       accountNumber: row.accountNumber || "",
       openingBalance: row.openingBalance ?? "",
       notes: row.notes || "",
+      showMirrorInDailyMemo: row.showMirrorInDailyMemo !== false,
     });
     setEditingId(row._id);
     setModalOpen(true);
@@ -71,6 +72,7 @@ export default function Accounts() {
         accountNumber: (form.accountNumber || "").trim(),
         openingBalance: Number(form.openingBalance) || 0,
         notes: (form.notes || "").trim(),
+        showMirrorInDailyMemo: form.showMirrorInDailyMemo,
       };
       if (editingId) await apiPut(`/accounts/${editingId}`, payload);
       else await apiPost("/accounts", payload);
@@ -167,6 +169,18 @@ export default function Accounts() {
           <div><label className="input-label">Account number (optional)</label><input type="text" placeholder="1234-567890" value={form.accountNumber} onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))} className="input-field" /></div>
           <div><label className="input-label">Opening balance</label><input type="number" placeholder="0" value={form.openingBalance} onChange={(e) => setForm((f) => ({ ...f, openingBalance: e.target.value }))} className="input-field" min="0" step="1" /></div>
           <div className="sm:col-span-2"><label className="input-label">Notes</label><input type="text" placeholder="Optional" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" /></div>
+          <div className="sm:col-span-2 border-t border-slate-100 pt-4 mt-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300 transition-all cursor-pointer" 
+                checked={form.showMirrorInDailyMemo} 
+                onChange={(e) => setForm(f => ({ ...f, showMirrorInDailyMemo: e.target.checked }))} 
+              />
+              <span className="text-sm font-bold text-slate-700 uppercase tracking-tighter">Show Mirror (Contra) in Daily Memo?</span>
+            </label>
+            <p className="text-[10px] text-slate-400 mt-1 ml-6 uppercase font-black tracking-widest leading-none">If unchecked, this account will only show single-sided entries in the cash memo.</p>
+          </div>
           {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
             <button type="submit" className="btn-primary" disabled={submitting}>
@@ -249,6 +263,7 @@ export default function Accounts() {
                       </td>
                       <td className="table-cell">
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${row.type === "Bank" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"}`}>{row.type || "Cash"}</span>
+                        {row.showMirrorInDailyMemo === false && <span className="ml-2 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800">Single-Sided</span>}
                       </td>
                       <td className="table-cell">{row.accountNumber || "—"}</td>
                       <td className="table-cell text-right font-semibold text-slate-800">{formatMoney(row.currentBalance ?? row.openingBalance)}</td>
