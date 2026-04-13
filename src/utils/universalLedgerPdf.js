@@ -104,7 +104,7 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}, dastiLis
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Aamad (Credit)", "From/Note", "Amount", "Date", "Kharch (Debit)", "To/Note", "Amount"]],
+    head: [["Date", "Credit Ledger", "Description", "Amount", "Date", "Debit Ledger", "Description", "Amount"]],
     body: formattedRows,
     headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7, halign: "center" },
     bodyStyles: { fontSize: 7, cellPadding: 2 },
