@@ -12,7 +12,10 @@ import {
   FaBoxes,
   FaReceipt,
   FaCheckCircle,
-  FaHistory
+  FaHistory,
+  FaCoins,
+  FaCogs,
+  FaBuilding
 } from "react-icons/fa";
 import { downloadConsolidatedLedgersPdf } from "../utils/exportPdf.js";
 
@@ -239,6 +242,33 @@ export default function ConsolidatedLedger() {
             list={data.expenses} 
             type="Kharch"
           />
+          
+          {/* TAXES SECTION */}
+          <EntityCard 
+            title="Tax Payments" 
+            icon={FaCoins} 
+            color="rose" 
+            list={data.taxes} 
+            type="Govt"
+          />
+
+          {/* MACHINERY SECTION */}
+          <EntityCard 
+            title="Machinery & Assets" 
+            icon={FaCogs} 
+            color="indigo" 
+            list={data.machinery} 
+            type="Capital"
+          />
+
+          {/* MILL EXPENSES */}
+          <EntityCard 
+            title="Mill Overhead" 
+            icon={FaBuilding} 
+            color="slate" 
+            list={data.millExpenses} 
+            type="General"
+          />
 
         </div>
       ) : null}
@@ -255,6 +285,7 @@ function EntityCard({ title, icon: Icon, color, list, type }) {
     emerald: "bg-emerald-100 text-emerald-600 border-emerald-200",
     teal: "bg-teal-100 text-teal-600 border-teal-200",
     rose: "bg-rose-100 text-rose-600 border-rose-200",
+    slate: "bg-slate-100 text-slate-600 border-slate-200",
   };
 
   return (

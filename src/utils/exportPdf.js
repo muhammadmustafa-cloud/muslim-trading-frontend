@@ -1462,6 +1462,8 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
     { key: 'rawMaterials', label: 'RAW MATERIAL UNITS' },
     { key: 'expenses', label: 'GENERAL EXPENSES' },
     { key: 'taxes', label: 'TAX PAYMENTS' },
+    { key: 'machinery', label: 'MACHINERY & ASSETS' },
+    { key: 'millExpenses', label: 'MILL OVERHEAD' }
   ];
 
   let firstEntity = true;
