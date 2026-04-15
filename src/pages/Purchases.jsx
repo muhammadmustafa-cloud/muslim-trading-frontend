@@ -35,13 +35,13 @@ export default function Purchases() {
     items: [{
       itemId: "",
       kattay: "",
-      kgPerKata: "",
-      grossWeight: "",
       rate: "",
       totalAmount: "",
       itemNetWeight: "",
       deductionKg: "",
       addKg: "",
+      bardanaAmount: "",
+      extrasAmount: "",
     }],
     truckNumber: "",
     gatePassNo: "",
@@ -120,13 +120,13 @@ export default function Purchases() {
       items: [{
         itemId: "",
         kattay: "",
-        kgPerKata: "",
-        grossWeight: "",
         rate: "",
         totalAmount: "",
         itemNetWeight: "",
         deductionKg: "",
         addKg: "",
+        bardanaAmount: "",
+        extrasAmount: "",
       }],
       truckNumber: "",
       gatePassNo: "",
@@ -156,21 +156,23 @@ export default function Purchases() {
       items: row.items?.map(it => ({
         itemId: it.itemId?._id || it.itemId || "",
         kattay: String(it.kattay || ""),
-        kgPerKata: String(it.kgPerKata || ""),
-        grossWeight: String(it.itemGrossWeight || ""),
         rate: String(it.rate || ""),
+        totalAmount: String(it.amount || ""),
         itemNetWeight: String(it.itemNetWeight || ""),
         deductionKg: String(it.deductionKg || ""),
         addKg: String(it.addKg || ""),
+        bardanaAmount: String(it.bardanaAmount || ""),
+        extrasAmount: String(it.extrasAmount || ""),
       })) || [{
         itemId: row.itemId?._id || row.itemId || "",
         kattay: String(row.kattay || ""),
-        kgPerKata: String(row.kgPerKata || ""),
-        grossWeight: String((row.kattay || 0) * (row.kgPerKata || 0)),
         rate: String(row.rate || ""),
+        totalAmount: String(row.amount || ""),
         itemNetWeight: String(row.itemNetWeight || ""),
         deductionKg: String(row.deductionKg || ""),
         addKg: String(row.addKg || ""),
+        bardanaAmount: String(row.bardanaAmount || ""),
+        extrasAmount: String(row.extrasAmount || ""),
       }],
       truckNumber: row.truckNumber || "",
       gatePassNo: row.gatePassNo || "",
@@ -197,34 +199,8 @@ export default function Purchases() {
     setForm((prev) => {
       const next = { ...prev, ...updates };
 
-      // 1. Calculate each item's gross weight
-      let totalItemsGross = 0;
-      next.items = next.items.map(it => {
-        const kattay = Number(it.kattay) || 0;
-        const kgPerBag = Number(it.kgPerKata) || 0;
-        const dKg = Number(it.deductionKg) || 0;
-        const aKg = Number(it.addKg) || 0;
-        let itemGross = 0;
-        if (kattay > 0 && kgPerBag > 0) {
-            itemGross = Math.max(0, (kattay * kgPerBag) - dKg + aKg);
-        } else {
-            itemGross = Math.max(0, (Number(it.grossWeight) || 0));
-        }
-        totalItemsGross += itemGross;
-        return { ...it, grossWeight: itemGross };
-      });
-
-      // 2. Set total gross if updated or fallback to items sum
-      if ("totalGrossWeight" in updates) { }
-      else if ("items" in updates) {
-          next.totalGrossWeight = totalItemsGross > 0 ? String(totalItemsGross) : next.totalGrossWeight;
-      }
-
-      // 2. MASTER TOTALS (Source of Truth)
-      const totalGross = Number(next.totalGrossWeight) || totalItemsGross;
-      if (updates.items && (!next.totalGrossWeight || Number(next.totalGrossWeight) === 0)) {
-        next.totalGrossWeight = totalGross > 0 ? String(totalGross) : "";
-      }
+      // 1. MASTER TOTALS (Source of Truth) - Total Gross Weight comes from user input
+      const totalGross = Number(next.totalGrossWeight) || 0;
 
       // Purchase Rule: 0.25kg S.H cut per 40kg (MUN)
       if (!("totalSHCut" in updates)) {
@@ -237,23 +213,66 @@ export default function Purchases() {
 
       next.netWeight = Math.max(0, totalNet);
 
-      // 3. Proportional Distribution to Items
-      next.items = next.items.map(it => {
-        const itemGross = Number(it.grossWeight) || 0;
-        const ratio = totalItemsGross > 0 ? itemGross / totalItemsGross : (next.items.length === 1 ? 1 : 0);
+      // 2. Equal Distribution to Items (simplified approach)
+      const itemCount = next.items.filter(it => it.itemId).length;
+      const nextItems = next.items.map((it, index) => {
+        // Only calculate for items that have itemId selected
+        if (!it.itemId) {
+          return {
+            ...it,
+            itemNetWeight: "",
+            totalAmount: "",
+          };
+        }
+
+        // Equal distribution among all valid items
+        const ratio = itemCount > 0 ? 1 / itemCount : 0;
         
         const itemMun = totalMun * ratio;
         const itemNet = totalNet * ratio;
         const itemSHCut = totalCut * ratio;
         
         const rate = Number(it.rate) || 0;
-        const totalLine = Math.round(itemMun * rate);
+        const totalLineBase = Math.round(itemMun * rate);
         
         return {
           ...it,
           shCut: String(itemSHCut.toFixed(2)),
           itemNetWeight: String(itemNet.toFixed(3)),
-          totalAmount: totalLine > 0 ? String(totalLine) : "",
+          totalAmount: totalLineBase > 0 ? String(totalLineBase) : "",
+          bardanaAmount: "",
+          extrasAmount: "",
+          _calcInfo: { itemMun, totalLineBase } // for bardana, mazdori and extras distribution
+        };
+      });
+
+      // 3. Distribute Extras, Bardana and Mazdori (like Sales system)
+      const totalExtras = Number(next.extras) || 0;
+      const totalBardana = Number(next.totalBardanaAmount) || 0;
+      const totalMazdori = Number(next.totalMazdori) || 0;
+
+      const extraPerMun = totalMun > 0 ? (totalExtras / totalMun) : 0;
+      const bardanaPerMun = totalMun > 0 ? (totalBardana / totalMun) : 0;
+      const mazdoriPerMun = totalMun > 0 ? (totalMazdori / totalMun) : 0;
+
+      next.items = nextItems.map(item => {
+        if (!item.itemId) {
+          const { _calcInfo, ...rest } = item;
+          return rest;
+        }
+
+        const itemProportionalExtra = item._calcInfo.itemMun * extraPerMun;
+        const itemProportionalBardana = item._calcInfo.itemMun * bardanaPerMun;
+        const itemProportionalMazdori = item._calcInfo.itemMun * mazdoriPerMun;
+
+        const finalTotal = Math.round(item._calcInfo.totalLineBase + itemProportionalBardana + itemProportionalMazdori - itemProportionalExtra);
+        
+        const { _calcInfo, ...rest } = item;
+        return {
+          ...rest,
+          bardanaAmount: String(Math.round(itemProportionalBardana)),
+          extrasAmount: String(Math.round(itemProportionalExtra)),
+          totalAmount: String(Math.max(0, finalTotal))
         };
       });
 
@@ -281,13 +300,13 @@ export default function Purchases() {
       items: [...prev.items, {
         itemId: "",
         kattay: "",
-        kgPerKata: "",
-        grossWeight: "",
         rate: "",
         totalAmount: "",
         itemNetWeight: "",
         deductionKg: "",
         addKg: "",
+        bardanaAmount: "",
+        extrasAmount: "",
       }]
     }));
   };
@@ -324,12 +343,12 @@ export default function Purchases() {
         items: JSON.stringify(form.items.map(it => ({
           itemId: it.itemId,
           kattay: Number(it.kattay) || 0,
-          kgPerKata: Number(it.kgPerKata) || 0,
-          grossWeight: Number(it.grossWeight) || 0,
           rate: Number(it.rate) || 0,
           totalAmount: Number(it.totalAmount) || 0,
           deductionKg: Number(it.deductionKg) || 0,
           addKg: Number(it.addKg) || 0,
+          bardanaAmount: Number(it.bardanaAmount) || 0,
+          extrasAmount: Number(it.extrasAmount) || 0,
         }))),
         truckNumber: (form.truckNumber || "").trim(),
         gatePassNo: (form.gatePassNo || "").trim(),
@@ -498,7 +517,6 @@ export default function Purchases() {
                   <tr>
                     <th className="px-4 py-3 text-left w-64">Item *</th>
                     <th className="px-4 py-3 text-left w-24">Bags</th>
-                    <th className="px-4 py-3 text-left w-24">Kg/Bag</th>
                     <th className="px-4 py-3 text-left w-24 text-rose-800">Less (Kg)</th>
                     <th className="px-4 py-3 text-left w-24 text-emerald-800">Add (Kg)</th>
                     <th className="px-4 py-3 text-left w-24 bg-amber-50 font-black text-amber-900 border-x border-amber-100">Net MUN</th>
@@ -530,13 +548,6 @@ export default function Purchases() {
                         }} className="input-field py-1.5 px-2" placeholder="0" />
                       </td>
                       <td className="p-3">
-                        <input type="number" value={item.kgPerKata} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].kgPerKata = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2" placeholder="0" />
-                      </td>
-                      <td className="p-3">
                         <input type="number" value={item.deductionKg} onChange={(e) => {
                           const newItems = [...form.items];
                           newItems[idx].deductionKg = e.target.value;
@@ -551,7 +562,7 @@ export default function Purchases() {
                         }} className="input-field py-1.5 px-2 bg-emerald-50 border-emerald-200 placeholder:text-emerald-300 text-center" placeholder="0" />
                       </td>
                       <td className="p-3 text-center bg-amber-50 font-black text-amber-900 border-x border-amber-100">
-                        {item.itemNetWeight !== undefined && item.itemNetWeight !== "" ? (Number(item.itemNetWeight) / 40).toFixed(4) : "—"}
+                        {item.itemNetWeight !== undefined && item.itemNetWeight !== "" ? (Number(item.itemNetWeight) / 40).toFixed(4) : "â"}
                       </td>
                       <td className="p-3">
                         <input type="number" value={item.rate} onChange={(e) => {
@@ -561,7 +572,7 @@ export default function Purchases() {
                         }} className="input-field py-1.5 px-2 font-bold text-amber-700 bg-amber-50/50" placeholder="0" />
                       </td>
                       <td className="p-3 text-right font-black text-indigo-700 bg-slate-50/50 text-base">
-                        {item.totalAmount ? Number(item.totalAmount).toLocaleString("en-PK") : "—"}
+                        {item.totalAmount ? Number(item.totalAmount).toLocaleString("en-PK") : "â"}
                       </td>
                       <td className="p-3 text-center">
                         {form.items.length > 1 && (

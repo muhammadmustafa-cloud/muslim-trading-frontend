@@ -766,7 +766,7 @@ export function drawPurchaseInvoice(doc, entry) {
       
       const itMun = it.itemNetWeight ? (it.itemNetWeight / 40).toFixed(3) : "0";
       doc.text(String(itMun), 120, yPos);
-      doc.text(String(it.kgPerKata || 0), 140, yPos);
+      doc.text("40", 140, yPos); // Standard KG per MUN
       doc.text(formatMoney(it.rate), 155, yPos);
       doc.text(formatMoney(it.amount), 175, yPos);
       
