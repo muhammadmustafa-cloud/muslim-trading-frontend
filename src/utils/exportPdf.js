@@ -513,9 +513,9 @@ export function drawSaleInvoice(doc, sale) {
       doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
       
-      // Show Gross Amount (before proportional deduction)
-      const itGross = Math.round((Number(it.quantity || 0) / 40) * Number(it.rate || 0));
-      doc.text(formatMoney(itGross), 175, yPos);
+      // Show Base Amount (without bardana, mazdori, extras)
+      const itBaseAmount = (it.totalAmount || 0) - (it.bardanaAmount || 0) - (it.mazdori || 0);
+      doc.text(formatMoney(Math.max(0, itBaseAmount)), 175, yPos);
       
       yPos += 7;
       if (yPos > 190) { 
@@ -530,13 +530,23 @@ export function drawSaleInvoice(doc, sale) {
     doc.text("40", 140, yPos);
     doc.text(formatMoney(sale.rate), 155, yPos);
     
-    const itGrossFallback = Math.round((Number(sale.quantity || 0) / 40) * Number(sale.rate || 0));
-    doc.text(formatMoney(itGrossFallback), 175, yPos);
+    // For single item fallback, calculate base amount
+    const itBaseFallback = Math.round((Number(sale.quantity || 0) / 40) * Number(sale.rate || 0));
+    doc.text(formatMoney(itBaseFallback), 175, yPos);
   }
 
-  // Summary logic
-  const itemsSubtotalNet = sale.items?.reduce((sum, i) => sum + (i.totalAmount || 0), 0) || sale.totalAmount || 0;
-  const itemsSubtotalGross = itemsSubtotalNet + (Number(sale.extras) || 0);
+  // Summary logic - Fix: Calculate base items total (without bardana, mazdori, extras)
+  const baseItemsTotal = sale.items?.reduce((sum, i) => {
+    // Remove bardana, mazdori from individual item totals to get base amount
+    const itemBaseAmount = (i.totalAmount || 0) - (i.bardanaAmount || 0) - (i.mazdori || 0);
+    return sum + Math.max(0, itemBaseAmount);
+  }, 0) || 0;
+  
+  // The final total amount from backend (includes everything)
+  const finalTotalAmount = sale.totalAmount || 0;
+  const bardanaTotal = sale.totalBardanaAmount || 0;
+  const mazdoriTotal = sale.totalMazdori || 0;
+  const extrasTotal = sale.extras || 0;
 
   yPos = 200; 
 
@@ -568,28 +578,26 @@ export function drawSaleInvoice(doc, sale) {
   doc.setFont("helvetica", "bold");
   doc.text("INVOICE TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatMoney(itemsSubtotalGross), 195, rightY, { align: "right" });
+  doc.text(formatMoney(baseItemsTotal), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
   doc.text("BARDANA TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  const bardanaTotal = sale.totalBardanaAmount || 0;
   doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
   doc.text("MAZDOORI TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
-  const mazdoriTotal = sale.totalMazdori || 0;
   doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
 
-  if (Number(sale.extras) > 0) {
+  if (Number(extrasTotal) > 0) {
     rightY += 7;
     doc.setFont("helvetica", "bold");
     doc.text("DISCOUNT (DIST):", 130, rightY);
     doc.setFont("helvetica", "normal");
-    doc.text(`- ${formatMoney(sale.extras)}`, 195, rightY, { align: "right" });
+    doc.text(`- ${formatMoney(extrasTotal)}`, 195, rightY, { align: "right" });
   }
 
   doc.setLineWidth(0.1);
@@ -599,7 +607,7 @@ export function drawSaleInvoice(doc, sale) {
   doc.setFont("helvetica", "bold");
   doc.text("NET PAYABLE:", 130, rightY);
   doc.setFontSize(11);
-  doc.text(formatMoney(sale.totalAmount), 195, rightY, { align: "right" });
+  doc.text(formatMoney(finalTotalAmount), 195, rightY, { align: "right" });
   doc.setFontSize(9);
 
   // --- MEMO SECTION ---
