@@ -768,7 +768,10 @@ export function drawPurchaseInvoice(doc, entry) {
       doc.text(String(itMun), 120, yPos);
       doc.text("40", 140, yPos); // Standard KG per MUN
       doc.text(formatMoney(it.rate), 155, yPos);
-      doc.text(formatMoney(it.amount), 175, yPos);
+      
+      // Show base amount (Rate × MUN) in Net Amount column
+      const baseAmount = Math.round((it.itemNetWeight / 40) * (it.rate || 0));
+      doc.text(formatMoney(baseAmount), 175, yPos);
       
       yPos += 7;
       if (yPos > 190) { doc.addPage(); yPos = 20; }
@@ -780,10 +783,15 @@ export function drawPurchaseInvoice(doc, entry) {
     doc.text((entry.receivedWeight / 40).toFixed(3), 120, yPos);
     doc.text("40", 140, yPos);
     doc.text(formatMoney(entry.rate), 155, yPos);
-    doc.text(formatMoney(entry.amount), 175, yPos);
+    const baseAmount = Math.round((entry.receivedWeight / 40) * (entry.rate || 0));
+    doc.text(formatMoney(baseAmount), 175, yPos);
   }
 
-  const baseTotal = entry.items?.reduce((sum, i) => sum + (i.amount || 0), 0) || entry.amount;
+  // Calculate base total (Rate × MUN for all items)
+  const baseTotal = entry.items?.reduce((sum, i) => {
+    const itemBase = Math.round((i.itemNetWeight / 40) * (i.rate || 0));
+    return sum + itemBase;
+  }, 0) || Math.round((entry.netWeight / 40) * (entry.rate || 0)) || 0;
 
   yPos = 200; // base y for summary
 
@@ -812,7 +820,7 @@ export function drawPurchaseInvoice(doc, entry) {
   // Right calculations
   let rightY = 200 + 8;
   doc.setFont("helvetica", "bold");
-  doc.text("GROSS AMOUNT:", 130, rightY);
+  doc.text("BASE AMOUNT:", 130, rightY);
   doc.setFont("helvetica", "normal");
   doc.text(formatMoney(baseTotal), 195, rightY, { align: "right" });
 
@@ -821,14 +829,14 @@ export function drawPurchaseInvoice(doc, entry) {
   doc.text("BARDANA TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
   const bardanaTotal = entry.totalBardanaAmount || 0;
-  doc.text(formatMoney(bardanaTotal), 195, rightY, { align: "right" });
+  doc.text(`+ ${formatMoney(bardanaTotal)}`, 195, rightY, { align: "right" });
 
   rightY += 7;
   doc.setFont("helvetica", "bold");
   doc.text("MAZDOORI TOTAL:", 130, rightY);
   doc.setFont("helvetica", "normal");
   const mazdoriTotal = entry.totalMazdori || 0;
-  doc.text(formatMoney(mazdoriTotal), 195, rightY, { align: "right" });
+  doc.text(`+ ${formatMoney(mazdoriTotal)}`, 195, rightY, { align: "right" });
 
   if (Number(entry.extras) > 0) {
     rightY += 7;
@@ -843,9 +851,10 @@ export function drawPurchaseInvoice(doc, entry) {
 
   rightY += 9;
   doc.setFont("helvetica", "bold");
-  doc.text("NET AMOUNT:", 130, rightY);
+  doc.text("GRAND TOTAL:", 130, rightY);
   doc.setFontSize(11);
-  doc.text(formatMoney(entry.totalAmount || entry.amount), 195, rightY, { align: "right" });
+  const grandTotal = baseTotal + bardanaTotal + mazdoriTotal - (Number(entry.extras) || 0);
+  doc.text(formatMoney(grandTotal), 195, rightY, { align: "right" });
   doc.setFontSize(9);
 
   // --- MEMO SECTION ---
