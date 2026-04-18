@@ -1575,28 +1575,37 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
       } else if (cat.key === 'items') {
         let totalBagsIn = 0;
         let totalBagsOut = 0;
-        let itemBalance = 0;
+        // Start with opening balance
+        let itemBalance = entity.openingBalance || 0;
         const body = entity.ledger.map(row => {
+          const isOpening = row.isOpeningBalance || row.status === 'opening';
           const isSale = row.status === 'sold';
-          const amt = isSale ? row.debit : row.credit;
+          const isPurchase = row.status === 'purchased';
+          const amt = row.debit || row.credit || 0;
           const bags = row.bags || 0;
           const weight = row.weight || 0;
           const mun = weight > 0 ? (weight / 40).toFixed(3) : "—";
 
-          if (isSale) totalBagsOut += bags; else totalBagsIn += bags;
-          if (isSale) totalDr += amt; else totalCr += amt;
+          if (isSale) totalBagsOut += bags;
+          if (isPurchase) totalBagsIn += bags;
+          if (isSale || (isOpening && row.debit > 0)) totalDr += amt;
+          if (isPurchase || (isOpening && row.credit > 0)) totalCr += amt;
           
-          if (isSale) itemBalance += amt; // Sale = Cr
-          else itemBalance -= amt;        // Purchase = Dr
+          // Update running balance
+          // Sale (Debit) = Asset/Receivable increases
+          // Purchase (Credit) = Asset/Receivable decreases
+          // Opening (Debit positive) = Starting receivable
+          itemBalance += row.debit || 0;
+          itemBalance -= row.credit || 0;
 
           return [
             formatDate(row.date),
             row.description,
             bags || "—",
             mun,
-            isSale ? formatMoney(amt) : "—",
-            !isSale ? formatMoney(amt) : "—",
-            formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Cr" : " Dr")
+            isSale ? formatMoney(amt) : (row.debit > 0 && isOpening ? formatMoney(amt) : "—"),
+            isPurchase ? formatMoney(amt) : (row.credit > 0 && isOpening ? formatMoney(amt) : "—"),
+            formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Dr" : " Cr")
           ];
         });
         tableConfig = {
