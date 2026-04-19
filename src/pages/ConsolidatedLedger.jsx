@@ -311,10 +311,10 @@ function EntityCard({ title, icon: Icon, color, list, type }) {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {list.map((item, i) => {
-              // Calculate closing for preview
-          const totalDr = item.ledger.reduce((s, l) => s + (Number(l.debit) || 0), 0);
-const totalCr = item.ledger.reduce((s, l) => s + (Number(l.credit) || 0), 0);
-const net = totalDr - totalCr;
+              // Calculate closing for preview (INCLUDE opening balance!)
+              const totalDr = item.ledger.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+              const totalCr = item.ledger.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+              const net = (item.openingBalance || 0) + totalDr - totalCr;
 
 
               return (
