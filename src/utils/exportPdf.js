@@ -513,9 +513,9 @@ export function drawSaleInvoice(doc, sale) {
       doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
       
-      // Show Base Amount (without bardana, mazdori, extras)
-      const itBaseAmount = (it.totalAmount || 0) - (it.bardanaAmount || 0) - (it.mazdori || 0);
-      doc.text(formatMoney(Math.max(0, itBaseAmount)), 175, yPos);
+      // Show Real Amount: (quantity / 40) * rate - base calculation without adjustments
+      const itBaseAmount = Math.round((it.quantity / 40) * (it.rate || 0));
+      doc.text(formatMoney(itBaseAmount), 175, yPos);
       
       yPos += 7;
       if (yPos > 190) { 
@@ -535,11 +535,10 @@ export function drawSaleInvoice(doc, sale) {
     doc.text(formatMoney(itBaseFallback), 175, yPos);
   }
 
-  // Summary logic - Fix: Calculate base items total (without bardana, mazdori, extras)
+  // Summary logic: Calculate real items total from base formula (quantity/40 * rate)
   const baseItemsTotal = sale.items?.reduce((sum, i) => {
-    // Remove bardana, mazdori from individual item totals to get base amount
-    const itemBaseAmount = (i.totalAmount || 0) - (i.bardanaAmount || 0) - (i.mazdori || 0);
-    return sum + Math.max(0, itemBaseAmount);
+    const itemBaseAmount = Math.round((i.quantity / 40) * (i.rate || 0));
+    return sum + itemBaseAmount;
   }, 0) || 0;
   
   // The final total amount from backend (includes everything)
