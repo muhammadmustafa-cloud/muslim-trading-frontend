@@ -1377,32 +1377,13 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   });
 
   if (manualDeposits.length > 0) {
-    addGroupHeader("6. MANUAL MILL DEPOSITS (DIRECT AAMAD)");
+    addGroupHeader("6a. MANUAL MILL DEPOSITS (DIRECT AAMAD)");
     manualDeposits.forEach(t => {
       addAuditRow(t.category || "INCOME", t.note || "Direct Credit", t.amount, 0);
     });
   }
 
-  // 7b. Manual Transfers (Specifically from Mill Khata to Outside/Bank)
-  const manualTransfers = (data.periodTransactions || []).filter(t => {
-    if (t.type !== 'transfer') return false;
-    // CRITICAL: Exclude all categorical entities to avoid double-counting
-    if (t.customerId || t.supplierId || t.mazdoorId || t.rawMaterialHeadId || t.expenseTypeId || t.taxTypeId) return false;
-    
-    const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
-    const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
-    return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
-  });
-
-  if (manualTransfers.length > 0) {
-    addGroupHeader("7b. INTERNAL MILL CASH TRANSFERS (SPECIFIC)");
-    manualTransfers.forEach(t => {
-      // Placing in Credit (Aamad) column to balance against the recipient account's Debit (Kharch)
-      addAuditRow("CASH MOVEMENT", t.note || "Mill Khata Outflow", t.amount, 0);
-    });
-  }
-
-  // 8. Direct Party Transfers (The "Perfect" Condition)
+  // 7a. Direct Party Transfers (The "Perfect" Condition)
   const partyTransfers = (data.periodTransactions || []).filter(t => {
     // CRITICAL: Only include transfer types here, exclude withdraw (which are counted in categoricals)
     if (t.type !== 'transfer') return false; 
@@ -1414,16 +1395,16 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   });
 
   if (partyTransfers.length > 0) {
-    addGroupHeader("8. MILL TO PARTY (DIRECT SETTLEMENT)");
+    addGroupHeader("7a. MILL TO PARTY (DIRECT SETTLEMENT)");
     partyTransfers.forEach(t => {
       const particName = (t.customerId?.name || t.supplierId?.name || t.mazdoorId?.name || "PARTY");
       addAuditRow("DIRECT SETTLEMENT", (t.note || `Paid to ${particName}`), t.amount, 0);
     });
   }
 
-  // 9. Closing Baqaya Balance (The Counterweight)
+  // 8. Closing Baqaya Balance (The Counterweight)
   const closingBaqaya = Number(data.universalBaqaya || 0);
-  addGroupHeader("9. CLOSING BAQAYA BALANCE (MILL CASH)");
+  addGroupHeader("8. CLOSING BAQAYA BALANCE (MILL CASH)");
   const isSurplus_cl = closingBaqaya >= 0;
   // Surplus is a Debit balance (Cash in hand), Deficit is a Credit balance (Udhaar)
   addAuditRow("BAQAYA BALANCE (CLOSING)", "Mill Desk Position", isSurplus_cl ? 0 : Math.abs(closingBaqaya), isSurplus_cl ? Math.abs(closingBaqaya) : 0);
