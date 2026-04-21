@@ -796,11 +796,8 @@ export function drawPurchaseInvoice(doc, entry) {
     doc.text(formatMoney(baseAmount), 175, yPos);
   }
 
-  // Calculate base total (Rate × MUN for all items)
-  const baseTotal = entry.items?.reduce((sum, i) => {
-    const itemBase = Math.round((i.itemNetWeight / 40) * (i.rate || 0));
-    return sum + itemBase;
-  }, 0) || Math.round((entry.netWeight / 40) * (entry.rate || 0)) || 0;
+  // Calculate total from items (item.amount already includes distributed bardana/mazdori/extras)
+  const baseTotal = entry.items?.reduce((sum, i) => sum + (Number(i.amount) || 0), 0) || Number(entry.amount) || 0;
 
   yPos = 200; // base y for summary
 
@@ -862,7 +859,9 @@ export function drawPurchaseInvoice(doc, entry) {
   doc.setFont("helvetica", "bold");
   doc.text("GRAND TOTAL:", 130, rightY);
   doc.setFontSize(11);
-  const grandTotal = baseTotal + bardanaTotal + mazdoriTotal - (Number(entry.extras) || 0);
+  // NOTE: baseTotal already includes per-item distributed bardana/mazdori/extras
+  // Do NOT add bardanaTotal/mazdoriTotal again - that would double count
+  const grandTotal = baseTotal;
   doc.text(formatMoney(grandTotal), 195, rightY, { align: "right" });
   doc.setFontSize(9);
 
