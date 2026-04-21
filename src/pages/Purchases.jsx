@@ -675,17 +675,20 @@ export default function Purchases() {
                   <div className="flex justify-between text-slate-400 pt-2 pb-2 border-b border-slate-800">
                     <span className="text-emerald-400 font-bold text-lg uppercase tracking-tight">Grand Total:</span>
                     <span className="text-3xl font-black text-white">Rs. {
-                      // NOTE: item.totalAmount already includes distributed bardana/mazdori/extras
-                      // Do NOT add totalBardanaAmount/totalMazdori again - that would double count
-                      (form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0)).toLocaleString("en-PK")
+                      (form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) + 
+                      (Number(form.totalBardanaAmount) || 0) + 
+                      (Number(form.totalMazdori) || 0) - 
+                      (Number(form.extras) || 0)).toLocaleString("en-PK")
                     }</span>
                   </div>
                 </div>
                 <div className="pt-2">
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Status Preview</p>
                   <p className="text-lg font-black text-amber-500">
-                    {// NOTE: item.totalAmount already includes distributed bardana/mazdori/extras
-                    Number(form.amountPaid) >= (form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0)) ? "PAID" : "CREDIT / PARTIAL"}
+                    {Number(form.amountPaid) >= (form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) + 
+                      (Number(form.totalBardanaAmount) || 0) + 
+                      (Number(form.totalMazdori) || 0) - 
+                      (Number(form.extras) || 0)) ? "PAID" : "CREDIT / PARTIAL"}
                   </p>
                 </div>
               </div>
