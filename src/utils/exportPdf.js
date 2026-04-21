@@ -1267,7 +1267,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   if (bankAccs.length > 0) {
     addGroupHeader("1. BANK & CASH ACCOUNTS (PERIODIC NET)");
     bankAccs.forEach(a => {
-      const net = (Number(a.tOut) || 0) - (Number(a.tIn) || 0);
+      const net = (Number(a.tIn) || 0) - (Number(a.tOut) || 0);
       if (net === 0) return;
       
       const isNetCredit = net > 0;
@@ -1383,26 +1383,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 7b. Manual Transfers (Specifically from Mill Khata to Outside/Bank)
-  const manualTransfers = (data.periodTransactions || []).filter(t => {
-    if (t.type !== 'transfer') return false;
-    // CRITICAL: Exclude all categorical entities to avoid double-counting
-    if (t.customerId || t.supplierId || t.mazdoorId || t.rawMaterialHeadId || t.expenseTypeId || t.taxTypeId) return false;
-    
-    const fromId = (t.fromAccountId?._id || t.fromAccountId)?.toString();
-    const fromAcc = (data.accounts || []).find(a => (a._id || a).toString() === fromId);
-    return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
-  });
-
-  if (manualTransfers.length > 0) {
-    addGroupHeader("7b. INTERNAL MILL CASH TRANSFERS (SPECIFIC)");
-    manualTransfers.forEach(t => {
-      // Placing in Credit (Aamad) column to balance against the recipient account's Debit (Kharch)
-      addAuditRow("CASH MOVEMENT", t.note || "Mill Khata Outflow", t.amount, 0);
-    });
-  }
-
-  // 8. Direct Party Transfers (The "Perfect" Condition)
+  // 7. Direct Party Transfers (The "Perfect" Condition)
   const partyTransfers = (data.periodTransactions || []).filter(t => {
     // CRITICAL: Only include transfer types here, exclude withdraw (which are counted in categoricals)
     if (t.type !== 'transfer') return false; 
