@@ -169,9 +169,19 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
   if (filters.dateFrom || filters.dateTo)
     subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
   
-  const accountName = transactions.length > 0 && filters.accountId 
-    ? (transactions.find(t => (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId))?.fromAccountId?.name || 
-       transactions.find(t => (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId))?.toAccountId?.name || "Account")
+  const accountName = transactions.length > 0 && filters.accountId
+    ? (() => {
+        const firstTx = transactions.find(t =>
+          (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId)
+        );
+        if (!firstTx) return "Account";
+        // Check which side matches the accountId and return that account's name
+        if (firstTx.fromAccountId?._id === filters.accountId) {
+          return firstTx.fromAccountId?.name || "Account";
+        } else {
+          return firstTx.toAccountId?.name || "Account";
+        }
+      })()
     : "All Accounts";
 
   const rawMaterialName = transactions.length > 0 && filters.rawMaterialHeadId
