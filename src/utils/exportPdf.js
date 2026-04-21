@@ -1383,8 +1383,8 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     });
   }
 
-  // 7b. Manual Transfers (Specifically from Mill Khata to Outside/Bank)
-  const manualTransfers = (data.periodTransactions || []).filter(t => {
+  // 7b. Mill Khata Transfers (Both Incoming and Outgoing)
+  const outgoingTransfers = (data.periodTransactions || []).filter(t => {
     if (t.type !== 'transfer') return false;
     // CRITICAL: Exclude all categorical entities to avoid double-counting
     if (t.customerId || t.supplierId || t.mazdoorId || t.rawMaterialHeadId || t.expenseTypeId || t.taxTypeId) return false;
@@ -1394,11 +1394,29 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
     return fromAcc?.isMillKhata || fromAcc?.isDailyKhata;
   });
 
-  if (manualTransfers.length > 0) {
-    addGroupHeader("7b. INTERNAL MILL CASH TRANSFERS (SPECIFIC)");
-    manualTransfers.forEach(t => {
-      // Placing in Credit (Aamad) column to balance against the recipient account's Debit (Kharch)
-      addAuditRow("CASH MOVEMENT", t.note || "Mill Khata Outflow", t.amount, 0);
+  const incomingTransfers = (data.periodTransactions || []).filter(t => {
+    if (t.type !== 'transfer') return false;
+    // CRITICAL: Exclude all categorical entities to avoid double-counting
+    if (t.customerId || t.supplierId || t.mazdoorId || t.rawMaterialHeadId || t.expenseTypeId || t.taxTypeId) return false;
+    
+    const toId = (t.toAccountId?._id || t.toAccountId)?.toString();
+    const toAcc = (data.accounts || []).find(a => (a._id || a).toString() === toId);
+    return toAcc?.isMillKhata || toAcc?.isDailyKhata;
+  });
+
+  if (outgoingTransfers.length > 0 || incomingTransfers.length > 0) {
+    addGroupHeader("7b. MILL KHATA TRANSFERS (COMPLETE)");
+    
+    // Incoming to Mill Khata (Credit/Aamad - Paisa Aaya)
+    incomingTransfers.forEach(t => {
+      const fromName = t.fromAccountId?.name || "External";
+      addAuditRow("INCOMING TRANSFER", `${fromName} → Mill Khata`, t.amount, 0);
+    });
+    
+    // Outgoing from Mill Khata (Debit/Kharch - Paisa Gaya)
+    outgoingTransfers.forEach(t => {
+      const toName = t.toAccountId?.name || "External";
+      addAuditRow("OUTGOING TRANSFER", `Mill Khata → ${toName}`, 0, t.amount);
     });
   }
 
