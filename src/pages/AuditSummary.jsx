@@ -1587,8 +1587,8 @@ export default function AuditSummary() {
               <thead className="bg-slate-900 text-white">
                 <tr className="text-[10px] font-black uppercase tracking-widest">
                   <th className="px-6 py-4 text-left">Account Name</th>
-                  <th className="px-6 py-4 text-right bg-emerald-500/20">Credit (Aamad/Out)</th>
-                  <th className="px-6 py-4 text-right bg-rose-500/20">Debit (Kharch/In)</th>
+                  <th className="px-6 py-4 text-right bg-emerald-500/20">Credit</th>
+                  <th className="px-6 py-4 text-right bg-rose-500/20">Debit</th>
                   <th className="px-6 py-4 text-right bg-indigo-500/20">Net Period (Baqaya)</th>
                 </tr>
               </thead>
@@ -1598,7 +1598,7 @@ export default function AuditSummary() {
                   .map((acc, i) => {
                     const tOut = Number(acc.tOut || 0);
                     const tIn = Number(acc.tIn || 0);
-                    const netMovement = tOut - tIn; // Standard Mill Perspective: Withdrawal - Deposit
+                    const netMovement = tIn - tOut; // Account Perspective: Received - Sent = Net Balance
                     
                     return (
                       <tr key={i} className="hover:bg-slate-50 transition-colors group">
@@ -1607,10 +1607,10 @@ export default function AuditSummary() {
                           <div className="text-[9px] text-slate-400 font-bold uppercase italic">{acc.type} Ledger</div>
                         </td>
                         <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/10">
-                          {tOut > 0 ? `Rs. ${formatMoney(tOut)}` : <span className="text-slate-200">—</span>}
+                          {tIn > 0 ? `Rs. ${formatMoney(tIn)}` : <span className="text-slate-200">—</span>}
                         </td>
                         <td className="px-6 py-4 text-right font-black text-rose-600 bg-rose-50/10">
-                          {tIn > 0 ? `Rs. ${formatMoney(tIn)}` : <span className="text-slate-200">—</span>}
+                          {tOut > 0 ? `Rs. ${formatMoney(tOut)}` : <span className="text-slate-200">—</span>}
                         </td>
                         <td className="px-6 py-4 text-right font-black text-indigo-700 bg-indigo-50/10">
                           Rs. {formatMoney(Math.abs(netMovement))}
