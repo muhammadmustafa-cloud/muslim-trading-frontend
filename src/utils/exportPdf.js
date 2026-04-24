@@ -303,15 +303,21 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     ]],
     ...tableTheme,
     theme: "grid",
-    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1 },
-    headStyles: { ...tableTheme.headStyles, fontSize: 9 },
-    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, fontStyle: "bold" },
+    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1, font: "helvetica", fontStyle: "normal" },
+    headStyles: { ...tableTheme.headStyles, fontSize: 9, font: "helvetica" },
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, fontStyle: "bold", font: "helvetica" },
     columnStyles: {
-      0: { cellWidth: 30 },
-      1: { cellWidth: 85 },
-      2: { cellWidth: 25, halign: "right" },
-      3: { cellWidth: 25, halign: "right" },
-      4: { cellWidth: 25, halign: "right" },
+      0: { cellWidth: 30, font: "helvetica" },
+      1: { cellWidth: 85, font: "helvetica", fontStyle: "normal" },
+      2: { cellWidth: 25, halign: "right", font: "helvetica" },
+      3: { cellWidth: 25, halign: "right", font: "helvetica" },
+      4: { cellWidth: 25, halign: "right", font: "helvetica" },
+    },
+    didDrawCell: (data) => {
+      // Ensure consistent font for description column
+      if (data.column.index === 1 && data.cell) {
+        doc.setFont("helvetica", "normal");
+      }
     },
   });
 
