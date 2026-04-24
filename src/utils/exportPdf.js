@@ -269,7 +269,26 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     // Add cheque info if available
     let chequeInfo = "";
     if (row.paymentMethod === "cheque" && row.chequeNumber) {
-      const chqDate = row.chequeDate ? new Date(row.chequeDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "";
+      console.log("PDF Debug - cheque row:", { 
+        paymentMethod: row.paymentMethod, 
+        chequeNumber: row.chequeNumber, 
+        chequeDate: row.chequeDate,
+        chequeDateType: typeof row.chequeDate
+      });
+      let chqDate = "";
+      if (row.chequeDate) {
+        try {
+          const parsedDate = new Date(row.chequeDate);
+          if (!isNaN(parsedDate.getTime())) {
+            chqDate = parsedDate.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
+          } else {
+            console.log("PDF Debug - Invalid date parsed:", row.chequeDate);
+          }
+        } catch (e) {
+          console.log("PDF Debug - Date parse error:", e, row.chequeDate);
+        }
+      }
+      console.log("PDF Debug - formatted date:", chqDate);
       chequeInfo = ` [Chq#${row.chequeNumber}${chqDate ? " " + chqDate : ""}]`;
     } else if (row.paymentMethod === "online") {
       chequeInfo = " [Online]";
