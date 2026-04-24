@@ -266,9 +266,18 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
        participant = row.fromAccountId?.name || row.toAccountId?.name || "Manual";
     }
 
+    // Add cheque info if available
+    let chequeInfo = "";
+    if (row.paymentMethod === "cheque" && row.chequeNumber) {
+      const chqDate = row.chequeDate ? new Date(row.chequeDate).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "";
+      chequeInfo = ` [Chq#${row.chequeNumber}${chqDate ? " " + chqDate : ""}]`;
+    } else if (row.paymentMethod === "online") {
+      chequeInfo = " [Online]";
+    }
+
     const descriptionFinal = participant 
-      ? `${participant} ${description ? `(${description})` : ""} ${row.category ? `[${row.category}]` : ""}`
-      : `${description} ${row.category ? `[${row.category}]` : ""}`;
+      ? `${participant} ${description ? `(${description})` : ""} ${row.category ? `[${row.category}]` : ""}${chequeInfo}`
+      : `${description} ${row.category ? `[${row.category}]` : ""}${chequeInfo}`;
 
     return [
       formatDate(row.date),
