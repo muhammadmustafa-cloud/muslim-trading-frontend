@@ -251,7 +251,7 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
       else if (row.mazdoorName) description = "Labor Payment / Advance";
       else description = row.note || (row.type === 'deposit' ? "Funds Received" : "Payment Made");
     } else if (row.type === 'transfer') {
-      participant = `${row.fromAccountId?.name || "—"} ➔ ${row.toAccountId?.name || "—"}`;
+      participant = `${row.fromAccountId?.name || "—"} -> ${row.toAccountId?.name || "—"}`;
       description = "Internal Transfer";
     } else if (row.rawMaterialHeadName) {
       participant = row.rawMaterialHeadName;
