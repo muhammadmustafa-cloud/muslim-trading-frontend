@@ -56,7 +56,7 @@ export default function Transactions() {
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ accountId: accountIdFromUrl, dateFrom: "", dateTo: "", rawMaterialHeadId: rawMaterialHeadIdFromUrl });
   const [sortKey, setSortKey] = useState("date");
-  const [sortDir, setSortDir] = useState("desc");
+  const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [editingId, setEditingId] = useState(null);
