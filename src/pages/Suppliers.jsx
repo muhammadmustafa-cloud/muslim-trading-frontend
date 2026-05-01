@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaTruck, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory } from "react-icons/fa";
+import { FaTruck, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory, FaTrash } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
@@ -61,6 +61,16 @@ export default function Suppliers() {
     });
     setEditingId(row._id);
     setModalOpen(true);
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!confirm(`Kya aap sure hain ke "${name}" ko delete karna chahte hain?`)) return;
+    try {
+      await apiDelete(`/suppliers/${id}`);
+      fetchList();
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -206,6 +216,7 @@ export default function Suppliers() {
                         <div className="flex items-center gap-1 flex-wrap">
                           <button type="button" onClick={() => navigate(`/suppliers/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
+                          <button type="button" onClick={() => handleDelete(row._id, row.name)} className="btn-ghost-danger flex items-center gap-1 text-rose-600 hover:text-rose-700"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>
                       </td>
                     </tr>
