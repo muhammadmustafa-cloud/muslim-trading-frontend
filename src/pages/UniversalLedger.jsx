@@ -274,7 +274,7 @@ export default function UniversalLedger() {
                         {cr && (
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-slate-700 leading-tight">
-                           {cr.name} <span className="text-emerald-500">➔</span> {cr.accountName} 
+                           {cr.accountName} <span className="text-emerald-500">➔</span> {cr.name}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate max-w-[200px]">{cr.description}</span>
                           </div>
@@ -288,7 +288,7 @@ export default function UniversalLedger() {
                         {dr && (
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-slate-700 leading-tight">
-                           {dr.name} <span className="text-rose-500">➔</span> {dr.accountName}
+                           {dr.accountName} <span className="text-rose-500">➔</span> {dr.name}
                             </span>
                             <span className="text-[10px] text-slate-400 truncate max-w-[200px]">{dr.description}</span>
                           </div>
