@@ -25,6 +25,9 @@ import {
   FaBookOpen,
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+import ChangePasswordModal from "../components/ChangePasswordModal.jsx";
+import { FaKey } from "react-icons/fa";
 
 const navItems = [
   { to: "/", end: true, icon: FaChartLine, label: "Dashboard" },
@@ -58,6 +61,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const { user, logout, clientId } = useAuth();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   return (
     <div className="min-h-screen flex bg-slate-100/80">
       {/* Sidebar */}
@@ -108,7 +112,14 @@ export default function AdminLayout() {
             })}
           </ul>
         </nav>
-        <div className="p-3 border-t border-sidebar-border bg-sidebar-darken mt-auto">
+        <div className="p-3 border-t border-sidebar-border bg-sidebar-darken mt-auto space-y-2">
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-indigo-300 hover:bg-indigo-500/20 transition-all group"
+          >
+            <FaKey className="w-5 h-5 opacity-80 group-hover:scale-110 transition-transform" />
+            Change Password
+          </button>
           <button
             onClick={logout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-rose-300 hover:bg-rose-500/20 transition-all group"
@@ -124,6 +135,12 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      
+      {/* Password Change Modal */}
+      <ChangePasswordModal 
+        isOpen={showPasswordModal} 
+        onClose={() => setShowPasswordModal(false)} 
+      />
     </div>
   );
 }
