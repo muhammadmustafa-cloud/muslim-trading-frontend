@@ -38,6 +38,7 @@ const navItems = [
   { to: "/customers/receivables", icon: FaHandHoldingUsd, label: "Customer Receivables" },
   { to: "/suppliers", icon: FaTruck, label: "Supplier (Purchase)" },
   { to: "/suppliers/payables", icon: FaHandHoldingUsd, label: "Supplier Payables" },
+  { to: "/party-ledger", icon: FaExchangeAlt, label: "Party Ledger" },
   { to: "/mazdoor", icon: FaUser, label: "Mazdoor" },
   { to: "/mazdoor/management", icon: FaClipboardList, label: "Mazdoor Management" },
   { to: "/accounts", icon: FaWallet, label: "Accounts" },

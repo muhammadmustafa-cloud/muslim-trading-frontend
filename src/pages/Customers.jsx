@@ -262,6 +262,7 @@ export default function Customers() {
                       <td className="table-cell">
                         <div className="flex items-center gap-1 flex-wrap">
                           <button type="button" onClick={() => navigate(`/customers/${row._id}/history`)} className="btn-ghost-primary flex items-center gap-1"><FaHistory className="w-3.5 h-3.5" /> History</button>
+                          <button type="button" onClick={() => navigate(`/party-ledger/${row._id}?role=customer`)} className="btn-ghost-primary flex items-center gap-1 text-indigo-600 hover:text-indigo-700 bg-indigo-50"><FaHistory className="w-3.5 h-3.5" /> Detail</button>
                           <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1"><FaEdit className="w-3.5 h-3.5" /> Edit</button>
                           <button type="button" onClick={() => handleDelete(row._id, row.name)} className="btn-ghost-danger flex items-center gap-1 text-rose-600 hover:text-rose-700"><FaTrash className="w-3.5 h-3.5" /> Delete</button>
                         </div>

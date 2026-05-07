@@ -33,6 +33,7 @@ import ExpenseLedger from "./pages/ExpenseLedger";
 import AuditSummary from "./pages/AuditSummary";
 import RawMaterials from "./pages/RawMaterials";
 import ConsolidatedLedger from "./pages/ConsolidatedLedger";
+import PartyLedger from "./pages/PartyLedger";
 import Login from "./pages/Login";
 import Users from "./pages/Users";
 import SetupOpeningBalances from "./pages/SetupOpeningBalances";
@@ -58,6 +59,8 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="customers/receivables" element={<CustomerReceivables />} />
           <Route path="customers/:id/history" element={<CustomerHistory />} />
+          <Route path="party-ledger" element={<PartyLedger />} />
+          <Route path="party-ledger/:id" element={<PartyLedger />} />
           <Route path="suppliers" element={<Suppliers />} />
           <Route path="suppliers/payables" element={<SupplierPayables />} />
           <Route path="suppliers/:id/history" element={<SupplierHistory />} />

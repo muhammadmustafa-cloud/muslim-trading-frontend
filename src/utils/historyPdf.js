@@ -404,3 +404,100 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   addPageNumbers(doc);
   doc.save(`${(data.name || "item").replace(/\s+/g, "-")}-khata.pdf`);
 }
+
+/**
+ * Party Ledger PDF — unified sale + purchase + payment with weight detail.
+ */
+export function downloadPartyLedgerPdf(name, ledger, summary, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  let y = 15;
+
+  doc.setFontSize(18);
+  doc.setFont(undefined, "bold");
+  doc.text(`Party Ledger — ${name || "Party"}`, MARGIN, y);
+  y += 8;
+  doc.setFont(undefined, "normal");
+  y = addGeneratedLine(doc, y);
+
+  if (filters.dateFrom || filters.dateTo) {
+    doc.setFontSize(9);
+    const filterStr = [
+      filters.dateFrom && `From: ${filters.dateFrom}`,
+      filters.dateTo && `To: ${filters.dateTo}`,
+    ].filter(Boolean).join(" | ");
+    doc.text(filterStr, MARGIN, y);
+    y += 6;
+  }
+
+  // Summary line
+  doc.setFontSize(9);
+  doc.text(
+    `Sales: ${formatMoney(summary.totalSaleAmount || 0)} (${summary.totalSaleBags || 0} bags, ${(summary.totalSaleMun || 0).toFixed(2)} MUN)  |  ` +
+    `Purchases: ${formatMoney(summary.totalPurchaseAmount || 0)} (${summary.totalPurchaseBags || 0} bags, ${(summary.totalPurchaseMun || 0).toFixed(2)} MUN)`,
+    MARGIN, y
+  );
+  y += 6;
+  doc.setFont(undefined, "bold");
+  const bal = summary.netBalance || 0;
+  doc.text(
+    `Net Balance: Rs. ${formatMoney(Math.abs(bal))} ${bal >= 0 ? "Receivable (Dr)" : "Payable (Cr)"}`,
+    MARGIN, y
+  );
+  doc.setFont(undefined, "normal");
+  y += 10;
+
+  const typeLabels = { opening: "Opening", sale: "Sale", purchase: "Purchase", payment: "Payment" };
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Date", "Type", "Description", "Bags", "Gross", "Net", "MUN", "Rate"]],
+    body: (ledger || []).map((row) => {
+      const isPayment = row.type === "payment" || row.type === "opening";
+      return [
+        formatDate(row.date),
+        typeLabels[row.type] || row.type,
+        row.description + (row.truckNumber ? ` (${row.truckNumber})` : ""),
+        !isPayment && row.bags > 0 ? row.bags : "—",
+        !isPayment && row.grossWeight > 0 ? formatMoney(row.grossWeight) : "—",
+        !isPayment && row.netWeight > 0 ? formatMoney(row.netWeight) : "—",
+        !isPayment && row.mun > 0 ? Number(row.mun).toFixed(3) : "—",
+        !isPayment && row.avgRate > 0 ? formatMoney(row.avgRate) : "—",
+      ];
+    }),
+    foot: [
+      [
+        { content: "SALES TOTAL", colSpan: 3, styles: { halign: "right" } },
+        String(summary.totalSaleBags || 0),
+        "—", "—",
+        (summary.totalSaleMun || 0).toFixed(3),
+        "—",
+      ],
+      [
+        { content: "PURCHASES TOTAL", colSpan: 3, styles: { halign: "right" } },
+        String(summary.totalPurchaseBags || 0),
+        "—", "—",
+        (summary.totalPurchaseMun || 0).toFixed(3),
+        "—",
+      ],
+    ],
+    ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+    footStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: "bold", fontSize: 8 },
+    columnStyles: {
+      0: { cellWidth: 24 },
+      1: { cellWidth: 20 },
+      2: { cellWidth: "auto" },
+      3: { cellWidth: 15, halign: "center" },
+      4: { cellWidth: 20, halign: "right" },
+      5: { cellWidth: 20, halign: "right" },
+      6: { cellWidth: 20, halign: "center" },
+      7: { cellWidth: 20, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`party-ledger-${(name || "party").replace(/\s+/g, "-")}.pdf`);
+}
+
