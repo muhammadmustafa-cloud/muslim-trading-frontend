@@ -21,12 +21,12 @@ export function downloadUniversalLedgerPdf(list, summary, filters = {}, dastiLis
     
     formattedRows.push([
       cr.date ? formatDate(cr.date) : "",
-      cr.name || "",
-      cr.accountName ? cr.accountName + (cr.description ? `\n(${cr.description})` : "") : "",
+      cr.accountName || "",
+      cr.name ? cr.name + (cr.description ? `\n(${cr.description})` : "") : "",
       cr.amount ? formatMoney(cr.amount) : "",
       dr.date ? formatDate(dr.date) : "",
-      dr.name || "",
-      dr.accountName ? dr.accountName + (dr.description ? `\n(${dr.description})` : "") : "",
+      dr.accountName || "",
+      dr.name ? dr.name + (dr.description ? `\n(${dr.description})` : "") : "",
       dr.amount ? formatMoney(dr.amount) : "",
     ]);
   }
