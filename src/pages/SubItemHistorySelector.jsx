@@ -1,62 +1,57 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap } from "react-icons/fa";
+import { FaSitemap, FaSearch, FaBook, FaSort, FaSortUp, FaSortDown, FaBox, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
-export default function Items() {
+export default function SubItems() {
   const navigate = useNavigate();
   const [list, setList] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [mainItems, setMainItems] = useState([]);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", categoryId: "", quality: "" });
+  const [form, setForm] = useState({ name: "", parentId: "", quality: "" });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const fetchCategories = async () => {
-    try {
-      const data = await apiGet("/categories");
-      setCategories(data.data || []);
-    } catch (_) { }
-  };
-
-  const fetchList = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError("");
     try {
-      const data = await apiGet("/items", {
-        search: search || undefined,
-        categoryId: categoryFilter || undefined,
-        parentId: "none",
-      });
-      setList(data.data || []);
+      // 1. Fetch all items
+      const data = await apiGet("/items");
+      const allItems = data.data || [];
+      
+      // 2. Separate Main and Sub items
+      const mains = allItems.filter(i => !i.parentId);
+      const subs = allItems.filter(i => i.parentId != null);
+      
+      setMainItems(mains);
+      setList(subs);
     } catch (e) {
       setError(e.message);
-      setList([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchList();
-    fetchCategories();
-  }, [search, categoryFilter]);
+    fetchData();
+  }, []);
 
   const resetForm = () => {
-    setForm({ name: "", categoryId: "", quality: "" });
+    setForm({ name: "", parentId: "", quality: "" });
     setEditingId(null);
     setModalOpen(false);
   };
+
   const openAddModal = () => {
     resetForm();
     setModalOpen(true);
@@ -64,8 +59,8 @@ export default function Items() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) {
-      setError("Item ka naam zaroori hai");
+    if (!form.name.trim() || !form.parentId) {
+      setError("Naam aur Main Item select karna zaroori hai");
       return;
     }
     setError("");
@@ -73,13 +68,13 @@ export default function Items() {
     try {
       const payload = {
         name: form.name.trim(),
-        categoryId: form.categoryId || undefined,
+        parentId: form.parentId,
         quality: (form.quality || "").trim(),
       };
       if (editingId) await apiPut(`/items/${editingId}`, payload);
       else await apiPost("/items", payload);
       resetForm();
-      fetchList();
+      fetchData();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -90,12 +85,42 @@ export default function Items() {
   const handleEdit = (row) => {
     setForm({
       name: row.name || "",
-      categoryId: row.categoryId?._id || row.categoryId || "",
+      parentId: row.parentId?._id || row.parentId || "",
       quality: row.quality || "",
     });
     setEditingId(row._id);
     setModalOpen(true);
   };
+
+  const handleDelete = async (id) => {
+     if (!window.confirm("Are you sure? Is sub-item ko delete karne se stock record pe asar par sakta hai.")) return;
+     try {
+       await apiDelete(`/items/${id}`);
+       fetchData();
+     } catch (e) { alert(e.message); }
+  };
+
+  const filteredList = useMemo(() => {
+    return list.filter(i => 
+      i.name.toLowerCase().includes(search.toLowerCase()) || 
+      (i.parentId?.name || "").toLowerCase().includes(search.toLowerCase())
+    );
+  }, [list, search]);
+
+  const sortedList = useMemo(() => {
+    const arr = [...filteredList];
+    arr.sort((a, b) => {
+      const va = (a[sortKey] || "").toString().toLowerCase();
+      const vb = (b[sortKey] || "").toString().toLowerCase();
+      return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
+    });
+    return arr;
+  }, [filteredList, sortKey, sortDir]);
+
+  const paginatedList = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedList.slice(start, start + pageSize);
+  }, [sortedList, page, pageSize]);
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -104,23 +129,6 @@ export default function Items() {
       setSortDir("asc");
     }
   };
-
-  const getCategoryName = (row) => row.categoryId?.name ?? (row.category ?? "—");
-
-  const sortedList = useMemo(() => {
-    const arr = [...list];
-    arr.sort((a, b) => {
-      const va = (sortKey === "category" ? getCategoryName(a) : (a[sortKey] || "")).toString().toLowerCase();
-      const vb = (sortKey === "category" ? getCategoryName(b) : (b[sortKey] || "")).toString().toLowerCase();
-      return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
-    });
-    return arr;
-  }, [list, sortKey, sortDir]);
-
-  const paginatedList = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedList.slice(start, start + pageSize);
-  }, [sortedList, page, pageSize]);
 
   const SortIcon = ({ columnKey }) => {
     if (sortKey !== columnKey) return <FaSort className="w-3.5 h-3.5 ml-1 opacity-50" />;
@@ -132,38 +140,36 @@ export default function Items() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <FaBox className="w-7 h-7 text-amber-500" /> Main Items
+            <FaSitemap className="w-7 h-7 text-amber-500" /> Sub-Item Management
           </h1>
-          <p className="page-subtitle">Pehle main items banain, sub-items ko Sub-Item Management se manage karein.</p>
+          <p className="page-subtitle">Sub-items (Warehouses/Batches) banain aur unhen main items ke sath bind karein.</p>
         </div>
-        <button type="button" onClick={openAddModal} className="btn-primary">
-          <FaPlus className="w-4 h-4" /> Add Item
+        <button type="button" onClick={openAddModal} className="btn-primary flex items-center gap-2">
+          <FaPlus className="w-4 h-4" /> Add Sub-Item
         </button>
       </header>
 
-      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit Item" : "Naya Item Add Karein"}>
+      <Modal open={modalOpen} onClose={resetForm} title={editingId ? "Edit Sub-Item" : "Naya Sub-Item Add Karein"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="input-label">Item ka naam *</label>
-            <input type="text" placeholder="e.g. Channa, Gehu" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="input-field" required />
+            <label className="input-label">Sub-Item Name *</label>
+            <input type="text" placeholder="e.g. Faisalabad Warehouse, LHR Batch" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="input-field" required />
           </div>
           <div>
-            <label className="input-label">Category</label>
-            <select value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))} className="input-field">
-              <option value="">— Select Category —</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>{c.name}</option>
-              ))}
+            <label className="input-label">Main Item (Bind to) *</label>
+            <select value={form.parentId} onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))} className="input-field" required>
+              <option value="">— Select Main Item —</option>
+              {mainItems.map(i => <option key={i._id} value={i._id}>{i.name} ({i.quality})</option>)}
             </select>
           </div>
           <div>
-            <label className="input-label">Quality</label>
-            <input type="text" placeholder="e.g. Premium, Standard" value={form.quality} onChange={(e) => setForm((f) => ({ ...f, quality: e.target.value }))} className="input-field" />
+            <label className="input-label">Quality (Optional)</label>
+            <input type="text" placeholder="e.g. Standard" value={form.quality} onChange={(e) => setForm((f) => ({ ...f, quality: e.target.value }))} className="input-field" />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? "Saving..." : (editingId ? "Update" : "Add Item")}
+              {submitting ? "Saving..." : (editingId ? "Update Sub-Item" : "Create & Bind")}
             </button>
             <button type="button" onClick={resetForm} className="btn-secondary" disabled={submitting}>Cancel</button>
           </div>
@@ -174,25 +180,20 @@ export default function Items() {
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[200px]">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Search items..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input pl-9" />
+            <input type="text" placeholder="Search sub-item..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input pl-9" />
           </div>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="input-field w-48">
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
+          <p className="text-sm text-slate-500">{filteredList.length} sub-item(s)</p>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="empty-state"><div className="loading-spinner mb-3" /><p>Loading...</p></div>
+            <div className="empty-state"><div className="loading-spinner mb-3" /><p>Loading sub-items...</p></div>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-5 py-4 text-left"><button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-slate-800 font-bold uppercase tracking-wider text-[10px] text-slate-500">Item <SortIcon columnKey="name" /></button></th>
-                    <th className="px-5 py-4 text-left font-bold uppercase tracking-wider text-[10px] text-slate-500">Category</th>
+                    <th className="px-5 py-4 text-left"><button type="button" onClick={() => toggleSort("name")} className="flex items-center hover:text-slate-800 font-bold uppercase tracking-wider text-[10px] text-slate-500">Sub-Item <SortIcon columnKey="name" /></button></th>
+                    <th className="px-5 py-4 text-left font-bold uppercase tracking-wider text-[10px] text-slate-500">Parent Item</th>
                     <th className="px-5 py-4 text-left font-bold uppercase tracking-wider text-[10px] text-slate-500">Quality</th>
                     <th className="px-5 py-4 text-center font-bold uppercase tracking-wider text-[10px] text-slate-500">Actions</th>
                   </tr>
@@ -201,13 +202,15 @@ export default function Items() {
                   {paginatedList.map((row) => (
                     <tr key={row._id} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-5 py-4 font-bold text-slate-800">{row.name}</td>
-                      <td className="px-5 py-4 text-slate-600">{getCategoryName(row)}</td>
+                      <td className="px-5 py-4 text-slate-600 font-medium">
+                        <span className="flex items-center gap-1.5"><FaBox className="text-amber-500/50 w-3 h-3" /> {row.parentId?.name || "—"}</span>
+                      </td>
                       <td className="px-5 py-4 text-slate-500">{row.quality || "—"}</td>
                       <td className="px-5 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button type="button" onClick={() => navigate(`/items/${row._id}/khata`)} className="btn-ghost-primary flex items-center gap-1.5"><FaBook /> Khata</button>
-                          <button type="button" onClick={() => navigate(`/items/${row._id}/sub-items-summary-report`)} className="btn-ghost-primary flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"><FaSitemap /> Summary</button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button type="button" onClick={() => navigate(`/items/${row._id}/sub-khata`)} className="btn-ghost-primary px-3 py-1.5 text-xs flex items-center gap-1.5"><FaBook /> Ledger</button>
                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><FaEdit className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><FaTrash className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>

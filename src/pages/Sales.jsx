@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadSalesPdf, downloadSaleInvoicePdf } from "../utils/exportPdf.js";
-import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown, FaSitemap } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -34,6 +35,7 @@ export default function Sales() {
     netWeight: "",
     items: [{
       itemId: "",
+      subItemId: "",
       kattay: "",
       kgPerKata: "",
       grossWeight: "",
@@ -134,6 +136,7 @@ export default function Sales() {
       netWeight: "",
       items: [{
         itemId: "",
+        subItemId: "",
         kattay: "",
         kgPerKata: "",
         grossWeight: "",
@@ -163,6 +166,7 @@ export default function Sales() {
   const addItemRow = () => {
     const newItems = [...form.items, {
       itemId: "",
+      subItemId: "",
       kattay: "",
       kgPerKata: "",
       grossWeight: "",
@@ -184,10 +188,6 @@ export default function Sales() {
     setForm((prev) => {
       let next = { ...prev, ...updates };
 
-      // 1. Master Weights
-      // (Moved calculation down to handle auto-syncing)
-
-      // 1. Calculate individual items' Gross Weight (with Deductions)
       const lineGrosses = next.items.map(item => {
         const k = Number(item.kattay) || 0;
         const kpk = Number(item.kgPerKata) || 0;
@@ -198,12 +198,10 @@ export default function Sales() {
       });
       const sumLineGross = lineGrosses.reduce((a, b) => a + b, 0);
 
-      // Auto-update Master Gross if items were edited and it's currently empty
       if (updates.items && (!next.totalGrossWeight || Number(next.totalGrossWeight) === 0)) {
         next.totalGrossWeight = sumLineGross > 0 ? String(sumLineGross) : "";
       }
       
-      // 2. MASTER TOTALS (Source of Truth)
       const totalGross = Number(next.totalGrossWeight) || sumLineGross;
       const totalCut = Number(next.totalSHCut) || 0;
       const totalNet = Math.max(0, totalGross - totalCut);
@@ -211,8 +209,6 @@ export default function Sales() {
       
       next.netWeight = String(totalNet);
 
-      // 3. Proportional Distribution to Items
-      // We distribute the Total MUN across items based on their relative gross weights
       const nextItems = next.items.map((item, idx) => {
         const lineGross = lineGrosses[idx];
         const ratio = sumLineGross > 0 ? (lineGross / sumLineGross) : (next.items.length === 1 ? 1 : 0);
@@ -222,8 +218,6 @@ export default function Sales() {
         const itemSHCut = totalCut * ratio;
         
         const rate = Number(item.rate) || 0;
-
-        // Note: We use the distributed MUN for the price calculation
         const lineTotalBase = Math.round(itemMun * rate);
 
         return {
@@ -232,11 +226,10 @@ export default function Sales() {
           shCut: String(itemSHCut.toFixed(2)),
           quantity: String(itemNet.toFixed(3)),
           totalAmount: String(Math.max(0, lineTotalBase)),
-          _calcInfo: { itemMun, lineTotalBase } // for extras subtraction
+          _calcInfo: { itemMun, lineTotalBase }
         };
       });
 
-      // 4. Distribute Extras, Bardana, and Mazdori
       const totalExtras = Number(next.extras) || 0;
       const totalBardana = Number(next.totalBardanaAmount) || 0;
       const totalMazdori = Number(next.totalMazdori) || 0;
@@ -259,7 +252,6 @@ export default function Sales() {
         };
       });
 
-      // 5. Payment Terms & Due Date
       if ("paymentTerms" in updates || "date" in updates) {
         if (next.paymentTerms === "cash") {
           next.dueDate = next.date;
@@ -294,6 +286,7 @@ export default function Sales() {
       netWeight: String(row.netWeight || ""),
       items: (row.items && row.items.length > 0) ? row.items.map(item => ({
         itemId: item.itemId?._id || item.itemId || "",
+        subItemId: item.subItemId || "",
         kattay: String(item.kattay || ""),
         kgPerKata: String(item.kgPerKata || ""),
         grossWeight: String(item.grossWeight || ""),
@@ -304,6 +297,7 @@ export default function Sales() {
         addKg: String(item.addKg || ""),
       })) : [{
         itemId: "",
+        subItemId: "",
         kattay: "",
         kgPerKata: "",
         grossWeight: "",
@@ -340,7 +334,6 @@ export default function Sales() {
       return;
     }
     
-    // Check if all items have an itemId
     if (form.items.some(i => !i.itemId)) {
       setError("Tamam items select karein.");
       return;
@@ -356,6 +349,7 @@ export default function Sales() {
         totalSHCut: Number(form.totalSHCut) || 0,
         items: form.items.map(item => ({
           itemId: item.itemId,
+          subItemId: item.subItemId || undefined,
           kattay: Number(item.kattay) || 0,
           kgPerKata: Number(item.kgPerKata) || 0,
           grossWeight: Number(item.grossWeight) || 0,
@@ -377,7 +371,6 @@ export default function Sales() {
       };
 
       const formData = new FormData();
-      // Special handling for JSON fields in FormData
       Object.keys(payload).forEach(key => {
         if (key === 'items') {
           formData.append(key, JSON.stringify(payload[key]));
@@ -398,7 +391,7 @@ export default function Sales() {
       resetForm();
       setView("list");
       fetchList();
-      fetchStockData(); // Refresh dropdown labels
+      fetchStockData();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -406,41 +399,28 @@ export default function Sales() {
     }
   };
 
-
-
-  const handleCollectSuccess = () => {
-    fetchList();
-    fetchStockData();
-  };
+  const mainItemsList = useMemo(() => items.filter(i => !i.parentId), [items]);
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
       setSortKey(key);
-      setSortDir(key === "date" ? "desc" : "asc");
+      setSortDir("asc");
     }
   };
-
 
   const sortedList = useMemo(() => {
     const arr = [...list];
     arr.sort((a, b) => {
-      if (sortKey === "date") {
-        const va = new Date(a.date).getTime();
-        const vb = new Date(b.date).getTime();
-        return sortDir === "asc" ? va - vb : vb - va;
+      let va = (a[sortKey] || "");
+      let vb = (b[sortKey] || "");
+      if (sortKey === "customerId") {
+        va = a.customerId?.name || "";
+        vb = b.customerId?.name || "";
       }
-      if (sortKey === "customer") {
-        const va = (a.customerId?.name || "").toLowerCase();
-        const vb = (b.customerId?.name || "").toLowerCase();
-        return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
-      }
-      if (sortKey === "amount") {
-        const va = Number(a.totalAmount) || 0;
-        const vb = Number(b.totalAmount) || 0;
-        return sortDir === "asc" ? va - vb : vb - va;
-      }
-      return 0;
+      va = va.toString().toLowerCase();
+      vb = vb.toString().toLowerCase();
+      return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
     });
     return arr;
   }, [list, sortKey, sortDir]);
@@ -455,7 +435,6 @@ export default function Sales() {
     return sortDir === "asc" ? <FaSortUp className="w-3.5 h-3.5 ml-1" /> : <FaSortDown className="w-3.5 h-3.5 ml-1" />;
   };
 
-
   if (view === "form") {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
@@ -467,9 +446,7 @@ export default function Sales() {
             </h1>
             <p className="text-slate-500 text-sm">Sale details enter karein aur items add karein.</p>
           </div>
-          <button type="button" onClick={resetForm} className="btn-secondary">
-            Back to List
-          </button>
+          <button type="button" onClick={resetForm} className="btn-secondary">Back to List</button>
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -481,12 +458,7 @@ export default function Sales() {
               </div>
               <div>
                 <label className="input-label">Customer *</label>
-                <SearchableSelect
-                  options={customers}
-                  value={form.customerId}
-                  onChange={(val) => setForm((f) => ({ ...f, customerId: val }))}
-                  placeholder="Select customer"
-                />
+                <SearchableSelect options={customers} value={form.customerId} onChange={(val) => setForm((f) => ({ ...f, customerId: val }))} placeholder="Select customer" />
               </div>
               <div>
                 <label className="input-label">Truck number</label>
@@ -505,28 +477,17 @@ export default function Sales() {
               </div>
               <div>
                 <label className="input-label font-black text-amber-900 tracking-tight">Master Net (Kg)</label>
-                <div className="bg-amber-100 border border-amber-300 rounded-lg h-[42px] flex items-center px-3 font-black text-amber-900 text-lg shadow-inner">
-                  {form.netWeight} Kg
-                </div>
+                <div className="bg-amber-100 border border-amber-300 rounded-lg h-[42px] flex items-center px-3 font-black text-amber-900 text-lg shadow-inner">{form.netWeight} Kg</div>
               </div>
               <div>
-                 {/* Logic to check if master gross matches sum of items */}
                  {(() => {
                    const sumItems = form.items.reduce((sum, it) => sum + (Number(it.grossWeight) || 0), 0);
                    const masterGross = Number(form.totalGrossWeight) || 0;
                    const diff = masterGross - sumItems;
-                   const totalBags = form.items.reduce((sum, it) => sum + (Number(it.kattay) || 0), 0);
-                   
                    return (
                      <div className={`p-2 rounded-lg border h-[42px] flex flex-col justify-center ${Math.abs(diff) > 0.1 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
-                        <div className="flex justify-between items-center">
-                           <span className="text-[9px] font-black uppercase tracking-widest">{Math.abs(diff) > 0.1 ? 'Mismatch!' : 'Matched'}</span>
-                           <span className="text-[10px] font-medium italic">{totalBags} Bags</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                           <p className="text-[12px] font-bold">Sum: {sumItems.toLocaleString()} Kg</p>
-                           {Math.abs(diff) > 0.1 && <p className="text-[10px] font-black">Δ {diff.toFixed(1)} Kg</p>}
-                        </div>
+                        <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase tracking-widest">{Math.abs(diff) > 0.1 ? 'Mismatch!' : 'Matched'}</span></div>
+                        <div className="flex justify-between items-center"><p className="text-[12px] font-bold">Sum: {sumItems.toLocaleString()} Kg</p></div>
                      </div>
                    );
                  })()}
@@ -544,13 +505,12 @@ export default function Sales() {
           <section className="card overflow-hidden border-t-4 border-t-indigo-500">
             <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
               <h3 className="font-bold text-slate-700">Items List</h3>
-              <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Line items for this truck</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-100 border-b border-slate-200 text-[10px] text-slate-500 uppercase font-black">
                   <tr>
-                    <th className="px-4 py-3 text-left w-64">Item *</th>
+                    <th className="px-4 py-3 text-left w-64">Item & Sub-Item *</th>
                     <th className="px-4 py-3 text-left w-20">Bags</th>
                     <th className="px-4 py-3 text-left w-20">Kg/Bag</th>
                     <th className="px-4 py-3 text-left w-20 text-rose-800">Less (Kg)</th>
@@ -563,82 +523,55 @@ export default function Sales() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {form.items.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                      <td className="p-3">
-                        <SearchableSelect
-                          options={items.map(i => ({ _id: i._id, name: `${i.name} (${i.quality})` }))}
-                          value={item.itemId}
-                          onChange={(val) => {
-                            const newItems = [...form.items];
-                            newItems[idx].itemId = val;
-                            updateFormWithAutoCalc({ items: newItems });
-                          }}
-                          placeholder="Select Item"
-                        />
-                      </td>
-                      <td className="p-3">
-                        <input type="number" value={item.kattay} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].kattay = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2 text-center" placeholder="0" />
-                      </td>
-                      <td className="p-3">
-                        <input type="number" value={item.kgPerKata} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].kgPerKata = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2 text-center" placeholder="0" />
-                      </td>
-                      <td className="p-3">
-                        <input type="number" value={item.deductionKg} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].deductionKg = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2 text-center border-rose-200 bg-rose-50 placeholder:text-rose-300" placeholder="0" title="Weight deduction in kg" />
-                      </td>
-                      <td className="p-3">
-                        <input type="number" value={item.addKg} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].addKg = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2 text-center border-emerald-200 bg-emerald-50 placeholder:text-emerald-300" placeholder="0" title="Extra weight in kg" />
-                      </td>
-                      <td className="p-3 bg-amber-50/50">
-                        <div className="font-bold text-amber-900 text-center">
-                          {item.grossWeight ? Number(item.grossWeight).toLocaleString() : "—"}
-                        </div>
-                      </td>
-                      <td className="p-3 bg-amber-100/30">
-                        <div className="font-black text-amber-900 text-center" title="Net weight divided by 40">
-                          {item.quantity !== undefined && item.quantity !== "" ? (Number(item.quantity) / 40).toFixed(4) : "—"}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <input type="number" value={item.rate} onChange={(e) => {
-                          const newItems = [...form.items];
-                          newItems[idx].rate = e.target.value;
-                          updateFormWithAutoCalc({ items: newItems });
-                        }} className="input-field py-1.5 px-2 font-bold text-emerald-700 bg-emerald-50/20" placeholder="0" />
-                      </td>
-                      <td className="p-3 text-right font-black text-slate-900 bg-slate-50/50 text-base">
-                        {formatMoney(item.totalAmount)}
-                      </td>
-                      <td className="p-3 text-center">
-                        {form.items.length > 1 && (
-                          <button type="button" onClick={() => removeItemRow(idx)} className="text-red-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded" title="Remove row">
-                            <FaPlus className="w-4 h-4 rotate-45" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {form.items.map((item, idx) => {
+                    const subOptions = items.filter(i => i.parentId === item.itemId);
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                        <td className="p-3 space-y-2">
+                          <SearchableSelect
+                            options={mainItemsList.map(i => ({ _id: i._id, name: `${i.name} (${i.quality})` }))}
+                            value={item.itemId}
+                            onChange={(val) => {
+                              const newItems = [...form.items];
+                              newItems[idx].itemId = val;
+                              newItems[idx].subItemId = ""; // Reset sub-item
+                              updateFormWithAutoCalc({ items: newItems });
+                            }}
+                            placeholder="Select Main Item"
+                          />
+                          {subOptions.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
+                               <FaSitemap className="text-amber-500 w-3 h-3" />
+                               <select 
+                                 value={item.subItemId} 
+                                 onChange={(e) => {
+                                   const newItems = [...form.items];
+                                   newItems[idx].subItemId = e.target.value;
+                                   updateFormWithAutoCalc({ items: newItems });
+                                 }}
+                                 className="input-field py-1 text-xs border-amber-200 bg-amber-50/50"
+                               >
+                                 <option value="">— Select Sub-Item (Required) —</option>
+                                 {subOptions.map(s => <option key={s._id} value={s._id}>{s.name} ({s.quality})</option>)}
+                               </select>
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3"><input type="number" value={item.kattay} onChange={(e) => { const newItems = [...form.items]; newItems[idx].kattay = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 text-center" placeholder="0" /></td>
+                        <td className="p-3"><input type="number" value={item.kgPerKata} onChange={(e) => { const newItems = [...form.items]; newItems[idx].kgPerKata = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 text-center" placeholder="0" /></td>
+                        <td className="p-3"><input type="number" value={item.deductionKg} onChange={(e) => { const newItems = [...form.items]; newItems[idx].deductionKg = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 text-center border-rose-200 bg-rose-50" placeholder="0" /></td>
+                        <td className="p-3"><input type="number" value={item.addKg} onChange={(e) => { const newItems = [...form.items]; newItems[idx].addKg = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 text-center border-emerald-200 bg-emerald-50" placeholder="0" /></td>
+                        <td className="p-3 bg-amber-50/50"><div className="font-bold text-amber-900 text-center">{item.grossWeight ? Number(item.grossWeight).toLocaleString() : "—"}</div></td>
+                        <td className="p-3 bg-amber-100/30"><div className="font-black text-amber-900 text-center">{(Number(item.quantity) / 40).toFixed(4)}</div></td>
+                        <td className="p-3"><input type="number" value={item.rate} onChange={(e) => { const newItems = [...form.items]; newItems[idx].rate = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 font-bold text-emerald-700 bg-emerald-50/20" placeholder="0" /></td>
+                        <td className="p-3 text-right font-black text-slate-900 bg-slate-50/50 text-base">{formatMoney(item.totalAmount)}</td>
+                        <td className="p-3 text-center">{form.items.length > 1 && <button type="button" onClick={() => removeItemRow(idx)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded"><FaPlus className="w-4 h-4 rotate-45" /></button>}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              <button type="button" onClick={addItemRow} className="w-full py-4 bg-slate-50 text-indigo-600 font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 border-t border-slate-200 group">
-                <FaPlus className="w-4 h-4 group-hover:scale-110" /> Add Another Item to this Invoice
-              </button>
+              <button type="button" onClick={addItemRow} className="w-full py-4 bg-slate-50 text-indigo-600 font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 border-t border-slate-200 group"><FaPlus className="w-4 h-4 group-hover:scale-110" /> Add Another Item to this Invoice</button>
             </div>
           </section>
 
@@ -668,85 +601,31 @@ export default function Sales() {
                     <input type="date" value={form.dueDate} onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value, paymentTerms: 'custom' }))} className="input-field w-1/2" />
                   </div>
                 </div>
-                <div>
-                  <label className="input-label font-bold text-slate-600">Total Bardana (Truck)</label>
-                  <input type="number" value={form.totalBardanaAmount} onChange={(e) => setForm(f => ({ ...f, totalBardanaAmount: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" />
-                </div>
-                <div>
-                  <label className="input-label font-bold text-slate-600">Total Mazdori (Truck)</label>
-                  <input type="number" value={form.totalMazdori} onChange={(e) => setForm(f => ({ ...f, totalMazdori: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" />
-                </div>
-                <div>
-                  <label className="input-label text-rose-600 font-bold">Extras (Deduction)</label>
-                  <input type="number" value={form.extras} onChange={(e) => setForm(f => ({ ...f, extras: e.target.value }))} className="input-field border-rose-300 bg-rose-50" placeholder="e.g. 870" />
-                </div>
+                <div><label className="input-label font-bold text-slate-600">Total Bardana (Truck)</label><input type="number" value={form.totalBardanaAmount} onChange={(e) => setForm(f => ({ ...f, totalBardanaAmount: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" /></div>
+                <div><label className="input-label font-bold text-slate-600">Total Mazdori (Truck)</label><input type="number" value={form.totalMazdori} onChange={(e) => setForm(f => ({ ...f, totalMazdori: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" /></div>
+                <div><label className="input-label text-rose-600 font-bold">Extras (Deduction)</label><input type="number" value={form.extras} onChange={(e) => setForm(f => ({ ...f, extras: e.target.value }))} className="input-field border-rose-300 bg-rose-50" placeholder="e.g. 870" /></div>
               </div>
-              <div>
-                <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label>
-                <input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" />
-              </div>
-              <div>
-                <label className="input-label">Special Notes</label>
-                <textarea value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} className="input-field h-20" placeholder="Koi khaas baat likhni ho tw..." />
-              </div>
+              <div><label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label><input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" /></div>
+              <div><label className="input-label">Special Notes</label><textarea value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} className="input-field h-20" placeholder="Koi khaas baat likhni ho tw..." /></div>
             </div>
 
             <div className="card p-6 bg-slate-900 text-white flex flex-col justify-between border-t-4 border-t-emerald-500 shadow-xl">
               <div className="space-y-4">
                 <h3 className="text-slate-400 text-xs font-black uppercase tracking-[0.2em]">Invoice Summary</h3>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-slate-400 text-sm">
-                    <span>Total Net MUN:</span>
-                    <span className="text-white font-bold">{(Number(form.netWeight) / 40).toFixed(4)} MUN</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400 text-sm border-b border-slate-800 pb-1">
-                    <span>Net Weight (Kg):</span>
-                    <span className="text-white font-bold">{form.netWeight} Kg</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400 text-sm border-b border-slate-800 pb-2">
-                    <span>Total Items:</span>
-                    <span className="text-white font-bold">{form.items.length}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400 text-sm pt-1">
-                    <span>Base Item Subtotal:</span>
-                    <span className="text-white font-bold">Rs. {formatMoney(
-                      form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0) 
-                      + (Number(form.extras) || 0) 
-                      - (Number(form.totalBardanaAmount) || 0) 
-                      - (Number(form.totalMazdori) || 0)
-                    )}</span>
-                  </div>
-                  <div className="flex justify-between text-amber-400 text-sm">
-                    <span>Bardana:</span>
-                    <span className="font-bold">+ Rs. {formatMoney(form.totalBardanaAmount || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-blue-400 text-sm">
-                    <span>Mazdori:</span>
-                    <span className="font-bold">+ Rs. {formatMoney(form.totalMazdori || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-rose-400 text-sm border-b border-slate-800 pb-2">
-                    <span>Extras (Deduction):</span>
-                    <span className="font-bold">- Rs. {formatMoney(form.extras || 0)}</span>
-                  </div>
+                  <div className="flex justify-between text-slate-400 text-sm"><span>Total Net MUN:</span><span className="text-white font-bold">{(Number(form.netWeight) / 40).toFixed(4)} MUN</span></div>
+                  <div className="flex justify-between text-slate-400 text-sm border-b border-slate-800 pb-1"><span>Net Weight (Kg):</span><span className="text-white font-bold">{form.netWeight} Kg</span></div>
+                  <div className="flex justify-between text-amber-400 text-sm"><span>Bardana:</span><span className="font-bold">+ Rs. {formatMoney(form.totalBardanaAmount || 0)}</span></div>
+                  <div className="flex justify-between text-blue-400 text-sm"><span>Mazdori:</span><span className="font-bold">+ Rs. {formatMoney(form.totalMazdori || 0)}</span></div>
+                  <div className="flex justify-between text-rose-400 text-sm border-b border-slate-800 pb-2"><span>Extras (Deduction):</span><span className="font-bold">- Rs. {formatMoney(form.extras || 0)}</span></div>
                 </div>
-                <div className="pt-2">
-                  <p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Total Receivable</p>
-                  <p className="text-4xl font-black">Rs. {formatMoney(
-                    form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0)
-                  )}</p>
-                </div>
+                <div className="pt-2"><p className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">Total Receivable</p><p className="text-4xl font-black">Rs. {formatMoney(form.items.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0))}</p></div>
               </div>
 
               <div className="mt-8 space-y-3">
                 {error && <p className="text-xs text-red-400 font-bold bg-red-400/10 p-2 rounded border border-red-400/20">{error}</p>}
-                <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2" disabled={submitting}>
-                  {submitting ? (
-                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
-                  ) : (editingId ? "Update Sale" : "Save & Generate Invoice")}
-                </button>
-                <button type="button" onClick={resetForm} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all" disabled={submitting}>
-                  Cancel / Exit
-                </button>
+                <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg rounded-xl transition-all shadow-lg flex items-center justify-center gap-2" disabled={submitting}>{submitting ? "Processing..." : (editingId ? "Update Sale" : "Save & Generate Invoice")}</button>
+                <button type="button" onClick={resetForm} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all" disabled={submitting}>Cancel / Exit</button>
               </div>
             </div>
           </section>
@@ -758,156 +637,60 @@ export default function Sales() {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title flex items-center gap-2">
-            <FaShoppingCart className="w-7 h-7 text-amber-500" />
-            Sales (Bechai)
-          </h1>
-          <p className="page-subtitle">Multiple items invoice system. Total weight aur S.H cut master level pe enter karein.</p>
-        </div>
+        <div><h1 className="page-title flex items-center gap-2"><FaShoppingCart className="w-7 h-7 text-amber-500" />Sales (Bechai)</h1><p className="page-subtitle">Multiple items invoice system. Total weight aur S.H cut master level pe enter karein.</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => downloadSalesPdf(list)} className="btn-secondary flex items-center gap-2">
-            <FaFilePdf className="w-4 h-4" /> Reports
-          </button>
-          <button type="button" onClick={() => downloadCsv(buildCsv(list, "Sales Report"), "sales-report.csv")} className="btn-secondary flex items-center gap-2">
-            <FaFileExport className="w-4 h-4" /> CSV
-          </button>
-          <button type="button" onClick={openAddModal} className="btn-primary flex items-center gap-2">
-            <FaPlus className="w-4 h-4" /> Add Multi-Item Sale
-          </button>
+          <button type="button" onClick={() => downloadSalesPdf(list)} className="btn-secondary flex items-center gap-2"><FaFilePdf className="w-4 h-4" /> Reports</button>
+          <button type="button" onClick={openAddModal} className="btn-primary flex items-center gap-2"><FaPlus className="w-4 h-4" /> Add Multi-Item Sale</button>
         </div>
       </header>
 
       {/* Filters */}
       <section className="card p-4 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div>
-            <label className="input-label">Date from</label>
-            <input type="date" value={filters.dateFrom} onChange={(e) => setFilters(f => ({ ...f, dateFrom: e.target.value }))} className="input-field" />
-          </div>
-          <div>
-            <label className="input-label">Date to</label>
-            <input type="date" value={filters.dateTo} onChange={(e) => setFilters(f => ({ ...f, dateTo: e.target.value }))} className="input-field" />
-          </div>
-          <div>
-            <label className="input-label">Customer</label>
-            <SearchableSelect
-              options={customers}
-              value={filters.customerId}
-              onChange={(val) => setFilters(f => ({ ...f, customerId: val }))}
-              placeholder="All Customers"
-            />
-          </div>
-          <div className="flex gap-2">
-             <div className="flex-1">
-              <label className="input-label">Item</label>
-              <SearchableSelect
-                options={items.map(i => ({ _id: i._id, name: `${i.name} (${i.quality})` }))}
-                value={filters.itemId}
-                onChange={(val) => setFilters(f => ({ ...f, itemId: val }))}
-                placeholder="All Items"
-              />
-            </div>
-            <button type="button" onClick={() => setFilters({ dateFrom: "", dateTo: "", itemId: "", customerId: "" })} className="btn-ghost-secondary h-10 px-3 mt-auto" title="Clear Filters">
-              <FaSearch className="w-4 h-4 rotate-45" />
-            </button>
-          </div>
+          <div><label className="input-label">Date from</label><input type="date" value={filters.dateFrom} onChange={(e) => setFilters(f => ({ ...f, dateFrom: e.target.value }))} className="input-field" /></div>
+          <div><label className="input-label">Date to</label><input type="date" value={filters.dateTo} onChange={(e) => setFilters(f => ({ ...f, dateTo: e.target.value }))} className="input-field" /></div>
+          <div><label className="input-label">Customer</label><SearchableSelect options={customers} value={filters.customerId} onChange={(val) => setFilters(f => ({ ...f, customerId: val }))} placeholder="All Customers" /></div>
         </div>
       </section>
 
-      <section className="card">
-        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
-
-          <p className="text-sm text-slate-500">{list.length} sale(s)</p>
-          <button type="button" onClick={() => downloadSalesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
-          <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "customerId.name", label: "Customer" }, { key: "itemName", label: "Item" }, { key: "category", label: "Category" }, { key: "kattay", label: "Kattay" }, { key: "kgPerKata", label: "Kg/Katta" }, { key: "ratePerKata", label: "Rate/Katta" }, { key: "quantity", label: "Quantity (kg)" }, { key: "totalAmount", label: "Total Amount" }, { key: "amountReceived", label: "Amount Received" }, { key: "truckNumber", label: "Truck" }, { key: "accountId.name", label: "Account" }, { key: "paymentStatus", label: "Status" }, { key: "notes", label: "Notes" }]); downloadCsv(csv, "sales.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
-        </div>
+      {/* Table */}
+      <section className="card overflow-hidden">
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="empty-state"><div className="loading-spinner mb-3" /><p>Loading...</p></div>
+            <div className="empty-state"><div className="loading-spinner mb-3" /><p>Loading sales...</p></div>
           ) : (
             <>
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr>
-                    <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("date")} className="flex items-center hover:text-slate-800">Date<SortIcon columnKey="date" /></button>
-                    </th>
-                    <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("customer")} className="flex items-center hover:text-slate-800">Customer<SortIcon columnKey="customer" /></button>
-                    </th>
-                    <th className="table-header px-5 py-3.5">Products</th>
-                    <th className="table-header px-5 py-3.5">Total Qty (Bags)</th>
-                    <th className="table-header px-5 py-3.5">Net Wt (Kg)</th>
-                    <th className="table-header px-5 py-3.5">
-                      <button type="button" onClick={() => toggleSort("amount")} className="flex items-center hover:text-slate-800">Total Invoice<SortIcon columnKey="amount" /></button>
-                    </th>
-                    <th className="table-header px-5 py-3.5">Received</th>
-                    <th className="table-header px-5 py-3.5">Truck</th>
-                    <th className="table-header px-5 py-3.5">Status</th>
-                    <th className="table-header px-5 py-3.5 w-28">Actions</th>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="px-5 py-4 text-left"><button type="button" onClick={() => toggleSort("date")} className="flex items-center hover:text-slate-800 font-bold uppercase tracking-wider text-[10px] text-slate-500">Date <SortIcon columnKey="date" /></button></th>
+                    <th className="px-5 py-4 text-left"><button type="button" onClick={() => toggleSort("customerId")} className="flex items-center hover:text-slate-800 font-bold uppercase tracking-wider text-[10px] text-slate-500">Customer <SortIcon columnKey="customerId" /></button></th>
+                    <th className="px-5 py-4 text-left font-bold uppercase tracking-wider text-[10px] text-slate-500">Items (Main & Sub)</th>
+                    <th className="px-5 py-4 text-right"><button type="button" onClick={() => toggleSort("totalAmount")} className="flex items-center justify-end hover:text-slate-800 font-bold uppercase tracking-wider text-[10px] text-slate-500">Total Amount <SortIcon columnKey="totalAmount" /></button></th>
+                    <th className="px-5 py-4 text-center font-bold uppercase tracking-wider text-[10px] text-slate-500">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {paginatedList.map((row) => (
-                    <tr key={row._id} className="table-row-hover text-sm">
-                      <td className="table-cell">{formatDate(row.date)}</td>
-                      <td className="table-cell font-bold text-slate-900">{row.customerId?.name || "—"}</td>
-                      <td className="table-cell">
-                        <div className="flex flex-col gap-0.5">
-                          {row.items?.slice(0, 2).map((it, idx) => (
-                            <span key={idx} className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 truncate max-w-[120px]">
-                              {it.itemId?.name || "Item"}
-                            </span>
-                          ))}
-                          {(row.items?.length > 2) && <span className="text-[10px] text-slate-500 font-medium">+{row.items.length - 2} more items</span>}
-                        </div>
+                    <tr key={row._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-5 py-4 font-medium text-slate-700">{formatDate(row.date)}</td>
+                      <td className="px-5 py-4"><span className="font-bold text-indigo-700">{row.customerId?.name || "—"}</span></td>
+                      <td className="px-5 py-4">
+                         <div className="flex flex-col gap-1">
+                           {row.items?.map((it, idx) => (
+                             <div key={idx} className="text-xs text-slate-600 flex items-center gap-1">
+                               <span className="font-bold">{it.itemId?.name}</span>
+                               {it.subItemId && <span className="text-amber-600 bg-amber-50 px-1 rounded flex items-center gap-0.5"><FaSitemap className="w-2 h-2" /> {items.find(i => i._id === it.subItemId)?.name || "Sub-Item"}</span>}
+                               <span className="text-slate-400">({(it.quantity / 40).toFixed(2)} MUN)</span>
+                             </div>
+                           ))}
+                         </div>
                       </td>
-                      <td className="table-cell text-center font-medium">
-                        {row.items?.reduce((sum, it) => sum + (it.kattay || 0), 0) || "—"}
-                      </td>
-                      <td className="table-cell font-bold text-indigo-700">
-                        {row.netWeight || row.totalGrossWeight - row.totalSHCut || "—"}
-                      </td>
-                      <td className="table-cell font-black text-slate-900">{formatMoney(row.totalAmount)}</td>
-                      <td className="table-cell font-bold text-emerald-700">{formatMoney(row.amountReceived)}</td>
-                      <td className="table-cell text-xs uppercase font-medium">{row.truckNumber || "—"}</td>
-                      <td className="table-cell">
-                        {row.paymentStatus === 'paid' ? (
-                          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">Paid</span>
-                        ) : (
-                          <div className="flex flex-col gap-1">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold w-fit ${row.paymentStatus === 'partial' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
-                              {row.paymentStatus === 'partial' ? 'Partial' : 'Pending'}
-                            </span>
-                            {row.dueDate && (
-                              <span className={`text-[10px] whitespace-nowrap ${new Date(row.dueDate) < new Date() ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
-                                Due: {formatDate(row.dueDate)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="table-cell">
-                        <div className="flex items-center gap-1">
-                          {row.image && (
-                            <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center gap-1 text-indigo-500 hover:text-indigo-700 bg-indigo-50" title="Preview Image">
-                              <FaImage className="w-3.5 h-3.5" /> 
-                            </button>
-                          )}
-                          {row.paymentStatus !== 'paid' && (
-                            <button type="button" onClick={() => { setSelectedCollectEntry(row); setCollectModalOpen(true); }} className="btn-ghost-primary flex items-center gap-1 text-emerald-600 hover:text-emerald-700 bg-emerald-50" title="Collect Payment">
-                              <FaHandHoldingUsd className="w-3.5 h-3.5" /> Rec
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button type="button" onClick={() => handleEdit(row)} className="btn-ghost-primary flex items-center gap-1">
-                              <FaPlus className="w-3.5 h-3.5" /> Edit
-                            </button>
-                          )}
-                          <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="btn-ghost-secondary flex items-center gap-1">
-                            <FaFilePdf className="w-3.5 h-3.5" /> Invoice
-                          </button>
+                      <td className="px-5 py-4 text-right font-black text-slate-900">Rs. {formatMoney(row.totalAmount)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><FaEdit className="w-4 h-4" /></button>
+                           <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><FaFilePdf className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -917,28 +700,8 @@ export default function Sales() {
               <TablePagination page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} totalItems={sortedList.length} />
             </>
           )}
-          {!loading && list.length === 0 && (
-            <div className="empty-state">
-              <FaShoppingCart className="w-12 h-12 text-slate-300 mb-2" />
-              <p>Abhi koi sale nahi. Add sale button se add karein.</p>
-            </div>
-          )}
         </div>
       </section>
-
-      <CollectPaymentModal
-        open={collectModalOpen}
-        onClose={() => setCollectModalOpen(false)}
-        entry={selectedCollectEntry}
-        onSuccess={handleCollectSuccess}
-      />
-
-      <ImagePreviewModal
-        open={!!previewImage}
-        onClose={() => setPreviewImage(null)}
-        imageUrl={previewImage}
-        title="Sale Receipt Preview"
-      />
     </div>
   );
 }

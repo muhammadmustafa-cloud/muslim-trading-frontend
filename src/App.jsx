@@ -15,6 +15,7 @@ import Accounts from "./pages/Accounts";
 import Categories from "./pages/Categories";
 import Items from "./pages/Items";
 import ItemKhata from "./pages/ItemKhata";
+import SubItemLedger from "./pages/SubItemLedger";
 import Purchases from "./pages/Purchases.jsx";
 import CurrentStock from "./pages/CurrentStock";
 import Sales from "./pages/Sales";
@@ -34,6 +35,8 @@ import AuditSummary from "./pages/AuditSummary";
 import RawMaterials from "./pages/RawMaterials";
 import ConsolidatedLedger from "./pages/ConsolidatedLedger";
 import PartyLedger from "./pages/PartyLedger";
+import SubItemHistorySelector from "./pages/SubItemHistorySelector";
+import SubItemSummaryReport from "./pages/SubItemSummaryReport";
 import Login from "./pages/Login";
 import Users from "./pages/Users";
 import SetupOpeningBalances from "./pages/SetupOpeningBalances";
@@ -72,6 +75,9 @@ function App() {
           <Route path="categories" element={<Categories />} />
           <Route path="items" element={<Items />} />
           <Route path="items/:id/khata" element={<ItemKhata />} />
+          <Route path="items/:id/sub-khata" element={<SubItemLedger />} />
+          <Route path="items/:id/sub-items-summary-report" element={<SubItemSummaryReport />} />
+          <Route path="sub-item-ledger" element={<SubItemHistorySelector />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="current-stock" element={<CurrentStock />} />
           <Route path="sales" element={<Sales />} />

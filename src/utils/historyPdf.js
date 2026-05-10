@@ -501,3 +501,152 @@ export function downloadPartyLedgerPdf(name, ledger, summary, filters = {}) {
   doc.save(`party-ledger-${(name || "party").replace(/\s+/g, "-")}.pdf`);
 }
 
+
+/**
+ * Sub-Item Ledger PDF: specific sales history for a warehouse/batch.
+ */
+export function downloadSubItemLedgerPdf(data, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  let y = 15;
+
+  doc.setFontSize(18);
+  doc.setFont(undefined, "bold");
+  doc.text(`${data.name || "Sub-Item"} History`, MARGIN, y);
+  y += 8;
+  doc.setFont(undefined, "normal");
+  y = addGeneratedLine(doc, y);
+  
+  if (data.parentName) {
+    doc.setFontSize(10);
+    doc.text(`Parent Item: ${data.parentName}`, MARGIN, y);
+    y += 6;
+  }
+
+  if (filters.dateFrom || filters.dateTo) {
+    doc.setFontSize(9);
+    const filterStr = [
+      filters.dateFrom && `From: ${filters.dateFrom}`,
+      filters.dateTo && `To: ${filters.dateTo}`,
+    ].filter(Boolean).join(" | ");
+    doc.text(filterStr, MARGIN, y);
+    y += 6;
+  }
+
+  doc.setFontSize(9);
+  doc.text(
+    `Total Bags Sold: ${data.totalBagsSold || 0}  |  Weight Sold (MUN): ${(data.totalMunSold || 0).toFixed(3)}  |  Total Revenue: Rs. ${formatMoney(data.totalRevenue)}`,
+    MARGIN,
+    y
+  );
+  y += 10;
+
+  const body = (data.sales || []).map((row) => [
+    formatDate(row.date),
+    `${row.customerId?.name || "Customer"}\nRef: ${row._id.slice(-6).toUpperCase()}`,
+    row.kattay || 0,
+    (row.quantity / 40).toFixed(3),
+    formatMoney(row.rate),
+    formatMoney(row.totalAmount),
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Date", "Customer / Ref", "Bags", "MUN", "Rate", "Amount (Rs.)"]],
+    body,
+    foot: [[
+      { content: "TOTALS", colSpan: 2, styles: { halign: "right" } },
+      String(data.totalBagsSold || 0),
+      (data.totalMunSold || 0).toFixed(3),
+      "—",
+      formatMoney(data.totalRevenue),
+    ]],
+    ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: "auto" },
+      2: { cellWidth: 15, halign: "center" },
+      3: { cellWidth: 20, halign: "center" },
+      4: { cellWidth: 25, halign: "right" },
+      5: { cellWidth: 30, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`${(data.name || "subitem").replace(/\s+/g, "-")}-history.pdf`);
+}
+
+/**
+ * Aggregated Sub-Items Summary PDF: how much sold per warehouse for a main item.
+ */
+export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  let y = 15;
+
+  doc.setFontSize(18);
+  doc.setFont(undefined, "bold");
+  doc.text(`Sub-Items Sales Summary — ${mainItemName}`, MARGIN, y);
+  y += 8;
+  doc.setFont(undefined, "normal");
+  y = addGeneratedLine(doc, y);
+
+  if (filters.dateFrom || filters.dateTo) {
+    doc.setFontSize(9);
+    const filterStr = [
+      filters.dateFrom && `From: ${filters.dateFrom}`,
+      filters.dateTo && `To: ${filters.dateTo}`,
+    ].filter(Boolean).join(" | ");
+    doc.text(filterStr, MARGIN, y);
+    y += 8;
+  }
+
+  const totals = {
+    bags: data.reduce((sum, r) => sum + (r.totalBags || 0), 0),
+    weight: data.reduce((sum, r) => sum + (r.totalWeight || 0), 0),
+    mun: data.reduce((sum, r) => sum + (r.totalMun || 0), 0),
+    revenue: data.reduce((sum, r) => sum + (r.totalRevenue || 0), 0),
+  };
+
+  const body = data.map((row) => [
+    row.name,
+    row.quality || "—",
+    row.saleCount || 0,
+    row.totalBags || 0,
+    formatMoney(row.totalWeight) + " kg",
+    Number(row.totalMun || 0).toFixed(3),
+    formatMoney(row.totalRevenue),
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Sub-Item (Warehouse)", "Quality", "Sales", "Bags", "Weight (KG)", "MUN", "Revenue (Rs.)"]],
+    body,
+    foot: [[
+      { content: "GRAND TOTALS", colSpan: 3, styles: { halign: "right" } },
+      String(totals.bags),
+      formatMoney(totals.weight) + " kg",
+      Number(totals.mun).toFixed(3),
+      formatMoney(totals.revenue),
+    ]],
+    ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: "auto" },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 12, halign: "center" },
+      3: { cellWidth: 15, halign: "center" },
+      4: { cellWidth: 22, halign: "center" },
+      5: { cellWidth: 20, halign: "center" },
+      6: { cellWidth: 28, halign: "right" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`${(mainItemName || "item").replace(/\s+/g, "-")}-sub-items-summary.pdf`);
+}

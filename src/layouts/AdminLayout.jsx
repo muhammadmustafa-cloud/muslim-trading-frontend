@@ -23,6 +23,7 @@ import {
   FaFileContract,
   FaSignOutAlt,
   FaBookOpen,
+  FaSitemap,
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
@@ -44,6 +45,7 @@ const navItems = [
   { to: "/accounts", icon: FaWallet, label: "Accounts" },
   { to: "/categories", icon: FaTags, label: "Categories" },
   { to: "/items", icon: FaBox, label: "Items" },
+  { to: "/sub-item-ledger", icon: FaSitemap, label: "Sub-Item Management" },
   { to: "/purchases", icon: FaBoxOpen, label: "Purchase" },
   { to: "/current-stock", icon: FaBoxes, label: "Current Stock" },
   { to: "/sales", icon: FaShoppingCart, label: "Sales" },
