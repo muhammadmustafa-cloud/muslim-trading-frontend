@@ -548,7 +548,9 @@ export function drawSaleInvoice(doc, sale) {
 
   if (sale.items && sale.items.length > 0) {
     sale.items.forEach((it, idx) => {
-      const itName = it.itemId?.name || "Product";
+      const mainName = it.itemId?.name || "Product";
+      const subName = it.subItemId?.name || it.subItemName;
+      const itName = subName ? `${mainName} (${subName})` : mainName;
       doc.text(itName, 18, yPos);
       doc.text(String(it.kattay || 0), 95, yPos);
       
