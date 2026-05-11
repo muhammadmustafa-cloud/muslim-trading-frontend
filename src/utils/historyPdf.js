@@ -604,31 +604,30 @@ export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
   }
 
   const totals = {
-    bags: data.reduce((sum, r) => sum + (r.totalBags || 0), 0),
-    weight: data.reduce((sum, r) => sum + (r.totalWeight || 0), 0),
-    mun: data.reduce((sum, r) => sum + (r.totalMun || 0), 0),
+    inMun: data.reduce((sum, r) => sum + (r.inMun || 0), 0),
+    outMun: data.reduce((sum, r) => sum + (r.outMun || 0), 0),
+    balanceMun: data.reduce((sum, r) => sum + (r.balanceMun || 0), 0),
     revenue: data.reduce((sum, r) => sum + (r.totalRevenue || 0), 0),
   };
 
   const body = data.map((row) => [
     row.name,
     row.quality || "—",
-    row.saleCount || 0,
-    row.totalBags || 0,
-    formatMoney(row.totalWeight) + " kg",
-    Number(row.totalMun || 0).toFixed(3),
+    Number(row.inMun || 0).toFixed(3),
+    Number(row.outMun || 0).toFixed(3),
+    Number(row.balanceMun || 0).toFixed(3),
     formatMoney(row.totalRevenue),
   ]);
 
   autoTable(doc, {
     startY: y,
-    head: [["Sub-Item (Warehouse)", "Quality", "Sales", "Bags", "Weight (KG)", "MUN", "Revenue (Rs.)"]],
+    head: [["Warehouse / Batch", "Quality", "Stock IN (MUN)", "Stock OUT (MUN)", "Balance (MUN)", "Revenue (Rs.)"]],
     body,
     foot: [[
-      { content: "GRAND TOTALS", colSpan: 3, styles: { halign: "right" } },
-      String(totals.bags),
-      formatMoney(totals.weight) + " kg",
-      Number(totals.mun).toFixed(3),
+      { content: "COMBINED TOTALS", colSpan: 2, styles: { halign: "right" } },
+      Number(totals.inMun).toFixed(3),
+      Number(totals.outMun).toFixed(3),
+      Number(totals.balanceMun).toFixed(3),
       formatMoney(totals.revenue),
     ]],
     ...tableTheme,
@@ -639,11 +638,10 @@ export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
     columnStyles: {
       0: { cellWidth: "auto" },
       1: { cellWidth: 20 },
-      2: { cellWidth: 12, halign: "center" },
-      3: { cellWidth: 15, halign: "center" },
-      4: { cellWidth: 22, halign: "center" },
-      5: { cellWidth: 20, halign: "center" },
-      6: { cellWidth: 28, halign: "right" },
+      2: { cellWidth: 25, halign: "center" },
+      3: { cellWidth: 25, halign: "center" },
+      4: { cellWidth: 25, halign: "center" },
+      5: { cellWidth: 30, halign: "right" },
     },
   });
 

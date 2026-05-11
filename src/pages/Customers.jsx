@@ -15,7 +15,7 @@ export default function Customers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "", isAlsoSupplier: false, linkedSupplierId: "", createLinkedSupplier: false });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "", isWarehouse: false, isAlsoSupplier: false, linkedSupplierId: "", createLinkedSupplier: false });
   const [sortKey, setSortKey] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -51,7 +51,7 @@ export default function Customers() {
   }, []);
 
   const resetForm = () => {
-    setForm({ name: "", phone: "", address: "", notes: "", isAlsoSupplier: false, linkedSupplierId: "", createLinkedSupplier: false });
+    setForm({ name: "", phone: "", address: "", notes: "", isWarehouse: false, isAlsoSupplier: false, linkedSupplierId: "", createLinkedSupplier: false });
     setEditingId(null);
     setModalOpen(false);
   };
@@ -67,6 +67,7 @@ export default function Customers() {
       phone: row.phone || "",
       address: row.address || "",
       notes: row.notes || "",
+      isWarehouse: !!row.isWarehouse,
       isAlsoSupplier: !!row.isAlsoSupplier,
       linkedSupplierId: row.linkedSupplierId?._id || row.linkedSupplierId || "",
       createLinkedSupplier: false,
@@ -99,6 +100,7 @@ export default function Customers() {
         phone: (form.phone || "").trim(),
         address: (form.address || "").trim(),
         notes: (form.notes || "").trim(),
+        isWarehouse: !!form.isWarehouse,
         isAlsoSupplier: !!form.isAlsoSupplier,
         linkedSupplierId: form.isAlsoSupplier && form.linkedSupplierId ? form.linkedSupplierId : undefined,
         createLinkedSupplier: form.isAlsoSupplier && form.createLinkedSupplier ? true : undefined,
@@ -183,10 +185,15 @@ export default function Customers() {
           <div className="sm:col-span-2">
             <label className="input-label">Notes</label>
             <input type="text" placeholder="Optional notes" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="input-field" />
-          </div>
-          <div className="sm:col-span-2 flex items-center gap-2">
-            <input type="checkbox" id="isAlsoSupplier" checked={form.isAlsoSupplier} onChange={(e) => setForm((f) => ({ ...f, isAlsoSupplier: e.target.checked, linkedSupplierId: e.target.checked ? f.linkedSupplierId : "", createLinkedSupplier: false }))} className="rounded border-slate-300" />
-            <label htmlFor="isAlsoSupplier" className="text-sm font-medium text-slate-700">Ye supplier bhi hai (hum inse bhi khareedte hain)</label>
+          </div>          <div className="sm:col-span-2 flex flex-col gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+             <div className="flex items-center gap-2">
+                <input type="checkbox" id="isWarehouse" checked={form.isWarehouse} onChange={(e) => setForm((f) => ({ ...f, isWarehouse: e.target.checked }))} className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500" />
+                <label htmlFor="isWarehouse" className="text-sm font-bold text-amber-800">Ye apna Warehouse / Branch hai?</label>
+             </div>
+             <div className="flex items-center gap-2">
+                <input type="checkbox" id="isAlsoSupplier" checked={form.isAlsoSupplier} onChange={(e) => setForm((f) => ({ ...f, isAlsoSupplier: e.target.checked, linkedSupplierId: e.target.checked ? f.linkedSupplierId : "", createLinkedSupplier: false }))} className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" />
+                <label htmlFor="isAlsoSupplier" className="text-sm font-medium text-slate-700">Ye customer supplier bhi hai</label>
+             </div>
           </div>
           {form.isAlsoSupplier && (
             <div className="sm:col-span-2 space-y-2">

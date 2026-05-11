@@ -63,8 +63,9 @@ export default function SubItemSummaryReport() {
   };
 
   const totals = {
-    bags: list.reduce((sum, r) => sum + (r.totalBags || 0), 0),
-    mun: list.reduce((sum, r) => sum + (r.totalMun || 0), 0),
+    inMun: list.reduce((sum, r) => sum + (r.inMun || 0), 0),
+    outMun: list.reduce((sum, r) => sum + (r.outMun || 0), 0),
+    balanceMun: list.reduce((sum, r) => sum + (r.balanceMun || 0), 0),
     revenue: list.reduce((sum, r) => sum + (r.totalRevenue || 0), 0),
   };
 
@@ -78,9 +79,9 @@ export default function SubItemSummaryReport() {
           <div>
             <h1 className="page-title flex items-center gap-2">
               <FaSitemap className="w-7 h-7 text-amber-500" />
-              {mainItem?.name || "Item"} - Sub-Items Sales Summary
+              {mainItem?.name || "Item"} - Warehouse Stock & Sales Summary
             </h1>
-            <p className="page-subtitle italic font-medium">Aggregated sales performance across all linked warehouses/batches.</p>
+            <p className="page-subtitle italic font-medium">Tracking stock movements (In/Out) via internal transfers and sales.</p>
           </div>
         </div>
         <button type="button" onClick={handlePdf} className="btn-primary flex items-center gap-2" disabled={loading || list.length === 0}>
@@ -92,7 +93,7 @@ export default function SubItemSummaryReport() {
 
       <section className="card p-4 border-l-4 border-l-amber-400">
         <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2 uppercase tracking-tighter text-xs">
-           <FaShoppingCart className="w-3 h-3" /> Filter by Sale Date
+           <FaShoppingCart className="w-3 h-3" /> Filter by Movement Date
         </h3>
         <div className="flex flex-wrap items-center gap-4">
           <div>
@@ -111,46 +112,50 @@ export default function SubItemSummaryReport() {
         <div className="card p-12 flex justify-center"><div className="loading-spinner" /></div>
       ) : (
         <>
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="card p-6 bg-white border-b-4 border-b-amber-500 shadow-sm">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Combined Revenue</p>
-              <p className="text-3xl font-black text-slate-900 mt-2">Rs. {formatMoney(totals.revenue)}</p>
-              <p className="text-[10px] text-amber-600 font-bold mt-1">Sum of all sub-item sales in this period.</p>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Total In (Transfer In)</p>
+              <p className="text-3xl font-black text-slate-900 mt-2 text-center">{totals.inMun.toFixed(3)}</p>
+              <p className="text-[10px] text-amber-600 font-bold mt-1 text-center">Weight received from mill.</p>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-indigo-500 shadow-sm">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Combined Weight (MUN)</p>
-              <p className="text-3xl font-black text-indigo-700 mt-2">{totals.mun.toFixed(3)}</p>
-              <p className="text-[10px] text-slate-400 font-bold mt-1">Total weight sold across all warehouses.</p>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Total Out (Sales)</p>
+              <p className="text-3xl font-black text-indigo-700 mt-2 text-center">{totals.outMun.toFixed(3)}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center italic tracking-tighter">Total weight sold to parties.</p>
+            </div>
+            <div className="card p-6 bg-white border-b-4 border-b-emerald-600 shadow-sm">
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Current Balance</p>
+              <p className="text-3xl font-black text-emerald-700 mt-2 text-center">{totals.balanceMun.toFixed(3)}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center uppercase tracking-widest">Available Stock in MUN</p>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-slate-900 shadow-sm">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Combined Bags</p>
-              <p className="text-3xl font-black text-slate-900 mt-2">{totals.bags}</p>
-              <p className="text-[10px] text-slate-400 font-bold mt-1 italic tracking-tighter">Total bag count out of mill.</p>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Sales Revenue</p>
+              <p className="text-3xl font-black text-slate-900 mt-2 text-center">Rs. {formatMoney(totals.revenue)}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center italic tracking-tighter">Income from real parties.</p>
             </div>
           </section>
 
           <section className="card overflow-hidden border-t border-slate-200 shadow-xl">
              <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
-                <h2 className="font-black uppercase tracking-widest text-sm">Aggregated Performance Table</h2>
-                <span className="text-[10px] font-bold bg-white/10 px-2 py-1 rounded">By Warehouse / Batch</span>
+                <h2 className="font-black uppercase tracking-widest text-sm">Warehouse Aggregated Stock Table</h2>
+                <span className="text-[10px] font-bold bg-white/10 px-2 py-1 rounded">Stock (In/Out/Balance)</span>
              </div>
              <div className="overflow-x-auto">
                 <table className="w-full">
                    <thead>
                       <tr className="bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border-b border-slate-200">
-                         <th className="py-4 px-5 text-left">Sub-Item Name</th>
+                         <th className="py-4 px-5 text-left">Warehouse / Batch</th>
                          <th className="py-4 px-5 text-left">Quality</th>
-                         <th className="py-4 px-5 text-center">Sales</th>
-                         <th className="py-4 px-5 text-center">Bags</th>
-                         <th className="py-4 px-5 text-center">Weight (KG)</th>
-                         <th className="py-4 px-5 text-center">MUN (40kg)</th>
-                         <th className="py-4 px-5 text-right font-bold text-indigo-600">Total Revenue</th>
+                         <th className="py-4 px-5 text-center text-amber-700 bg-amber-50">Stock IN (MUN)</th>
+                         <th className="py-4 px-5 text-center text-indigo-700 bg-indigo-50">Stock OUT (MUN)</th>
+                         <th className="py-4 px-5 text-center text-emerald-700 bg-emerald-50">Balance (MUN)</th>
+                         <th className="py-4 px-5 text-right font-bold text-slate-900">Revenue (Rs.)</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
                       {list.length === 0 ? (
                          <tr>
-                            <td colSpan="7" className="py-20 text-center text-slate-400 font-medium">
+                            <td colSpan="6" className="py-20 text-center text-slate-400 font-medium">
                                Koi record nahi mila is period mein.
                             </td>
                          </tr>
@@ -160,12 +165,13 @@ export default function SubItemSummaryReport() {
                                <td className="py-4 px-5 font-black text-slate-800 text-sm flex items-center gap-2">
                                   <FaBox className="text-amber-500/50 w-3 h-3" /> {row.name}
                                </td>
-                               <td className="py-4 px-5 text-slate-500 font-medium">{row.quality || "—"}</td>
-                               <td className="py-4 px-5 text-center font-bold text-slate-600 italic text-[10px]">{row.saleCount} sales</td>
-                               <td className="py-4 px-5 text-center font-black text-slate-900 bg-slate-50/50">{row.totalBags}</td>
-                               <td className="py-4 px-5 text-center font-black text-slate-900">{formatMoney(row.totalWeight)} kg</td>
-                               <td className="py-4 px-5 text-center font-black text-indigo-700 bg-indigo-50/10">{row.totalMun.toFixed(3)}</td>
-                               <td className="py-4 px-5 text-right font-black text-slate-900 bg-emerald-50/5">
+                               <td className="py-4 px-5 text-slate-500 font-medium text-xs">{row.quality || "—"}</td>
+                               <td className="py-4 px-5 text-center font-black text-amber-700 bg-amber-50/30">{row.inMun.toFixed(3)}</td>
+                               <td className="py-4 px-5 text-center font-black text-indigo-700 bg-indigo-50/30">{row.outMun.toFixed(3)}</td>
+                               <td className={`py-4 px-5 text-center font-black bg-emerald-50/30 ${row.balanceMun < 0 ? 'text-red-600':'text-emerald-700'}`}>
+                                  {row.balanceMun.toFixed(3)}
+                               </td>
+                               <td className="py-4 px-5 text-right font-black text-slate-900">
                                   {formatMoney(row.totalRevenue)}
                                </td>
                             </tr>
@@ -174,10 +180,10 @@ export default function SubItemSummaryReport() {
                    </tbody>
                    <tfoot className="bg-slate-900 text-white font-black text-xs uppercase">
                       <tr>
-                         <td colSpan="3" className="py-4 px-5 text-right border-r border-slate-800">Totals:</td>
-                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{totals.bags}</td>
-                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{formatMoney(list.reduce((sum, r) => sum + (r.totalWeight || 0), 0))} kg</td>
-                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{totals.mun.toFixed(3)}</td>
+                         <td colSpan="2" className="py-4 px-5 text-right border-r border-slate-800 italic">Combined Totals:</td>
+                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{totals.inMun.toFixed(3)}</td>
+                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{totals.outMun.toFixed(3)}</td>
+                         <td className="py-4 px-5 text-center border-r border-slate-800 text-emerald-400">{totals.balanceMun.toFixed(3)}</td>
                          <td className="py-4 px-5 text-right text-emerald-400 text-lg tracking-tighter">Rs. {formatMoney(totals.revenue)}</td>
                       </tr>
                    </tfoot>
