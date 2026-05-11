@@ -339,6 +339,17 @@ export default function Sales() {
       return;
     }
 
+    // NEW: Force sub-item selection if main item has sub-items
+    for (let i = 0; i < form.items.length; i++) {
+      const line = form.items[i];
+      const hasSubItems = items.some(item => item.parentId === line.itemId);
+      if (hasSubItems && !line.subItemId) {
+        const itemName = items.find(it => it._id === line.itemId)?.name || "Item";
+        setError(`${itemName} ke liye Sub-Item (Warehouse) select karna lazmi hai.`);
+        return;
+      }
+    }
+
     setError("");
     setSubmitting(true);
     try {
@@ -680,7 +691,7 @@ export default function Sales() {
                            {row.items?.map((it, idx) => (
                              <div key={idx} className="text-xs text-slate-600 flex items-center gap-1">
                                <span className="font-bold">{it.itemId?.name}</span>
-                               {it.subItemId && <span className="text-amber-600 bg-amber-50 px-1 rounded flex items-center gap-0.5"><FaSitemap className="w-2 h-2" /> {items.find(i => i._id === it.subItemId)?.name || "Sub-Item"}</span>}
+                               {it.subItemId && <span className="text-amber-600 bg-amber-50 px-1 rounded flex items-center gap-0.5"><FaSitemap className="w-2 h-2" /> {it.subItemId.name || "Sub-Item"}</span>}
                                <span className="text-slate-400">({(it.quantity / 40).toFixed(2)} MUN)</span>
                              </div>
                            ))}
