@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
 import { downloadSalesPdf, downloadSaleInvoicePdf } from "../utils/exportPdf.js";
-import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown, FaSitemap } from "react-icons/fa";
+import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash } from "react-icons/fa";
 import { FaEdit } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
@@ -410,6 +410,17 @@ export default function Sales() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Kya aap waqai is sale ko delete karna chahte hain? Is se tamam linked payments bhi delete ho jayengi.")) return;
+    try {
+      await apiDelete(`/sales/${id}`);
+      fetchList();
+      fetchStockData();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   const mainItemsList = useMemo(() => items.filter(i => !i.parentId), [items]);
 
   const toggleSort = (key) => {
@@ -700,8 +711,11 @@ export default function Sales() {
                       <td className="px-5 py-4 text-right font-black text-slate-900">Rs. {formatMoney(row.totalAmount)}</td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-2">
-                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><FaEdit className="w-4 h-4" /></button>
-                           <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><FaFilePdf className="w-4 h-4" /></button>
+                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
+                           <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Invoice"><FaFilePdf className="w-4 h-4" /></button>
+                           {isAdmin && (
+                             <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><FaTrash className="w-4 h-4" /></button>
+                           )}
                         </div>
                       </td>
                     </tr>
