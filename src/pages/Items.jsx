@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap } from "react-icons/fa";
+import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 
 export default function Items() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [list, setList] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
@@ -95,6 +97,16 @@ export default function Items() {
     });
     setEditingId(row._id);
     setModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Kya aap waqai is item ko delete karna chahte hain? Is se tamam linked sub-items bhi delete ho jayenge.")) return;
+    try {
+      await apiDelete(`/items/${id}`);
+      fetchList();
+    } catch (e) {
+      alert(e.message);
+    }
   };
 
   const toggleSort = (key) => {
@@ -205,9 +217,12 @@ export default function Items() {
                       <td className="px-5 py-4 text-slate-500">{row.quality || "—"}</td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-2">
-                          <button type="button" onClick={() => navigate(`/items/${row._id}/khata`)} className="btn-ghost-primary flex items-center gap-1.5"><FaBook /> Khata</button>
-                          <button type="button" onClick={() => navigate(`/items/${row._id}/sub-items-summary-report`)} className="btn-ghost-primary flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"><FaSitemap /> Summary</button>
-                          <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><FaEdit className="w-4 h-4" /></button>
+                           <button type="button" onClick={() => navigate(`/items/${row._id}/khata`)} className="btn-ghost-primary flex items-center gap-1.5"><FaBook /> Khata</button>
+                           <button type="button" onClick={() => navigate(`/items/${row._id}/sub-items-summary-report`)} className="btn-ghost-primary flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"><FaSitemap /> Summary</button>
+                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
+                           {isAdmin && (
+                             <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><FaTrash className="w-4 h-4" /></button>
+                           )}
                         </div>
                       </td>
                     </tr>

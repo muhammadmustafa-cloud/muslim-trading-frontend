@@ -4,9 +4,11 @@ import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaSitemap, FaSearch, FaBook, FaSort, FaSortUp, FaSortDown, FaBox, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function SubItems() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [list, setList] = useState([]);
   const [mainItems, setMainItems] = useState([]);
   const [search, setSearch] = useState("");
@@ -209,8 +211,10 @@ export default function SubItems() {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-1">
                           <button type="button" onClick={() => navigate(`/items/${row._id}/sub-khata`)} className="btn-ghost-primary px-3 py-1.5 text-xs flex items-center gap-1.5"><FaBook /> Ledger</button>
-                          <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><FaEdit className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><FaTrash className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
+                          {isAdmin && (
+                            <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><FaTrash className="w-4 h-4" /></button>
+                          )}
                         </div>
                       </td>
                     </tr>
