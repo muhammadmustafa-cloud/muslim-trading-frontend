@@ -23,6 +23,7 @@ export default function Items() {
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [customers, setCustomers] = useState([]);
 
   const fetchCategories = async () => {
     try {
@@ -49,13 +50,21 @@ export default function Items() {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const data = await apiGet("/customers");
+      setCustomers((data.data || []).filter(c => c.isWarehouse));
+    } catch (_) { }
+  };
+
   useEffect(() => {
     fetchList();
     fetchCategories();
+    fetchCustomers();
   }, [search, categoryFilter]);
 
   const resetForm = () => {
-    setForm({ name: "", categoryId: "", quality: "" });
+    setForm({ name: "", categoryId: "", quality: "", linkedWarehouseCustomerId: "" });
     setEditingId(null);
     setModalOpen(false);
   };
@@ -77,6 +86,7 @@ export default function Items() {
         name: form.name.trim(),
         categoryId: form.categoryId || undefined,
         quality: (form.quality || "").trim(),
+        linkedWarehouseCustomerId: form.linkedWarehouseCustomerId || undefined,
       };
       if (editingId) await apiPut(`/items/${editingId}`, payload);
       else await apiPost("/items", payload);
@@ -94,6 +104,7 @@ export default function Items() {
       name: row.name || "",
       categoryId: row.categoryId?._id || row.categoryId || "",
       quality: row.quality || "",
+      linkedWarehouseCustomerId: row.linkedWarehouseCustomerId?._id || row.linkedWarehouseCustomerId || "",
     });
     setEditingId(row._id);
     setModalOpen(true);
@@ -171,6 +182,16 @@ export default function Items() {
           <div>
             <label className="input-label">Quality</label>
             <input type="text" placeholder="e.g. Premium, Standard" value={form.quality} onChange={(e) => setForm((f) => ({ ...f, quality: e.target.value }))} className="input-field" />
+          </div>
+          <div>
+            <label className="input-label font-bold text-amber-700">Link to Warehouse Customer (Ledger Correction)</label>
+            <select value={form.linkedWarehouseCustomerId} onChange={(e) => setForm((f) => ({ ...f, linkedWarehouseCustomerId: e.target.value }))} className="input-field border-amber-200 bg-amber-50/30">
+              <option value="">— No Warehouse Link —</option>
+              {customers.map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-400 mt-1">Agar aap chahte hain ke is item ki sale ka credit "Item Ledger" ki bajaye "Customer Ledger" mein jaye, tw yahan warehouse account select karein.</p>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2">
