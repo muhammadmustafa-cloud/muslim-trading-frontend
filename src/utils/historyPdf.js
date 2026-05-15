@@ -586,9 +586,9 @@ export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let y = 15;
 
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont(undefined, "bold");
-  doc.text(`Sub-Items Sales Summary — ${mainItemName}`, MARGIN, y);
+  doc.text(`Sub-Items Stock Summary — ${mainItemName}`, MARGIN, y);
   y += 8;
   doc.setFont(undefined, "normal");
   y = addGeneratedLine(doc, y);
@@ -604,44 +604,81 @@ export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
   }
 
   const totals = {
+    inBags: data.reduce((sum, r) => sum + (r.inBags || 0), 0),
+    inWeight: data.reduce((sum, r) => sum + (r.inWeight || 0), 0),
     inMun: data.reduce((sum, r) => sum + (r.inMun || 0), 0),
+    outBags: data.reduce((sum, r) => sum + (r.outBags || 0), 0),
+    outWeight: data.reduce((sum, r) => sum + (r.outWeight || 0), 0),
     outMun: data.reduce((sum, r) => sum + (r.outMun || 0), 0),
+    balanceBags: data.reduce((sum, r) => sum + (r.balanceBags || 0), 0),
+    balanceWeight: data.reduce((sum, r) => sum + (r.balanceWeight || 0), 0),
     balanceMun: data.reduce((sum, r) => sum + (r.balanceMun || 0), 0),
-    revenue: data.reduce((sum, r) => sum + (r.totalRevenue || 0), 0),
   };
 
   const body = data.map((row) => [
-    row.name,
-    row.quality || "—",
+    `${row.name}\n(${row.quality || "—"})`,
+    row.inBags || 0,
+    Number(row.inWeight || 0).toLocaleString(),
     Number(row.inMun || 0).toFixed(3),
+    row.outBags || 0,
+    Number(row.outWeight || 0).toLocaleString(),
     Number(row.outMun || 0).toFixed(3),
+    row.balanceBags || 0,
+    Number(row.balanceWeight || 0).toLocaleString(),
     Number(row.balanceMun || 0).toFixed(3),
-    formatMoney(row.totalRevenue),
   ]);
 
   autoTable(doc, {
     startY: y,
-    head: [["Warehouse / Batch", "Quality", "Stock IN (MUN)", "Stock OUT (MUN)", "Balance (MUN)", "Revenue (Rs.)"]],
+    head: [
+      [
+        { content: "Warehouse / Quality", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
+        { content: "Stock IN (Credit)", colSpan: 3, styles: { halign: "center", fillColor: [161, 98, 7] } },
+        { content: "Stock OUT (Debit)", colSpan: 3, styles: { halign: "center", fillColor: [67, 56, 202] } },
+        { content: "Balance (Baqi)", colSpan: 3, styles: { halign: "center", fillColor: [4, 120, 87] } },
+      ],
+      [
+        { content: "Bags", styles: { halign: "center", fillColor: [217, 119, 6] } },
+        { content: "Weight (Kg)", styles: { halign: "center", fillColor: [217, 119, 6] } },
+        { content: "MUN", styles: { halign: "center", fillColor: [217, 119, 6] } },
+        { content: "Bags", styles: { halign: "center", fillColor: [99, 102, 241] } },
+        { content: "Weight (Kg)", styles: { halign: "center", fillColor: [99, 102, 241] } },
+        { content: "MUN", styles: { halign: "center", fillColor: [99, 102, 241] } },
+        { content: "Bags", styles: { halign: "center", fillColor: [16, 185, 129] } },
+        { content: "Weight (Kg)", styles: { halign: "center", fillColor: [16, 185, 129] } },
+        { content: "MUN", styles: { halign: "center", fillColor: [16, 185, 129] } },
+      ],
+    ],
     body,
     foot: [[
-      { content: "COMBINED TOTALS", colSpan: 2, styles: { halign: "right" } },
-      Number(totals.inMun).toFixed(3),
-      Number(totals.outMun).toFixed(3),
-      Number(totals.balanceMun).toFixed(3),
-      formatMoney(totals.revenue),
+      { content: "COMBINED TOTALS", styles: { halign: "right", fontStyle: "bold" } },
+      { content: totals.inBags, styles: { halign: "center" } },
+      { content: totals.inWeight.toLocaleString(), styles: { halign: "right" } },
+      { content: totals.inMun.toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: totals.outBags, styles: { halign: "center" } },
+      { content: totals.outWeight.toLocaleString(), styles: { halign: "right" } },
+      { content: totals.outMun.toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: totals.balanceBags, styles: { halign: "center" } },
+      { content: totals.balanceWeight.toLocaleString(), styles: { halign: "right" } },
+      { content: totals.balanceMun.toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
     ]],
-    ...tableTheme,
     theme: "grid",
-    styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1 },
-    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
-    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+    margin: { left: MARGIN, right: MARGIN },
+    styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.1, textColor: [30, 41, 59] },
+    headStyles: { textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
-      0: { cellWidth: "auto" },
-      1: { cellWidth: 20 },
-      2: { cellWidth: 25, halign: "center" },
-      3: { cellWidth: 25, halign: "center" },
-      4: { cellWidth: 25, halign: "center" },
-      5: { cellWidth: 30, halign: "right" },
+      0: { cellWidth: 38 },
+      1: { halign: "center", cellWidth: 14 },
+      2: { halign: "right", cellWidth: 20 },
+      3: { halign: "center", cellWidth: 16, fontStyle: "bold" },
+      4: { halign: "center", cellWidth: 14 },
+      5: { halign: "right", cellWidth: 20 },
+      6: { halign: "center", cellWidth: 16, fontStyle: "bold" },
+      7: { halign: "center", cellWidth: 14 },
+      8: { halign: "right", cellWidth: 20 },
+      9: { halign: "center", cellWidth: 16, fontStyle: "bold" },
     },
   });
 

@@ -63,8 +63,14 @@ export default function SubItemSummaryReport() {
   };
 
   const totals = {
+    inBags: list.reduce((sum, r) => sum + (r.inBags || 0), 0),
+    inWeight: list.reduce((sum, r) => sum + (r.inWeight || 0), 0),
     inMun: list.reduce((sum, r) => sum + (r.inMun || 0), 0),
+    outBags: list.reduce((sum, r) => sum + (r.outBags || 0), 0),
+    outWeight: list.reduce((sum, r) => sum + (r.outWeight || 0), 0),
     outMun: list.reduce((sum, r) => sum + (r.outMun || 0), 0),
+    balanceBags: list.reduce((sum, r) => sum + (r.balanceBags || 0), 0),
+    balanceWeight: list.reduce((sum, r) => sum + (r.balanceWeight || 0), 0),
     balanceMun: list.reduce((sum, r) => sum + (r.balanceMun || 0), 0),
     revenue: list.reduce((sum, r) => sum + (r.totalRevenue || 0), 0),
   };
@@ -115,18 +121,18 @@ export default function SubItemSummaryReport() {
           <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="card p-6 bg-white border-b-4 border-b-amber-500 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Total In (Transfer In)</p>
-              <p className="text-3xl font-black text-slate-900 mt-2 text-center">{totals.inMun.toFixed(3)}</p>
-              <p className="text-[10px] text-amber-600 font-bold mt-1 text-center">Weight received from mill.</p>
+              <p className="text-3xl font-black text-slate-900 mt-2 text-center">{totals.inMun.toFixed(3)} <span className="text-sm font-bold text-slate-400">MUN</span></p>
+              <p className="text-[10px] text-amber-600 font-bold mt-1 text-center">{totals.inBags} Bags | {totals.inWeight.toLocaleString()} Kg</p>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-indigo-500 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Total Out (Sales)</p>
-              <p className="text-3xl font-black text-indigo-700 mt-2 text-center">{totals.outMun.toFixed(3)}</p>
-              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center italic tracking-tighter">Total weight sold to parties.</p>
+              <p className="text-3xl font-black text-indigo-700 mt-2 text-center">{totals.outMun.toFixed(3)} <span className="text-sm font-bold text-slate-400">MUN</span></p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center italic tracking-tighter">{totals.outBags} Bags | {totals.outWeight.toLocaleString()} Kg</p>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-emerald-600 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Current Balance</p>
-              <p className="text-3xl font-black text-emerald-700 mt-2 text-center">{totals.balanceMun.toFixed(3)}</p>
-              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center uppercase tracking-widest">Available Stock in MUN</p>
+              <p className="text-3xl font-black text-emerald-700 mt-2 text-center">{totals.balanceMun.toFixed(3)} <span className="text-sm font-bold text-slate-400">MUN</span></p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 text-center uppercase tracking-widest">{totals.balanceBags} Bags | {totals.balanceWeight.toLocaleString()} Kg</p>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-slate-900 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Sales Revenue</p>
@@ -143,48 +149,79 @@ export default function SubItemSummaryReport() {
              <div className="overflow-x-auto">
                 <table className="w-full">
                    <thead>
-                      <tr className="bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border-b border-slate-200">
-                         <th className="py-4 px-5 text-left">Warehouse / Batch</th>
-                         <th className="py-4 px-5 text-left">Quality</th>
-                         <th className="py-4 px-5 text-center text-amber-700 bg-amber-50">Stock IN (MUN)</th>
-                         <th className="py-4 px-5 text-center text-indigo-700 bg-indigo-50">Stock OUT (MUN)</th>
-                         <th className="py-4 px-5 text-center text-emerald-700 bg-emerald-50">Balance (MUN)</th>
-                         <th className="py-4 px-5 text-right font-bold text-slate-900">Revenue (Rs.)</th>
+                      <tr className="bg-slate-200 text-slate-700 font-black text-[9px] uppercase tracking-widest border-b border-slate-300">
+                         <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300">Warehouse / Batch / Quality</th>
+                         <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-amber-100/50 text-amber-900">Stock IN (Aaya)</th>
+                         <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-indigo-100/50 text-indigo-900">Stock OUT (Gya)</th>
+                         <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-emerald-100/50 text-emerald-900">Balance (Baqi)</th>
+                         <th rowSpan="2" className="py-4 px-3 text-right font-bold text-slate-900">Revenue (Rs.)</th>
+                      </tr>
+                      <tr className="bg-slate-100 text-slate-600 font-black text-[8px] uppercase tracking-widest border-b border-slate-200">
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">Bags</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">Weight (Kg)</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">MUN</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">Bags</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">Weight (Kg)</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">MUN</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50">Bags</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50">Weight (Kg)</th>
+                         <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50 font-bold">MUN</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
                       {list.length === 0 ? (
                          <tr>
-                            <td colSpan="6" className="py-20 text-center text-slate-400 font-medium">
+                            <td colSpan="11" className="py-20 text-center text-slate-400 font-medium">
                                Koi record nahi mila is period mein.
                             </td>
                          </tr>
                       ) : (
                          list.map((row) => (
-                            <tr key={row._id} className="hover:bg-slate-50 transition-colors group">
-                               <td className="py-4 px-5 font-black text-slate-800 text-sm flex items-center gap-2">
-                                  <FaBox className="text-amber-500/50 w-3 h-3" /> {row.name}
+                            <tr key={row._id} className="hover:bg-slate-50 transition-colors group text-xs">
+                               <td className="py-3 px-3 border-r border-slate-100">
+                                  <div className="font-black text-slate-800 flex items-center gap-2">
+                                     <FaBox className="text-amber-500/50 w-3 h-3" /> {row.name}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-medium">{row.quality || "—"}</div>
                                </td>
-                               <td className="py-4 px-5 text-slate-500 font-medium text-xs">{row.quality || "—"}</td>
-                               <td className="py-4 px-5 text-center font-black text-amber-700 bg-amber-50/30">{row.inMun.toFixed(3)}</td>
-                               <td className="py-4 px-5 text-center font-black text-indigo-700 bg-indigo-50/30">{row.outMun.toFixed(3)}</td>
-                               <td className={`py-4 px-5 text-center font-black bg-emerald-50/30 ${row.balanceMun < 0 ? 'text-red-600':'text-emerald-700'}`}>
+                               
+                               {/* Stock IN */}
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/10 font-bold">{row.inBags || 0}</td>
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/10">{row.inWeight.toLocaleString()}</td>
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/30 font-black text-amber-800">{row.inMun.toFixed(3)}</td>
+                               
+                               {/* Stock OUT */}
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/10 font-bold">{row.outBags || 0}</td>
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/10">{row.outWeight.toLocaleString()}</td>
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/30 font-black text-indigo-800">{row.outMun.toFixed(3)}</td>
+                               
+                               {/* Balance */}
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/10 font-bold">{row.balanceBags || 0}</td>
+                               <td className="py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/10">{row.balanceWeight.toLocaleString()}</td>
+                               <td className={`py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/30 font-black ${row.balanceMun < 0 ? 'text-red-600':'text-emerald-800'}`}>
                                   {row.balanceMun.toFixed(3)}
                                </td>
-                               <td className="py-4 px-5 text-right font-black text-slate-900">
+                               
+                               <td className="py-3 px-3 text-right font-black text-slate-900 bg-slate-50/30">
                                   {formatMoney(row.totalRevenue)}
                                </td>
                             </tr>
                          ))
                       )}
                    </tbody>
-                   <tfoot className="bg-slate-900 text-white font-black text-xs uppercase">
+                   <tfoot className="bg-slate-900 text-white font-black text-[10px] uppercase">
                       <tr>
-                         <td colSpan="2" className="py-4 px-5 text-right border-r border-slate-800 italic">Combined Totals:</td>
-                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{totals.inMun.toFixed(3)}</td>
-                         <td className="py-4 px-5 text-center border-r border-slate-800 text-amber-400">{totals.outMun.toFixed(3)}</td>
-                         <td className="py-4 px-5 text-center border-r border-slate-800 text-emerald-400">{totals.balanceMun.toFixed(3)}</td>
-                         <td className="py-4 px-5 text-right text-emerald-400 text-lg tracking-tighter">Rs. {formatMoney(totals.revenue)}</td>
+                         <td className="py-4 px-3 text-right border-r border-slate-800 italic">Combined Totals:</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-400">{totals.inBags}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-400">{totals.inWeight.toLocaleString()}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-300 text-xs">{totals.inMun.toFixed(3)}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-400">{totals.outBags}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-400">{totals.outWeight.toLocaleString()}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-300 text-xs">{totals.outMun.toFixed(3)}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-400">{totals.balanceBags}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-400">{totals.balanceWeight.toLocaleString()}</td>
+                         <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-300 text-xs">{totals.balanceMun.toFixed(3)}</td>
+                         <td className="py-4 px-3 text-right text-emerald-400 text-sm tracking-tighter">Rs. {formatMoney(totals.revenue)}</td>
                       </tr>
                    </tfoot>
                 </table>
