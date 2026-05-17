@@ -286,7 +286,7 @@ export default function Sales() {
       netWeight: String(row.netWeight || ""),
       items: (row.items && row.items.length > 0) ? row.items.map(item => ({
         itemId: item.itemId?._id || item.itemId || "",
-        subItemId: item.subItemId || "",
+        subItemId: item.subItemId?._id || item.subItemId || "",
         kattay: String(item.kattay || ""),
         kgPerKata: String(item.kgPerKata || ""),
         grossWeight: String(item.grossWeight || ""),
