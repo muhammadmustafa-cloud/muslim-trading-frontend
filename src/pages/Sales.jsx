@@ -667,7 +667,7 @@ export default function Sales() {
       </header>
 
       {/* Filters */}
-      <section className="card p-4 relative z-20">
+      <section className="card p-4 overflow-visible relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div><label className="input-label">Date from</label><input type="date" value={filters.dateFrom} onChange={(e) => setFilters(f => ({ ...f, dateFrom: e.target.value }))} className="input-field" /></div>
           <div><label className="input-label">Date to</label><input type="date" value={filters.dateTo} onChange={(e) => setFilters(f => ({ ...f, dateTo: e.target.value }))} className="input-field" /></div>

@@ -729,7 +729,7 @@ export default function Purchases() {
 
 
       {/* Filters */}
-      <section className="card p-4 relative z-20">
+      <section className="card p-4 overflow-visible relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
             <label className="input-label">Date from</label>
@@ -748,8 +748,8 @@ export default function Purchases() {
               placeholder="All Suppliers"
             />
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 relative">
               <label className="input-label">Item</label>
               <SearchableSelect
                 options={items}
