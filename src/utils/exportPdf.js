@@ -1309,7 +1309,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
   }
 
   // 1. Bank Accounts (Net Movements for Audit)
-  const bankAccs = (data.accounts || []).filter(a => !a.isMillKhata && !a.isDailyKhata);
+  const bankAccs = (data.accounts || []).filter(a => !a.isMillKhata && !a.isDailyKhata && a.showMirrorInDailyMemo !== false);
   if (bankAccs.length > 0) {
     addGroupHeader("1. BANK & CASH ACCOUNTS (PERIODIC NET)");
     bankAccs.forEach(a => {

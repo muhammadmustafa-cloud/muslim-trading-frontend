@@ -648,7 +648,7 @@ export default function AuditSummary() {
                     </div>
                   )}
                   {data.accounts
-                    .filter((acc) => !acc.isDailyKhata && !acc.isMillKhata)
+                    .filter((acc) => !acc.isDailyKhata && !acc.isMillKhata && acc.showMirrorInDailyMemo !== false)
                     .map((acc, i) => (
                       <div
                         key={i}
