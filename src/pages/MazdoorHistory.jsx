@@ -14,6 +14,8 @@ function getRowType(t) {
   if (t.category === "mazdoor_expense") return "Work Earned (Wage)";
   if (t.type === "deposit" && t.category === "udhaar_received") return "Udhaar wapas liya";
   if (t.category === "daily_wage") return "Work Earned (Wage)";
+  if (t.type === "deposit") return "Deposit / Wapas Aya";
+  if (t.type === "transfer") return "Transfer / Paid via Third Party";
   return t.type === "deposit" ? "Deposit" : "Withdraw";
 }
 function getRowAccount(t) {
@@ -75,9 +77,9 @@ export default function MazdoorHistory() {
   };
 
   const getDrCr = (t) => {
-    const isReceive = t.type === "deposit" && t.category === "udhaar_received";
+    const isReceive = t.type === "deposit";
     const cr = (t.type === "accrual" || t.category === "mazdoor_expense" || isReceive) ? (Number(t.amount) || 0) : 0;
-    const dr = (t.type === "salary" || t.type === "withdraw") ? (Number(t.amount) || 0) : 0;
+    const dr = (t.type === "salary" || t.type === "withdraw" || t.type === "transfer") ? (Number(t.amount) || 0) : 0;
     return { dr, cr };
   };
 

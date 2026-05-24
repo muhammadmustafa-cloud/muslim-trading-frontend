@@ -209,11 +209,13 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
     if (t.type === "accrual") return "Salary Posted (Earned)";
     if (t.category === "mazdoor_expense") return "Work Earned (Wage)";
     if (t.type === "deposit" && t.category === "udhaar_received") return "Udhaar wapas liya";
+    if (t.type === "deposit") return "Deposit / Wapas Aya";
     if (t.type === "withdraw") {
       if (t.category === "udhaar") return "Udhaar (Advance)";
       if (t.category === "salary") return "Salary (Advance)";
       return t.category || "Payment";
     }
+    if (t.type === "transfer") return "Transfer / Paid via Third Party";
     return t.category || "—";
   };
 
@@ -223,9 +225,9 @@ export function downloadMazdoorHistoryPdf(name, transactions, totalPaid, totalRe
   };
 
   const getDrCr = (t) => {
-    const isReceive = t.type === "deposit" && t.category === "udhaar_received";
+    const isReceive = t.type === "deposit";
     const cr = (t.type === "accrual" || t.category === "mazdoor_expense" || isReceive) ? (Number(t.amount) || 0) : 0;
-    const dr = (t.type === "salary" || t.type === "withdraw") ? (Number(t.amount) || 0) : 0;
+    const dr = (t.type === "salary" || t.type === "withdraw" || t.type === "transfer") ? (Number(t.amount) || 0) : 0;
     return { dr, cr };
   };
 
