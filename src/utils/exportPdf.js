@@ -1769,7 +1769,8 @@ export function downloadGatePassPdf(sale) {
   doc.setFontSize(12);
   doc.setFillColor(230, 200, 200);
   doc.rect(30, 23, 45, 6, "F");
-  doc.text("Jins Out Gate Pass", 52.5, 27.5, { align: "center" });
+  const isPurchase = !!sale.supplierId;
+  doc.text(isPurchase ? "Jins In Gate Pass" : "Jins Out Gate Pass", 52.5, 27.5, { align: "center" });
 
   // Fields
   doc.setFont("helvetica", "normal");
@@ -1791,7 +1792,7 @@ export function downloadGatePassPdf(sale) {
 
   y += 8;
   doc.text("Janab:", 10, y);
-  doc.text(sale.customerId?.name || "", 25, y);
+  doc.text(isPurchase ? (sale.supplierId?.name || "") : (sale.customerId?.name || ""), 25, y);
   doc.line(23, y+1, 95, y+1);
 
   y += 8;
@@ -1853,12 +1854,13 @@ export function downloadGatePassPdf(sale) {
  * All Gate Pass Report PDF
  * Shows every item of every sale as a separate row.
  */
-export function downloadAllGatePassPdf(sales, filters = {}) {
+export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
   
-  let startY = addReportHeader(doc, "All Gate Pass Report", subtitleLines);
+  const title = isPurchase ? "All Purchase Gate Pass (Jins In)" : "All Sale Gate Pass (Jins Out)";
+  let startY = addReportHeader(doc, title, subtitleLines);
 
   if (!sales || !sales.length) {
     doc.setFontSize(10);
@@ -1880,7 +1882,7 @@ export function downloadAllGatePassPdf(sales, filters = {}) {
         rows.push([
           srNo++,
           formatDate(sale.date),
-          sale.customerId?.name || "—",
+          isPurchase ? sale.supplierId?.name || "—" : sale.customerId?.name || "—",
           itName,
           it.kattay || 0,
           Number(it.quantity || 0).toFixed(2),
@@ -1891,7 +1893,7 @@ export function downloadAllGatePassPdf(sales, filters = {}) {
        rows.push([
           srNo++,
           formatDate(sale.date),
-          sale.customerId?.name || "—",
+          isPurchase ? sale.supplierId?.name || "—" : sale.customerId?.name || "—",
           sale.itemName || "—",
           sale.kattay || 0,
           Number(sale.quantity || sale.netWeight || 0).toFixed(2),

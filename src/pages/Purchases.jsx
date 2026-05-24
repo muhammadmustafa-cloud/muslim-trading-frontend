@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
-import { downloadPurchasesPdf, downloadPurchaseInvoicePdf } from "../utils/exportPdf.js";
-import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf, FaImage } from "react-icons/fa";
+import { downloadPurchasesPdf, downloadPurchaseInvoicePdf, downloadGatePassPdf, downloadAllGatePassPdf } from "../utils/exportPdf.js";
+import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf, FaImage, FaFileExport, FaTicketAlt, FaTrash } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -375,7 +375,10 @@ export default function Purchases() {
       if (editingId) {
         await apiPutFormData(`/stock-entries/${editingId}`, formData);
       } else {
-        await apiPostFormData("/stock-entries", formData);
+        const res = await apiPostFormData("/stock-entries", formData);
+        if (res && res.data) {
+          downloadGatePassPdf(res.data);
+        }
       }
       resetForm();
       setView("list");
@@ -768,7 +771,10 @@ export default function Purchases() {
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 border-t-4 border-t-amber-500 rounded-t-xl">
           <p className="text-sm font-bold text-slate-700">{list.length} purchase invoices</p>
-          <button type="button" onClick={() => downloadPurchasesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => downloadAllGatePassPdf(list, filters, true)} className="btn-secondary flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-sm" disabled={list.length === 0}><FaTicketAlt className="w-4 h-4 text-amber-600" /> All Gate Pass</button>
+            <button type="button" onClick={() => downloadPurchasesPdf(sortedList, filters)} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
@@ -865,6 +871,9 @@ export default function Purchases() {
                               <FaEdit className="w-3.5 h-3.5" /> Edit
                             </button>
                           )}
+                          <button type="button" onClick={() => downloadGatePassPdf(row)} className="btn-ghost-secondary flex items-center gap-1 text-amber-600 hover:bg-amber-50">
+                            <FaFileExport className="w-3.5 h-3.5" /> Gate Pass
+                          </button>
                           <button type="button" onClick={() => downloadPurchaseInvoicePdf(row)} className="btn-ghost-secondary flex items-center gap-1">
                             <FaFilePdf className="w-3.5 h-3.5" /> Invoice
                           </button>
