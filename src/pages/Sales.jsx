@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
 import { buildCsv, downloadCsv } from "../utils/exportToCsv.js";
-import { downloadSalesPdf, downloadSaleInvoicePdf } from "../utils/exportPdf.js";
-import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash } from "react-icons/fa";
+import { downloadSalesPdf, downloadSaleInvoicePdf, downloadGatePassPdf, downloadAllGatePassPdf } from "../utils/exportPdf.js";
+import { FaMoneyBillWave, FaHandHoldingUsd, FaFilePdf, FaPlus, FaSearch, FaShoppingCart, FaImage, FaFileExport, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash, FaTicketAlt } from "react-icons/fa";
 import { FaEdit } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
@@ -397,7 +397,10 @@ export default function Sales() {
       if (editingId) {
         await apiPutFormData(`/sales/${editingId}`, formData);
       } else {
-        await apiPostFormData("/sales", formData);
+        const res = await apiPostFormData("/sales", formData);
+        if (res && res.data) {
+          downloadGatePassPdf(res.data);
+        }
       }
       resetForm();
       setView("list");
@@ -488,7 +491,7 @@ export default function Sales() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6 p-4 bg-amber-50 rounded-xl border border-amber-100">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6 p-5 bg-gradient-to-br from-amber-50 to-orange-50/80 rounded-2xl border border-amber-200 shadow-sm backdrop-blur-sm">
               <div>
                 <label className="input-label font-bold text-amber-800 tracking-tight">Master Gross (Kg)</label>
                 <input type="number" value={form.totalGrossWeight} onChange={(e) => updateFormWithAutoCalc({ totalGrossWeight: e.target.value })} className="input-field border-amber-300 shadow-sm font-bold" placeholder="0" />
@@ -593,7 +596,7 @@ export default function Sales() {
                   })}
                 </tbody>
               </table>
-              <button type="button" onClick={addItemRow} className="w-full py-4 bg-slate-50 text-indigo-600 font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 border-t border-slate-200 group"><FaPlus className="w-4 h-4 group-hover:scale-110" /> Add Another Item to this Invoice</button>
+              <button type="button" onClick={addItemRow} className="w-full py-4 bg-gradient-to-b from-slate-50 to-indigo-50/50 text-indigo-700 font-bold hover:from-indigo-50 hover:to-indigo-100 transition-all flex items-center justify-center gap-2 border-t border-indigo-100 group shadow-inner"><FaPlus className="w-4 h-4 group-hover:scale-125 transition-transform" /> Add Another Item to this Invoice</button>
             </div>
           </section>
 
@@ -631,8 +634,11 @@ export default function Sales() {
               <div><label className="input-label">Special Notes</label><textarea value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} className="input-field h-20" placeholder="Koi khaas baat likhni ho tw..." /></div>
             </div>
 
-            <div className="card p-6 bg-slate-900 text-white flex flex-col justify-between border-t-4 border-t-emerald-500 shadow-xl">
-              <div className="space-y-4">
+            <div className="p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col justify-between rounded-2xl border border-slate-700 shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-900/80 to-transparent pointer-events-none"></div>
+              
+              <div className="space-y-4 relative z-10">
                 <h3 className="text-slate-400 text-xs font-black uppercase tracking-[0.2em]">Invoice Summary</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between text-slate-400 text-sm"><span>Total Net MUN:</span><span className="text-white font-bold">{(Number(form.netWeight) / 40).toFixed(4)} MUN</span></div>
@@ -646,8 +652,8 @@ export default function Sales() {
 
               <div className="mt-8 space-y-3">
                 {error && <p className="text-xs text-red-400 font-bold bg-red-400/10 p-2 rounded border border-red-400/20">{error}</p>}
-                <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg rounded-xl transition-all shadow-lg flex items-center justify-center gap-2" disabled={submitting}>{submitting ? "Processing..." : (editingId ? "Update Sale" : "Save & Generate Invoice")}</button>
-                <button type="button" onClick={resetForm} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all" disabled={submitting}>Cancel / Exit</button>
+                <button type="submit" className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-lg rounded-2xl transition-all duration-300 transform hover:-translate-y-1 shadow-[0_10px_20px_rgba(16,185,129,0.25)] flex items-center justify-center gap-2" disabled={submitting}>{submitting ? "Processing..." : (editingId ? "Update Sale" : "Save & Generate Invoice")}</button>
+                <button type="button" onClick={resetForm} className="w-full py-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-bold rounded-2xl transition-all duration-300 backdrop-blur-sm border border-slate-700" disabled={submitting}>Cancel / Exit</button>
               </div>
             </div>
           </section>
@@ -658,10 +664,19 @@ export default function Sales() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div><h1 className="page-title flex items-center gap-2"><FaShoppingCart className="w-7 h-7 text-amber-500" />Sales (Bechai)</h1><p className="page-subtitle">Multiple items invoice system. Total weight aur S.H cut master level pe enter karein.</p></div>
+      <header className="flex flex-wrap items-center justify-between gap-4 bg-white/50 p-4 rounded-2xl border border-slate-100 shadow-sm backdrop-blur-md">
+        <div>
+          <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3 tracking-tight">
+            <div className="p-2.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg shadow-amber-500/20 text-white">
+              <FaShoppingCart className="w-6 h-6" />
+            </div>
+            Sales <span className="text-slate-400 font-medium text-2xl">(Bechai)</span>
+          </h1>
+          <p className="text-slate-500 mt-1.5 ml-14 text-sm font-medium">Multiple items invoice system. Manage master weights & deductions.</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => downloadSalesPdf(list)} className="btn-secondary flex items-center gap-2"><FaFilePdf className="w-4 h-4" /> Reports</button>
+          <button type="button" onClick={() => downloadAllGatePassPdf(list, filters)} className="btn-secondary flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-sm"><FaTicketAlt className="w-4 h-4 text-amber-600" /> All Gate Pass</button>
+          <button type="button" onClick={() => downloadSalesPdf(list, filters)} className="btn-secondary flex items-center gap-2"><FaFilePdf className="w-4 h-4" /> Reports</button>
           <button type="button" onClick={openAddModal} className="btn-primary flex items-center gap-2"><FaPlus className="w-4 h-4" /> Add Multi-Item Sale</button>
         </div>
       </header>
@@ -712,6 +727,7 @@ export default function Sales() {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-2">
                            <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
+                           <button type="button" onClick={() => downloadGatePassPdf(row)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Gate Pass"><FaFileExport className="w-4 h-4" /></button>
                            <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Invoice"><FaFilePdf className="w-4 h-4" /></button>
                            {isAdmin && (
                              <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><FaTrash className="w-4 h-4" /></button>

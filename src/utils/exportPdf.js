@@ -1743,3 +1743,179 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
   addPageNumbers(doc);
   doc.save(`Daily_Ledger_Book_${filters.dateFrom || 'report'}.pdf`);
 }
+
+/**
+ * Gate Pass PDF (Roman Urdu)
+ */
+export function downloadGatePassPdf(sale) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [105, 148] });
+  
+  // Outer Border
+  doc.setLineWidth(0.5);
+  doc.rect(5, 5, 95, 138);
+  doc.setLineWidth(0.2);
+  doc.rect(6, 6, 93, 136);
+
+  // Logo / Header
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("Muslim Trading Company", 52.5, 15, { align: "center" });
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.text("Near Soomro House, Quetta Road, Jacobabad", 52.5, 20, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setFillColor(230, 200, 200);
+  doc.rect(30, 23, 45, 6, "F");
+  doc.text("Jins Out Gate Pass", 52.5, 27.5, { align: "center" });
+
+  // Fields
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  
+  let y = 38;
+  
+  // Date
+  doc.text("Tariq:", 10, y);
+  doc.text(formatDate(sale.date), 25, y);
+  doc.setLineWidth(0.1);
+  doc.line(23, y+1, 55, y+1);
+
+  // Number
+  const invoiceNo = sale._id ? sale._id.slice(-4).toUpperCase() : "";
+  doc.text("No:", 65, y);
+  doc.text(invoiceNo, 75, y);
+  doc.line(73, y+1, 95, y+1);
+
+  y += 8;
+  doc.text("Janab:", 10, y);
+  doc.text(sale.customerId?.name || "", 25, y);
+  doc.line(23, y+1, 95, y+1);
+
+  y += 8;
+  doc.setFont("helvetica", "bold");
+  doc.text("Jins (Items):", 10, y);
+  doc.setFont("helvetica", "normal");
+  y += 6;
+
+  // Items
+  if (sale.items && sale.items.length > 0) {
+    sale.items.forEach(it => {
+      const mainName = it.itemId?.name || "Item";
+      const subName = it.subItemId?.name || "";
+      const itName = subName ? `${mainName} (${subName})` : mainName;
+      
+      doc.text(itName.slice(0, 22), 12, y);
+      doc.text(`${it.kattay || 0} Katty`, 65, y);
+      doc.line(12, y+1, 60, y+1);
+      doc.line(65, y+1, 95, y+1);
+      y += 7;
+    });
+  } else {
+    doc.text((sale.itemName || "Item").slice(0, 22), 12, y);
+    doc.text(`${sale.kattay || 0} Katty`, 65, y);
+    doc.line(12, y+1, 60, y+1);
+    doc.line(65, y+1, 95, y+1);
+    y += 7;
+  }
+
+  y += 2;
+  doc.text("Gaari Number:", 10, y);
+  doc.text(sale.truckNumber || "", 35, y);
+  doc.line(33, y+1, 95, y+1);
+
+  y += 8;
+  doc.text("Wazan (Net Kg):", 10, y);
+  doc.text(`${formatMoney(sale.netWeight || (sale.totalGrossWeight - sale.totalSHCut))} Kg`, 40, y);
+  doc.line(38, y+1, 95, y+1);
+  
+  y += 8;
+  doc.text("Goods:", 10, y);
+  doc.text(sale.goods || "", 25, y);
+  doc.line(22, y+1, 95, y+1);
+  
+  y += 8;
+  doc.text("Rate:", 10, y);
+  const rateStr = sale.items && sale.items.length === 1 ? formatMoney(sale.items[0].rate) : sale.rate ? formatMoney(sale.rate) : "Multiple";
+  doc.text(rateStr, 25, y);
+  doc.line(20, y+1, 95, y+1);
+
+  y = 135;
+  doc.text("Dastkhat:", 10, y);
+  doc.line(28, y+1, 70, y+1);
+
+  doc.save(`gate-pass-${invoiceNo}.pdf`);
+}
+
+/**
+ * All Gate Pass Report PDF
+ * Shows every item of every sale as a separate row.
+ */
+export function downloadAllGatePassPdf(sales, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo) subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
+  
+  let startY = addReportHeader(doc, "All Gate Pass Report", subtitleLines);
+
+  if (!sales || !sales.length) {
+    doc.setFontSize(10);
+    doc.text("No records in this period.", MARGIN, startY);
+    doc.save("all-gate-pass-report.pdf");
+    return;
+  }
+
+  const rows = [];
+  let srNo = 1;
+
+  sales.forEach(sale => {
+    if (sale.items && sale.items.length > 0) {
+      sale.items.forEach(it => {
+        const mainName = it.itemId?.name || "Item";
+        const subName = it.subItemId?.name || "";
+        const itName = subName ? `${mainName} (${subName})` : mainName;
+
+        rows.push([
+          srNo++,
+          formatDate(sale.date),
+          sale.customerId?.name || "—",
+          itName,
+          it.kattay || 0,
+          Number(it.quantity || 0).toFixed(2),
+          sale.goods || "—"
+        ]);
+      });
+    } else {
+       rows.push([
+          srNo++,
+          formatDate(sale.date),
+          sale.customerId?.name || "—",
+          sale.itemName || "—",
+          sale.kattay || 0,
+          Number(sale.quantity || sale.netWeight || 0).toFixed(2),
+          sale.goods || "—"
+       ]);
+    }
+  });
+
+  autoTable(doc, {
+    startY,
+    head: [["Sr No", "Date", "Party", "Item", "Bags", "Wazan (Kg)", "Goods"]],
+    body: rows,
+    ...tableTheme,
+    columnStyles: {
+      0: { cellWidth: 15 },
+      1: { cellWidth: 25 },
+      2: { cellWidth: 40 },
+      3: { cellWidth: 40 },
+      4: { cellWidth: 15 },
+      5: { cellWidth: 25 },
+      6: { cellWidth: "auto" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save("all-gate-pass-report.pdf");
+}
