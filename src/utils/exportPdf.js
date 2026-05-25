@@ -1874,6 +1874,8 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
 
   const rows = [];
   let srNo = 1;
+  let totalBags = 0;
+  let totalWeight = 0;
 
   sales.forEach(sale => {
     if (sale.items && sale.items.length > 0) {
@@ -1888,13 +1890,18 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
         const subName = it.subItemId?.name || "";
         const itName = subName ? `${mainName} (${subName})` : mainName;
 
+        const bags = Number(it.kattay) || 0;
+        const weight = Number(it.quantity) || 0;
+        totalBags += bags;
+        totalWeight += weight;
+
         rows.push([
           srNo++,
           formatDate(sale.date),
           isPurchase ? sale.supplierId?.name || "—" : sale.customerId?.name || "—",
           itName,
-          it.kattay || 0,
-          Number(it.quantity || 0).toFixed(2),
+          bags,
+          weight.toFixed(2),
           sale.goods || "—"
         ]);
       });
@@ -1905,13 +1912,18 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
            if (!subIdStr || !filters.allowedSubItemIds || !filters.allowedSubItemIds.includes(subIdStr)) return;
         }
 
+        const bags = Number(sale.kattay) || 0;
+        const weight = Number(sale.quantity || sale.netWeight) || 0;
+        totalBags += bags;
+        totalWeight += weight;
+
         rows.push([
           srNo++,
           formatDate(sale.date),
           isPurchase ? sale.supplierId?.name || "—" : sale.customerId?.name || "—",
           sale.itemName || "—",
-          sale.kattay || 0,
-          Number(sale.quantity || sale.netWeight || 0).toFixed(2),
+          bags,
+          weight.toFixed(2),
           sale.goods || "—"
        ]);
     }
@@ -1921,14 +1933,21 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
     startY,
     head: [["Sr No", "Date", "Party", "Item", "Bags", "Wazan (Kg)", "Goods"]],
     body: rows,
+    foot: [[
+      { content: "GRAND TOTALS", colSpan: 4, styles: { halign: "right", fontStyle: "bold" } },
+      { content: formatMoney(totalBags), styles: { halign: "center", fontStyle: "bold" } },
+      { content: formatMoney(totalWeight), styles: { halign: "right", fontStyle: "bold" } },
+      { content: "", styles: { halign: "center", fontStyle: "bold" } }
+    ]],
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8.5, fontStyle: "bold" },
     ...tableTheme,
     columnStyles: {
       0: { cellWidth: 15 },
       1: { cellWidth: 25 },
       2: { cellWidth: 40 },
       3: { cellWidth: 40 },
-      4: { cellWidth: 15 },
-      5: { cellWidth: 25 },
+      4: { cellWidth: 15, halign: "center" },
+      5: { cellWidth: 25, halign: "right" },
       6: { cellWidth: "auto" },
     },
   });
