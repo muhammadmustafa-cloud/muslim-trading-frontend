@@ -761,12 +761,38 @@ export default function Sales() {
             <button type="button" onClick={() => setGatePassModalOpen(false)} className="btn-secondary">Cancel</button>
             <button type="button" onClick={() => {
               let allowedSubItemIds = null;
+              let sourceName = "";
+              if (gatePassSource === "mill") {
+                sourceName = "Own Mill";
+              } else if (gatePassSource) {
+                const selectedWarehouse = customers.find(c => c._id === gatePassSource);
+                sourceName = selectedWarehouse ? selectedWarehouse.name : "Warehouse";
+              }
+
               if (gatePassSource && gatePassSource !== "mill") {
+                const selectedWarehouse = customers.find(c => c._id === gatePassSource);
+                const warehouseName = selectedWarehouse ? selectedWarehouse.name.toLowerCase() : "";
+
+                const mainItemIds = items
+                  .filter(i => !i.parentId && (i.linkedWarehouseCustomerId?._id || i.linkedWarehouseCustomerId) === gatePassSource)
+                  .map(i => i._id.toString());
+
                 allowedSubItemIds = items
-                  .filter(i => i.parentId && (i.linkedWarehouseCustomerId?._id || i.linkedWarehouseCustomerId) === gatePassSource)
+                  .filter(i => {
+                    if (!i.parentId) return false;
+                    const parentIdStr = (i.parentId?._id || i.parentId)?.toString();
+                    
+                    // Match by parent ID link
+                    const matchesParentId = parentIdStr && mainItemIds.includes(parentIdStr);
+                    
+                    // Match by name fallback (e.g. sub-item name contains warehouse name)
+                    const matchesName = warehouseName && i.name.toLowerCase().includes(warehouseName);
+                    
+                    return matchesParentId || matchesName;
+                  })
                   .map(i => i._id.toString());
               }
-              downloadAllGatePassPdf(list, { ...filters, source: gatePassSource, allowedSubItemIds });
+              downloadAllGatePassPdf(list, { ...filters, source: gatePassSource, sourceName, allowedSubItemIds });
               setGatePassModalOpen(false);
             }} className="btn-primary flex items-center gap-2"><FaFileExport className="w-4 h-4" /> Generate PDF</button>
           </div>

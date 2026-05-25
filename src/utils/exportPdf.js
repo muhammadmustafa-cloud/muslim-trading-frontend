@@ -1859,7 +1859,10 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
   
-  const title = isPurchase ? "All Purchase Gate Pass (Jins In)" : "All Sale Gate Pass (Jins Out)";
+  let title = isPurchase ? "All Purchase Gate Pass (Jins In)" : "All Sale Gate Pass (Jins Out)";
+  if (filters.sourceName) {
+    title = `${title} - ${filters.sourceName}`;
+  }
   let startY = addReportHeader(doc, title, subtitleLines);
 
   if (!sales || !sales.length) {
