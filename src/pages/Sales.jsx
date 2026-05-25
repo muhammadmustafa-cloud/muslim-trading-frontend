@@ -67,6 +67,8 @@ export default function Sales() {
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedCollectEntry, setSelectedCollectEntry] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [gatePassModalOpen, setGatePassModalOpen] = useState(false);
+  const [gatePassSource, setGatePassSource] = useState("");
 
   useEffect(() => {
     fetchList();
@@ -675,7 +677,7 @@ export default function Sales() {
           <p className="text-slate-500 mt-1.5 ml-14 text-sm font-medium">Multiple items invoice system. Manage master weights & deductions.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => downloadAllGatePassPdf(list, filters)} className="btn-secondary flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-sm"><FaTicketAlt className="w-4 h-4 text-amber-600" /> All Gate Pass</button>
+          <button type="button" onClick={() => setGatePassModalOpen(true)} className="btn-secondary flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 shadow-sm"><FaTicketAlt className="w-4 h-4 text-amber-600" /> All Gate Pass</button>
           <button type="button" onClick={() => downloadSalesPdf(list, filters)} className="btn-secondary flex items-center gap-2"><FaFilePdf className="w-4 h-4" /> Reports</button>
           <button type="button" onClick={openAddModal} className="btn-primary flex items-center gap-2"><FaPlus className="w-4 h-4" /> Add Multi-Item Sale</button>
         </div>
@@ -743,6 +745,33 @@ export default function Sales() {
           )}
         </div>
       </section>
+
+      {/* Gate Pass Export Modal */}
+      <Modal open={gatePassModalOpen} onClose={() => setGatePassModalOpen(false)} title="Export All Gate Pass">
+        <div className="space-y-4">
+          <div>
+            <label className="input-label">Select Source</label>
+            <select value={gatePassSource} onChange={(e) => setGatePassSource(e.target.value)} className="input-field">
+              <option value="">All Sources</option>
+              <option value="mill">Own Mill (Normal Sales / No Warehouse)</option>
+              {customers.filter(c => c.isWarehouse).map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <button type="button" onClick={() => setGatePassModalOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="button" onClick={() => {
+              let allowedSubItemIds = null;
+              if (gatePassSource && gatePassSource !== "mill") {
+                allowedSubItemIds = items
+                  .filter(i => i.parentId && (i.linkedWarehouseCustomerId?._id || i.linkedWarehouseCustomerId) === gatePassSource)
+                  .map(i => i._id.toString());
+              }
+              downloadAllGatePassPdf(list, { ...filters, source: gatePassSource, allowedSubItemIds });
+              setGatePassModalOpen(false);
+            }} className="btn-primary flex items-center gap-2"><FaFileExport className="w-4 h-4" /> Generate PDF</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1875,6 +1875,12 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
   sales.forEach(sale => {
     if (sale.items && sale.items.length > 0) {
       sale.items.forEach(it => {
+        const subIdStr = (it.subItemId?._id || it.subItemId)?.toString() || null;
+        if (filters.source === "mill" && subIdStr) return;
+        if (filters.source && filters.source !== "mill") {
+           if (!subIdStr || !filters.allowedSubItemIds || !filters.allowedSubItemIds.includes(subIdStr)) return;
+        }
+
         const mainName = it.itemId?.name || "Item";
         const subName = it.subItemId?.name || "";
         const itName = subName ? `${mainName} (${subName})` : mainName;
@@ -1890,7 +1896,13 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
         ]);
       });
     } else {
-       rows.push([
+        const subIdStr = (sale.subItemId?._id || sale.subItemId)?.toString() || null;
+        if (filters.source === "mill" && subIdStr) return;
+        if (filters.source && filters.source !== "mill") {
+           if (!subIdStr || !filters.allowedSubItemIds || !filters.allowedSubItemIds.includes(subIdStr)) return;
+        }
+
+        rows.push([
           srNo++,
           formatDate(sale.date),
           isPurchase ? sale.supplierId?.name || "—" : sale.customerId?.name || "—",
