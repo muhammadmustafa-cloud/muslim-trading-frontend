@@ -762,19 +762,8 @@ export default function Sales() {
             <button type="button" onClick={() => {
               let allowedSubItemIds = null;
               if (gatePassSource && gatePassSource !== "mill") {
-                const selectedCust = customers.find(c => c._id === gatePassSource);
-                const custName = selectedCust ? selectedCust.name.toLowerCase().trim() : "";
-                
                 allowedSubItemIds = items
-                  .filter(i => {
-                    if (!i.parentId) return false;
-                    const linkedId = i.linkedWarehouseCustomerId?._id || i.linkedWarehouseCustomerId;
-                    if (linkedId && linkedId.toString() === gatePassSource) return true;
-                    if (custName && i.name.toLowerCase().trim() === custName) return true;
-                    if (custName && i.name.toLowerCase().includes(custName)) return true;
-                    if (custName && custName.includes(i.name.toLowerCase())) return true;
-                    return false;
-                  })
+                  .filter(i => i.parentId && (i.linkedWarehouseCustomerId?._id || i.linkedWarehouseCustomerId) === gatePassSource)
                   .map(i => i._id.toString());
               }
               downloadAllGatePassPdf(list, { ...filters, source: gatePassSource, allowedSubItemIds });
