@@ -112,6 +112,8 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
       8: { halign: "right", cellWidth: 22, fontStyle: "bold" },
     },
     ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, lineWidth: 0.1, lineColor: [200, 200, 200] },
     willDrawCell: (data) => {
       if (data.row.section === 'body' && data.column.index === 0) {
         processedRows++;
@@ -191,42 +193,55 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
+    head: [["Date", "Day", "Description", "Bag", "Rate", "Payment Due Date", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: ledger.map((item) => [
       formatDate(item.date),
+      formatDay(item.date),
       item.description,
       item.bags > 0 ? item.bags : "—",
+      item.rate || "—",
+      formatDate(item.dueDate),
       item.credit > 0 ? formatMoney(item.credit) : "—",
       item.debit > 0 ? formatMoney(item.debit) : "—",
       formatMoney(Math.abs(item.balance)) + (item.balance <= 0 ? " Cr" : " Dr"),
     ]),
     foot: [
       [
-        "", "RUNNING TOTALS", "", "", "", "",
+        "", "",
+        "RUNNING TOTALS",
+        "", "", "",
+        "",
+        "",
+        "",
       ],
     ],
     footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: "auto" },
-      2: { halign: "center", cellWidth: 15 },
-      3: { halign: "right", cellWidth: 28, fontStyle: "bold" },
-      4: { halign: "right", cellWidth: 28, fontStyle: "bold" },
-      5: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+      0: { cellWidth: 20 },
+      1: { cellWidth: 12 },
+      2: { cellWidth: "auto" },
+      3: { halign: "center", cellWidth: 12 },
+      4: { halign: "center", cellWidth: 15 },
+      5: { halign: "center", cellWidth: 22 },
+      6: { halign: "right", cellWidth: 20, fontStyle: "bold" },
+      7: { halign: "right", cellWidth: 20, fontStyle: "bold" },
+      8: { halign: "right", cellWidth: 22, fontStyle: "bold" },
     },
     ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, lineWidth: 0.1, lineColor: [200, 200, 200] },
     willDrawCell: (data) => {
       if (data.row.section === 'body' && data.column.index === 0) {
         processedRows++;
-        runningBags += Number(data.row.raw[2]) || 0;
+        runningBags += Number(data.row.raw[3]) || 0;
 
         const parseMoneyStr = (val) => {
           if (!val || val === "—") return 0;
           return Number(val.toString().replace(/,/g, "")) || 0;
         };
 
-        runningCredit += parseMoneyStr(data.row.raw[3]);
-        runningDebit += parseMoneyStr(data.row.raw[4]);
+        runningCredit += parseMoneyStr(data.row.raw[6]);
+        runningDebit += parseMoneyStr(data.row.raw[7]);
         runningBalance = runningDebit - runningCredit;
       }
 
@@ -238,14 +253,16 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
         if (data.column.index === 0) {
           data.cell.text = [""];
         } else if (data.column.index === 1) {
-          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
+          data.cell.text = [""];
         } else if (data.column.index === 2) {
-          data.cell.text = [runningBags > 0 ? formatMoney(runningBags) : "—"];
+          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
         } else if (data.column.index === 3) {
+          data.cell.text = [runningBags > 0 ? formatMoney(runningBags) : "—"];
+        } else if (data.column.index === 6) {
           data.cell.text = [formatMoney(runningCredit)];
-        } else if (data.column.index === 4) {
+        } else if (data.column.index === 7) {
           data.cell.text = [formatMoney(runningDebit)];
-        } else if (data.column.index === 5) {
+        } else if (data.column.index === 8) {
           data.cell.text = [formattedBalance];
         }
       }

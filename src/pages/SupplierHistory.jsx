@@ -5,6 +5,7 @@ import { FaArrowLeft, FaFilePdf, FaTruck } from "react-icons/fa";
 import { downloadSupplierHistoryPdf } from "../utils/historyPdf.js";
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
+const formatDay = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { weekday: "short", timeZone: "Asia/Karachi" }) : "—");
 const formatMoney = (n) => (n != null ? Number(n).toLocaleString("en-PK") : "—");
 
 export default function SupplierHistory() {
@@ -133,10 +134,13 @@ export default function SupplierHistory() {
                 <thead>
                   <tr className="bg-slate-800 text-white border-b border-slate-700">
                     <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Date</th>
+                    <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Day</th>
                     <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest">Description</th>
-                    <th className="py-4 px-4 text-center text-[10px] font-black uppercase tracking-widest">Bags</th>
-                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-emerald-900/30">Credit (Aamne)</th>
-                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-rose-900/30">Debit (Payments)</th>
+                    <th className="py-4 px-4 text-center text-[10px] font-black uppercase tracking-widest">Bag</th>
+                    <th className="py-4 px-4 text-center text-[10px] font-black uppercase tracking-widest">Rate</th>
+                    <th className="py-4 px-4 text-center text-[10px] font-black uppercase tracking-widest">Payment Due Date</th>
+                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-emerald-900/30">Credit</th>
+                    <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-rose-900/30">Debit</th>
                     <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest bg-slate-700 font-black">Balance</th>
                   </tr>
                 </thead>
@@ -144,6 +148,7 @@ export default function SupplierHistory() {
                   {data.ledger.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors border-b border-slate-100">
                       <td className="py-4 px-4 whitespace-nowrap text-[11px] font-bold text-slate-400">{formatDate(item.date)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-[11px] font-bold text-slate-400">{formatDay(item.date)}</td>
                       <td className="py-4 px-4">
                         <div className="flex flex-col">
                           <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.description}</span>
@@ -154,6 +159,12 @@ export default function SupplierHistory() {
                         <span className={`px-2 py-1 rounded-md text-xs font-black ${item.bags > 0 ? 'bg-amber-100 text-amber-700' : 'text-slate-300'}`}>
                            {item.bags > 0 ? item.bags : '—'}
                         </span>
+                      </td>
+                      <td className="py-4 px-4 text-center text-[11px] font-bold text-slate-500">
+                        {item.rate || "—"}
+                      </td>
+                      <td className="py-4 px-4 text-center text-[11px] font-bold text-slate-400">
+                        {formatDate(item.dueDate)}
                       </td>
                       {/* Swapped layout values */}
                       <td className="py-4 px-4 text-right font-black text-emerald-700 bg-emerald-50/10 text-base">
@@ -171,7 +182,7 @@ export default function SupplierHistory() {
                 </tbody>
                 <tfoot className="bg-slate-800 text-white font-black">
                   <tr>
-                    <td colSpan="3" className="py-6 px-4 text-right text-[10px] uppercase tracking-[0.2em] text-slate-400">Grand Ledger Totals:</td>
+                    <td colSpan="6" className="py-6 px-4 text-right text-[10px] uppercase tracking-[0.2em] text-slate-400">Grand Ledger Totals:</td>
                     {/* Swapped Footers */}
                     <td className="py-6 px-4 text-right text-emerald-400 border-t-4 border-emerald-500/50 text-lg decoration-double underline underline-offset-8">
                        {formatMoney(Number(data.summary?.totalCredit || 0))}
