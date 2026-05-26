@@ -1929,14 +1929,18 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
     }
   });
 
+  let runningBags = 0;
+  let runningWeight = 0;
+  let processedRows = 0;
+
   autoTable(doc, {
     startY,
     head: [["Sr No", "Date", "Party", "Item", "Bags", "Wazan (Kg)", "Goods"]],
     body: rows,
     foot: [[
-      { content: "GRAND TOTALS", colSpan: 4, styles: { halign: "right", fontStyle: "bold" } },
-      { content: formatMoney(totalBags), styles: { halign: "center", fontStyle: "bold" } },
-      { content: formatMoney(totalWeight), styles: { halign: "right", fontStyle: "bold" } },
+      { content: "RUNNING TOTALS", colSpan: 4, styles: { halign: "right", fontStyle: "bold" } },
+      { content: "", styles: { halign: "center", fontStyle: "bold" } },
+      { content: "", styles: { halign: "right", fontStyle: "bold" } },
       { content: "", styles: { halign: "center", fontStyle: "bold" } }
     ]],
     footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8.5, fontStyle: "bold" },
@@ -1950,6 +1954,24 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
       5: { cellWidth: 25, halign: "right" },
       6: { cellWidth: "auto" },
     },
+    willDrawCell: (data) => {
+      if (data.row.section === 'body' && data.column.index === 0) {
+        processedRows++;
+        runningBags += Number(data.row.raw[4]) || 0;
+        runningWeight += Number(data.row.raw[5]) || 0;
+      }
+
+      if (data.row.section === 'foot') {
+        const isLastPage = (processedRows === rows.length);
+        if (data.column.index === 0) {
+          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
+        } else if (data.column.index === 4) {
+          data.cell.text = [formatMoney(runningBags)];
+        } else if (data.column.index === 5) {
+          data.cell.text = [formatMoney(runningWeight)];
+        }
+      }
+    }
   });
 
   addPageNumbers(doc);
