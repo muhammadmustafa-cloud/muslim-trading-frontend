@@ -175,7 +175,6 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
           (t.fromAccountId?._id === filters.accountId || t.toAccountId?._id === filters.accountId)
         );
         if (!firstTx) return "Account";
-        // Check which side matches the accountId and return that account's name
         if (firstTx.fromAccountId?._id === filters.accountId) {
           return firstTx.fromAccountId?.name || "Account";
         } else {
@@ -201,11 +200,9 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     return;
   }
 
-  // Calculate Totals
-  let totalCredit = 0;
-  let totalDebit = 0;
-
-  const formattedRows = transactions.map((row, i) => {
+  // Pre-calculate credit/debit for each row and running balance
+  let cumulativeBalance = 0;
+  const formattedRows = transactions.map((row) => {
     let credit = 0;
     let debit = 0;
 
@@ -217,27 +214,24 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
       const filterId = filters?.accountId?.toString();
 
       if (filterId) {
-        // Outflow Priority Logic: if it's both, count as Credit (Aamad)
         if (fromId === filterId) credit = row.amount;
         else if (toId === filterId) debit = row.amount;
       } else {
-        // Global view: From = Credit, To = Debit
         credit = row.amount;
         debit = row.amount;
       }
     } else {
       const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
       if (isMillNature) {
-        if (isInflow) credit = row.amount; // Mill Credit
-        else debit = row.amount; // Mill Debit
+        if (isInflow) credit = row.amount;
+        else debit = row.amount;
       } else {
-        if (isInflow) debit = row.amount; // Bank Debit
-        else credit = row.amount; // Bank Credit
+        if (isInflow) debit = row.amount;
+        else credit = row.amount;
       }
     }
 
-    totalCredit += credit;
-    totalDebit += debit;
+    cumulativeBalance += (credit - debit);
 
     let participant = "—";
     let description = row.note || "";
@@ -269,26 +263,15 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     // Add cheque info if available
     let chequeInfo = "";
     if (row.paymentMethod === "cheque" && row.chequeNumber) {
-      console.log("PDF Debug - cheque row:", { 
-        paymentMethod: row.paymentMethod, 
-        chequeNumber: row.chequeNumber, 
-        chequeDate: row.chequeDate,
-        chequeDateType: typeof row.chequeDate
-      });
       let chqDate = "";
       if (row.chequeDate) {
         try {
           const parsedDate = new Date(row.chequeDate);
           if (!isNaN(parsedDate.getTime())) {
             chqDate = parsedDate.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
-          } else {
-            console.log("PDF Debug - Invalid date parsed:", row.chequeDate);
           }
-        } catch (e) {
-          console.log("PDF Debug - Date parse error:", e, row.chequeDate);
-        }
+        } catch (e) { /* ignore */ }
       }
-      console.log("PDF Debug - formatted date:", chqDate);
       chequeInfo = ` [Chq#${row.chequeNumber}${chqDate ? " " + chqDate : ""}]`;
     } else if (row.paymentMethod === "online") {
       chequeInfo = " [Online]";
@@ -298,44 +281,71 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
       ? `${participant} ${description ? `(${description})` : ""} ${row.category ? `[${row.category}]` : ""}${chequeInfo}`
       : `${description} ${row.category ? `[${row.category}]` : ""}${chequeInfo}`;
 
+    const balSign = cumulativeBalance >= 0 ? " CR" : " DR";
+
     return [
       formatDate(row.date),
       descriptionFinal.slice(0, 80) || "—",
       credit > 0 ? formatMoney(credit) : "—",
       debit > 0 ? formatMoney(debit) : "—",
-      "", // Individual row balance is empty
+      formatMoney(Math.abs(cumulativeBalance)) + balSign,
     ];
   });
 
-  const netBalance = totalCredit - totalDebit;
-  const balanceStr = `${formatMoney(Math.abs(netBalance))} ${netBalance >= 0 ? "CR" : "DR"}`;
+  // Running totals state for willDrawCell
+  let runningCredit = 0;
+  let runningDebit = 0;
+  let processedRows = 0;
 
   autoTable(doc, {
     startY,
     head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: formattedRows,
     foot: [[
-      { content: "TOTAL ACCOUNT MOVEMENTS", colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
-      { content: formatMoney(totalCredit), styles: { halign: "right", fontStyle: "bold" } },
-      { content: formatMoney(totalDebit), styles: { halign: "right", fontStyle: "bold" } },
-      { content: balanceStr, styles: { halign: "right", fontStyle: "bold", textColor: [0, 80, 0] } },
+      "", "RUNNING TOTALS", "", "", "",
     ]],
     ...tableTheme,
     theme: "grid",
     styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1, font: "helvetica", fontStyle: "normal" },
     headStyles: { ...tableTheme.headStyles, fontSize: 9, font: "helvetica" },
-    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 9, fontStyle: "bold", font: "helvetica" },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9, fontStyle: "bold", font: "helvetica" },
     columnStyles: {
-      0: { cellWidth: 30, font: "helvetica" },
-      1: { cellWidth: 85, font: "helvetica", fontStyle: "normal" },
-      2: { cellWidth: 25, halign: "right", font: "helvetica" },
-      3: { cellWidth: 25, halign: "right", font: "helvetica" },
-      4: { cellWidth: 25, halign: "right", font: "helvetica" },
+      0: { cellWidth: 24, font: "helvetica" },
+      1: { cellWidth: "auto", font: "helvetica", fontStyle: "normal" },
+      2: { cellWidth: 25, halign: "right", font: "helvetica", fontStyle: "bold" },
+      3: { cellWidth: 25, halign: "right", font: "helvetica", fontStyle: "bold" },
+      4: { cellWidth: 30, halign: "right", font: "helvetica", fontStyle: "bold" },
     },
-    didDrawCell: (data) => {
-      // Ensure consistent font for description column
-      if (data.column.index === 1 && data.cell) {
-        doc.setFont("helvetica", "normal");
+    willDrawCell: (data) => {
+      if (data.row.section === 'body' && data.column.index === 0) {
+        processedRows++;
+
+        const parseMoneyStr = (val) => {
+          if (!val || val === "—") return 0;
+          return Number(val.toString().replace(/,/g, "")) || 0;
+        };
+
+        runningCredit += parseMoneyStr(data.row.raw[2]);
+        runningDebit += parseMoneyStr(data.row.raw[3]);
+      }
+
+      if (data.row.section === 'foot') {
+        const isLastPage = (processedRows === transactions.length);
+        const netBal = runningCredit - runningDebit;
+        const balSign = netBal >= 0 ? " CR" : " DR";
+        const formattedBalance = formatMoney(Math.abs(netBal)) + balSign;
+
+        if (data.column.index === 0) {
+          data.cell.text = [""];
+        } else if (data.column.index === 1) {
+          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
+        } else if (data.column.index === 2) {
+          data.cell.text = [formatMoney(runningCredit)];
+        } else if (data.column.index === 3) {
+          data.cell.text = [formatMoney(runningDebit)];
+        } else if (data.column.index === 4) {
+          data.cell.text = [formattedBalance];
+        }
       }
     },
   });
