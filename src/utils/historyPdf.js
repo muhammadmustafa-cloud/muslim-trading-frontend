@@ -69,6 +69,12 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
     y += 8;
   }
 
+  let runningBags = 0;
+  let runningCredit = 0;
+  let runningDebit = 0;
+  let runningBalance = 0;
+  let processedRows = 0;
+
   autoTable(doc, {
     startY: y,
     head: [["Date", "Day", "Description", "Bag", "Rate", "Payment Due Date", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
@@ -86,11 +92,11 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
     foot: [
       [
         "", "",
-        "GRAND TOTALS",
+        "RUNNING TOTALS",
         "", "", "",
-        formatMoney(Number(summary.totalCredit || 0)),
-        formatMoney(Number(summary.totalDebit || 0)),
-        formatMoney(Math.abs(summary.finalBalance)) + (summary.finalBalance >= 0 ? " Dr" : " Cr"),
+        "",
+        "",
+        "",
       ],
     ],
     footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
@@ -106,6 +112,46 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
       8: { halign: "right", cellWidth: 22, fontStyle: "bold" },
     },
     ...tableTheme,
+    willDrawCell: (data) => {
+      if (data.row.section === 'body' && data.column.index === 0) {
+        processedRows++;
+        runningBags += Number(data.row.raw[3]) || 0;
+
+        const parseMoneyStr = (val) => {
+          if (!val || val === "—") return 0;
+          return Number(val.toString().replace(/,/g, "")) || 0;
+        };
+
+        const credit = parseMoneyStr(data.row.raw[6]);
+        const debit = parseMoneyStr(data.row.raw[7]);
+
+        runningCredit += credit;
+        runningDebit += debit;
+        runningBalance = runningDebit - runningCredit;
+      }
+
+      if (data.row.section === 'foot') {
+        const isLastPage = (processedRows === ledger.length);
+        const balSign = runningBalance >= 0 ? " Dr" : " Cr";
+        const formattedBalance = formatMoney(Math.abs(runningBalance)) + balSign;
+
+        if (data.column.index === 0) {
+          data.cell.text = [""];
+        } else if (data.column.index === 1) {
+          data.cell.text = [""];
+        } else if (data.column.index === 2) {
+          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
+        } else if (data.column.index === 3) {
+          data.cell.text = [runningBags > 0 ? formatMoney(runningBags) : "—"];
+        } else if (data.column.index === 6) {
+          data.cell.text = [formatMoney(runningCredit)];
+        } else if (data.column.index === 7) {
+          data.cell.text = [formatMoney(runningDebit)];
+        } else if (data.column.index === 8) {
+          data.cell.text = [formattedBalance];
+        }
+      }
+    }
   });
 
   addPageNumbers(doc);
@@ -137,6 +183,12 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
     y += 8;
   }
 
+  let runningBags = 0;
+  let runningCredit = 0;
+  let runningDebit = 0;
+  let runningBalance = 0;
+  let processedRows = 0;
+
   autoTable(doc, {
     startY: y,
     head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
@@ -150,12 +202,7 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
     ]),
     foot: [
       [
-        "",
-        "GRAND TOTALS",
-        "",
-        formatMoney(Number(summary.totalCredit || 0)),
-        formatMoney(Number(summary.totalDebit || 0)),
-        formatMoney(Math.abs(summary.finalBalance)) + (summary.finalBalance <= 0 ? " Cr" : " Dr"),
+        "", "RUNNING TOTALS", "", "", "", "",
       ],
     ],
     footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
@@ -168,6 +215,41 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
       5: { halign: "right", cellWidth: 28, fontStyle: "bold" },
     },
     ...tableTheme,
+    willDrawCell: (data) => {
+      if (data.row.section === 'body' && data.column.index === 0) {
+        processedRows++;
+        runningBags += Number(data.row.raw[2]) || 0;
+
+        const parseMoneyStr = (val) => {
+          if (!val || val === "—") return 0;
+          return Number(val.toString().replace(/,/g, "")) || 0;
+        };
+
+        runningCredit += parseMoneyStr(data.row.raw[3]);
+        runningDebit += parseMoneyStr(data.row.raw[4]);
+        runningBalance = runningDebit - runningCredit;
+      }
+
+      if (data.row.section === 'foot') {
+        const isLastPage = (processedRows === ledger.length);
+        const balSign = runningBalance >= 0 ? " Dr" : " Cr";
+        const formattedBalance = formatMoney(Math.abs(runningBalance)) + balSign;
+
+        if (data.column.index === 0) {
+          data.cell.text = [""];
+        } else if (data.column.index === 1) {
+          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
+        } else if (data.column.index === 2) {
+          data.cell.text = [runningBags > 0 ? formatMoney(runningBags) : "—"];
+        } else if (data.column.index === 3) {
+          data.cell.text = [formatMoney(runningCredit)];
+        } else if (data.column.index === 4) {
+          data.cell.text = [formatMoney(runningDebit)];
+        } else if (data.column.index === 5) {
+          data.cell.text = [formattedBalance];
+        }
+      }
+    },
   });
 
   addPageNumbers(doc);
