@@ -200,37 +200,65 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     return;
   }
 
-  // Pre-calculate credit/debit for each row and running balance
+  // Pre-calculate credit/debit for each row, running balance, AND grand totals
   let cumulativeBalance = 0;
+  let grandTotalCredit = 0;
+  let grandTotalDebit = 0;
+
   const formattedRows = transactions.map((row) => {
     let credit = 0;
     let debit = 0;
+    const amt = Number(row.amount) || 0;
+    const hasAccountFilter = filters?.accountId && filters.accountId !== "";
+    const isTraditional = !!filters?.isTraditional;
 
-    const isMillNature = !filters?.accountId || filters?.isTraditional;
+    if (hasAccountFilter) {
+      if (row.type === "transfer") {
+        const fromId = (row.fromAccountId?._id || row.fromAccountId)?.toString();
+        const toId = (row.toAccountId?._id || row.toAccountId)?.toString();
+        const filterId = filters.accountId.toString();
 
-    if (row.type === "transfer") {
-      const fromId = (row.fromAccountId?._id || row.fromAccountId)?.toString();
-      const toId = (row.toAccountId?._id || row.toAccountId)?.toString();
-      const filterId = filters?.accountId?.toString();
+        // Self-transfer: zero out
+        if (fromId === filterId && toId === filterId) {
+          credit = 0;
+          debit = 0;
+        } else {
+          const isInflow = (toId === filterId);
+          const isOutflow = (fromId === filterId);
 
-      if (filterId) {
-        if (fromId === filterId) credit = row.amount;
-        else if (toId === filterId) debit = row.amount;
+          if (isTraditional) {
+            if (isInflow) credit = amt;
+            if (isOutflow) debit = amt;
+          } else {
+            if (isInflow) debit = amt;
+            if (isOutflow) credit = amt;
+          }
+        }
       } else {
-        credit = row.amount;
-        debit = row.amount;
+        const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+        if (isTraditional) {
+          if (isInflow) credit = amt;
+          else debit = amt;
+        } else {
+          if (isInflow) debit = amt;
+          else credit = amt;
+        }
       }
     } else {
-      const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
-      if (isMillNature) {
-        if (isInflow) credit = row.amount;
-        else debit = row.amount;
+      // Global Perspective (no account filter)
+      if (row.type === "transfer") {
+        credit = 0;
+        debit = 0;
       } else {
-        if (isInflow) debit = row.amount;
-        else credit = row.amount;
+        const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+        if (isInflow) credit = amt;
+        else debit = amt;
       }
     }
 
+    // Accumulate from raw numbers — no string parsing
+    grandTotalCredit += credit;
+    grandTotalDebit += debit;
     cumulativeBalance += (credit - debit);
 
     let participant = "—";
@@ -292,18 +320,22 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
     ];
   });
 
-  // Running totals state for willDrawCell
-  let runningCredit = 0;
-  let runningDebit = 0;
-  let processedRows = 0;
+  // Pre-compute the footer values from raw numbers (no string parsing)
+  const netBal = grandTotalCredit - grandTotalDebit;
+  const balSign = netBal >= 0 ? " CR" : " DR";
+  const footerRow = [
+    "",
+    "GRAND TOTALS",
+    formatMoney(grandTotalCredit),
+    formatMoney(grandTotalDebit),
+    formatMoney(Math.abs(netBal)) + balSign,
+  ];
 
   autoTable(doc, {
     startY,
     head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
     body: formattedRows,
-    foot: [[
-      "", "RUNNING TOTALS", "", "", "",
-    ]],
+    foot: [footerRow],
     ...tableTheme,
     theme: "grid",
     styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1, font: "helvetica", fontStyle: "normal" },
@@ -315,38 +347,6 @@ export function downloadTransactionsPdf(transactions, filters = {}) {
       2: { cellWidth: 25, halign: "right", font: "helvetica", fontStyle: "bold" },
       3: { cellWidth: 25, halign: "right", font: "helvetica", fontStyle: "bold" },
       4: { cellWidth: 30, halign: "right", font: "helvetica", fontStyle: "bold" },
-    },
-    willDrawCell: (data) => {
-      if (data.row.section === 'body' && data.column.index === 0) {
-        processedRows++;
-
-        const parseMoneyStr = (val) => {
-          if (!val || val === "—") return 0;
-          return Number(val.toString().replace(/,/g, "")) || 0;
-        };
-
-        runningCredit += parseMoneyStr(data.row.raw[2]);
-        runningDebit += parseMoneyStr(data.row.raw[3]);
-      }
-
-      if (data.row.section === 'foot') {
-        const isLastPage = (processedRows === transactions.length);
-        const netBal = runningCredit - runningDebit;
-        const balSign = netBal >= 0 ? " CR" : " DR";
-        const formattedBalance = formatMoney(Math.abs(netBal)) + balSign;
-
-        if (data.column.index === 0) {
-          data.cell.text = [""];
-        } else if (data.column.index === 1) {
-          data.cell.text = [isLastPage ? "GRAND TOTALS" : "RUNNING TOTALS"];
-        } else if (data.column.index === 2) {
-          data.cell.text = [formatMoney(runningCredit)];
-        } else if (data.column.index === 3) {
-          data.cell.text = [formatMoney(runningDebit)];
-        } else if (data.column.index === 4) {
-          data.cell.text = [formattedBalance];
-        }
-      }
     },
   });
 

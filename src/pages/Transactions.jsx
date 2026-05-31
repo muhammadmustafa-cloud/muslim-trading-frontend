@@ -17,6 +17,57 @@ const formatMoney = (n) => (n == null ? "—" : Number(n).toLocaleString("en-PK"
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Karachi" }) : "—");
 const formatTime = (d) => (d ? new Date(d).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Karachi" }) : "—");
 
+const calculateRowColumns = (row, filtersAccountId, isTraditional) => {
+  let col1 = 0; // Credit (Aamad)
+  let col2 = 0; // Debit (Kharch)
+  const amt = Number(row.amount) || 0;
+
+  if (filtersAccountId) {
+    if (row.type === "transfer") {
+      const fromId = (row.fromAccountId?._id || row.fromAccountId)?.toString();
+      const toId = (row.toAccountId?._id || row.toAccountId)?.toString();
+      const filterId = filtersAccountId.toString();
+
+      if (fromId === filterId && toId === filterId) return { col1: 0, col2: 0 };
+
+      let isInflow = false;
+      let isOutflow = false;
+      
+      if (fromId === filterId) isOutflow = true;
+      if (toId === filterId) isInflow = true;
+
+      if (isTraditional) {
+        if (isInflow) col1 = amt;
+        if (isOutflow) col2 = amt;
+      } else {
+        if (isInflow) col2 = amt;
+        if (isOutflow) col1 = amt;
+      }
+    } else {
+      const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+      if (isTraditional) {
+        if (isInflow) col1 = amt;
+        else col2 = amt;
+      } else {
+        if (isInflow) col2 = amt;
+        else col1 = amt;
+      }
+    }
+  } else {
+    // Global Perspective
+    if (row.type === "transfer") {
+      col1 = 0;
+      col2 = 0;
+    } else {
+      const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
+      if (isInflow) col1 = amt;
+      else col2 = amt;
+    }
+  }
+
+  return { col1, col2 };
+};
+
 export default function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams();
   const accountIdFromUrl = searchParams.get("accountId") || "";
@@ -717,37 +768,7 @@ export default function Transactions() {
                 </thead>
                 <tbody>
                   {paginatedList.map((row) => {
-                     let col1 = 0; // Left Col (Credit / Aamad)
-                     let col2 = 0; // Right Col (Debit / Kharch)
-                      // Nature-based Decision: Global/Mill = Credit Inflow, Bank = Debit Inflow
-                      const isMillNature = !filters.accountId || isTraditional;
-
-                      if (filters.accountId) {
-                        if (row.type === "transfer") {
-                          if (row.fromAccountId?._id === filters.accountId || row.fromAccountId === filters.accountId) {
-                            // Source Account (Giver) = Credit (Aamad)
-                            col1 = row.amount;
-                          } else if (row.toAccountId?._id === filters.accountId || row.toAccountId === filters.accountId) {
-                            // Destination Account (Receiver) = Debit (Kharch)
-                            col2 = row.amount;
-                          }
-                        } else {
-                          // Standard Inflow/Outflow
-                          const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
-                          if (isMillNature) {
-                            if (isInflow) col1 = row.amount; // Credit (Aamad)
-                            else col2 = row.amount; // Debit (Kharch)
-                          } else {
-                            if (isInflow) col2 = row.amount; // Debit
-                            else col1 = row.amount; // Credit
-                          }
-                        }
-                      } else {
-                        // Global Perspective (Always Mill Nature)
-                        if (row.type === "deposit" || row.type === "sale" || row.type === "income") col1 = row.amount;
-                        else col2 = row.amount;
-                      }
-
+                      const { col1, col2 } = calculateRowColumns(row, filters.accountId, isTraditional);
                       const participant = getParticipant(row);
                       const reference = getReference(row);
 
@@ -838,43 +859,19 @@ export default function Transactions() {
                     {(() => {
                       let tKharchTotal = 0;
                       let tAamadTotal = 0;
-
-                      // Use consistent logic with PDF export
-                      const isMillNatureFooter = !filters.accountId || isTraditional;
+                      let pKharchTotal = 0;
+                      let pAamadTotal = 0;
 
                       list.forEach((row) => {
-                        let rowAamad = 0;
-                        let rowKharch = 0;
-
-                        if (filters.accountId) {
-                          if (row.type === "transfer") {
-                            const fromId = (row.fromAccountId?._id || row.fromAccountId)?.toString();
-                            const toId = (row.toAccountId?._id || row.toAccountId)?.toString();
-                            const filterId = filters.accountId.toString();
-
-                            // SAHI: Ignore internal self-transfers for net total
-                            if (fromId === filterId && toId === filterId) return;
-
-                            if (fromId === filterId) rowAamad = row.amount;
-                            if (toId === filterId) rowKharch = row.amount;
-                          } else {
-                            const isInflow = row.type === "deposit" || row.type === "sale" || row.type === "income";
-                            if (isMillNatureFooter) {
-                               if (isInflow) rowAamad = row.amount;
-                               else rowKharch = row.amount;
-                            } else {
-                               if (isInflow) rowKharch = row.amount;
-                               else rowAamad = row.amount;
-                            }
-                          }
-                        } else {
-                          // Global (Mill Standard)
-                          if (row.type === "deposit" || row.type === "sale" || row.type === "income") rowAamad = row.amount;
-                          else rowKharch = row.amount;
-                        }
-
-                        tAamadTotal += rowAamad;
-                        tKharchTotal += rowKharch;
+                        const { col1, col2 } = calculateRowColumns(row, filters.accountId, isTraditional);
+                        tAamadTotal += col1;
+                        tKharchTotal += col2;
+                      });
+                      
+                      paginatedList.forEach((row) => {
+                        const { col1, col2 } = calculateRowColumns(row, filters.accountId, isTraditional);
+                        pAamadTotal += col1;
+                        pKharchTotal += col2;
                       });
 
                       const netBal = tAamadTotal - tKharchTotal;
@@ -882,9 +879,21 @@ export default function Transactions() {
 
                       return (
                         <>
+                          <tr className="font-bold text-slate-600 border-b border-slate-200 bg-slate-50">
+                            <td colSpan="3" className="px-5 py-3 text-right uppercase tracking-[0.1em] text-[10px]">
+                              Page Total:
+                            </td>
+                            <td className="px-5 py-3 text-right text-emerald-700 border-x border-slate-200">
+                              {formatMoney(pAamadTotal)}
+                            </td>
+                            <td className="px-5 py-3 text-right text-rose-700 border-x border-slate-200">
+                              {formatMoney(pKharchTotal)}
+                            </td>
+                            <td className="bg-slate-50/30"></td>
+                          </tr>
                           <tr className="font-black text-slate-800 border-b border-slate-200">
                             <td colSpan="3" className="px-5 py-4 text-right uppercase tracking-[0.2em] text-[10px] text-slate-500 font-black">
-                              Total Account Movements:
+                              Grand Total (All Pages):
                             </td>
                             <td className="px-5 py-4 text-right text-emerald-800 bg-emerald-50/50 border-x border-slate-200">
                               {formatMoney(tAamadTotal)}
