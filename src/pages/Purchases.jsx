@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete, apiPostFormData, apiPutFormData } from "../config/api.js";
 import { downloadPurchasesPdf, downloadPurchaseInvoicePdf, downloadGatePassPdf, downloadAllGatePassPdf } from "../utils/exportPdf.js";
-import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf, FaImage, FaFileExport, FaTicketAlt, FaTrash } from "react-icons/fa";
+import { FaBoxOpen, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilePdf, FaImage, FaFileExport, FaTicketAlt, FaTrash, FaSitemap } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -34,6 +34,7 @@ export default function Purchases() {
     netWeight: "",
     items: [{
       itemId: "",
+      subItemId: "",
       kattay: "",
       rate: "",
       totalAmount: "",
@@ -119,6 +120,7 @@ export default function Purchases() {
       netWeight: "",
       items: [{
         itemId: "",
+        subItemId: "",
         kattay: "",
         rate: "",
         totalAmount: "",
@@ -155,6 +157,7 @@ export default function Purchases() {
       netWeight: String(row.netWeight || ""),
       items: row.items?.map(it => ({
         itemId: it.itemId?._id || it.itemId || "",
+        subItemId: it.subItemId?._id || it.subItemId || "",
         kattay: String(it.kattay || ""),
         rate: String(it.rate || ""),
         totalAmount: String(it.amount || ""),
@@ -165,6 +168,7 @@ export default function Purchases() {
         extrasAmount: String(it.extrasAmount || ""),
       })) || [{
         itemId: row.itemId?._id || row.itemId || "",
+        subItemId: row.subItemId?._id || row.subItemId || "",
         kattay: String(row.kattay || ""),
         rate: String(row.rate || ""),
         totalAmount: String(row.amount || ""),
@@ -299,6 +303,7 @@ export default function Purchases() {
       ...prev,
       items: [...prev.items, {
         itemId: "",
+        subItemId: "",
         kattay: "",
         rate: "",
         totalAmount: "",
@@ -331,6 +336,18 @@ export default function Purchases() {
       setError("Supplier aur saare items select karein.");
       return;
     }
+
+    // Force sub-item selection if main item has sub-items
+    for (let i = 0; i < form.items.length; i++) {
+      const line = form.items[i];
+      const hasSubItems = items.some(item => item.parentId === line.itemId);
+      if (hasSubItems && !line.subItemId) {
+        const itemName = items.find(it => it._id === line.itemId)?.name || "Item";
+        setError(`${itemName} ke liye Sub-Item (Warehouse) select karna lazmi hai.`);
+        return;
+      }
+    }
+
     setError("");
     setSubmitting(true);
     try {
@@ -342,6 +359,7 @@ export default function Purchases() {
         netWeight: Number(form.netWeight) || 0,
         items: JSON.stringify(form.items.map(it => ({
           itemId: it.itemId,
+          subItemId: it.subItemId || undefined,
           kattay: Number(it.kattay) || 0,
           rate: Number(it.rate) || 0,
           totalAmount: Number(it.totalAmount) || 0,
@@ -518,7 +536,7 @@ export default function Purchases() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-100 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-3 text-left w-64">Item *</th>
+                    <th className="px-4 py-3 text-left w-64">Item & Sub-Item *</th>
                     <th className="px-4 py-3 text-left w-24">Bags</th>
                     <th className="px-4 py-3 text-left w-24 text-rose-800">Less (Kg)</th>
                     <th className="px-4 py-3 text-left w-24 text-emerald-800">Add (Kg)</th>
@@ -529,20 +547,40 @@ export default function Purchases() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {form.items.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                      <td className="p-3">
-                        <SearchableSelect
-                          options={items.map(i => ({ _id: i._id, name: `${i.name} (${i.quality || "Standard"})` }))}
-                          value={item.itemId}
-                          onChange={(val) => {
-                            const newItems = [...form.items];
-                            newItems[idx].itemId = val;
-                            updateFormWithAutoCalc({ items: newItems });
-                          }}
-                          placeholder="Select Item"
-                        />
-                      </td>
+                  {form.items.map((item, idx) => {
+                    const subOptions = items.filter(i => i.parentId === item.itemId);
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                        <td className="p-3 space-y-2">
+                          <SearchableSelect
+                            options={items.filter(i => !i.parentId).map(i => ({ _id: i._id, name: `${i.name} (${i.quality || "Standard"})` }))}
+                            value={item.itemId}
+                            onChange={(val) => {
+                              const newItems = [...form.items];
+                              newItems[idx].itemId = val;
+                              newItems[idx].subItemId = ""; // Reset sub-item
+                              updateFormWithAutoCalc({ items: newItems });
+                            }}
+                            placeholder="Select Item"
+                          />
+                          {subOptions.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in slide-in-from-left-2 mt-2">
+                               <FaSitemap className="text-amber-500 w-3 h-3" />
+                               <select 
+                                 value={item.subItemId} 
+                                 onChange={(e) => {
+                                   const newItems = [...form.items];
+                                   newItems[idx].subItemId = e.target.value;
+                                   updateFormWithAutoCalc({ items: newItems });
+                                 }}
+                                 className="input-field py-1 text-xs border-amber-200 bg-amber-50/50"
+                               >
+                                 <option value="">— Select Sub-Item (Required) —</option>
+                                 {subOptions.map(s => <option key={s._id} value={s._id}>{s.name} ({s.quality})</option>)}
+                               </select>
+                            </div>
+                          )}
+                        </td>
                       <td className="p-3">
                         <input type="number" value={item.kattay} onChange={(e) => {
                           const newItems = [...form.items];
@@ -585,7 +623,8 @@ export default function Purchases() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               <button type="button" onClick={addItemRow} className="w-full py-4 bg-slate-50 text-indigo-600 font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 border-t border-slate-200 group">
@@ -808,13 +847,17 @@ export default function Purchases() {
                       <td className="table-cell">{formatDate(row.date)}</td>
                       <td className="table-cell font-bold text-slate-900">{row.supplierId?.name || "—"}</td>
                       <td className="table-cell">
-                        <div className="flex flex-col gap-0.5">
-                          {row.items?.slice(0, 2).map((it, idx) => (
-                            <span key={idx} className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 truncate max-w-[120px]">
-                              {it.itemId?.name || "Item"}
-                            </span>
+                        <div className="flex flex-col gap-1">
+                          {row.items?.map((it, idx) => (
+                            <div key={idx} className="text-[11px] text-slate-700 flex flex-wrap items-center gap-1">
+                              <span className="font-bold bg-slate-100 px-1.5 py-0.5 rounded">{it.itemId?.name || "Item"}</span>
+                              {it.subItemId && (
+                                <span className="text-[10px] text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100 flex items-center gap-0.5 font-medium">
+                                  <FaSitemap className="w-2.5 h-2.5" /> {it.subItemId.name || "Sub-Item"}
+                                </span>
+                              )}
+                            </div>
                           ))}
-                          {(row.items?.length > 2) && <span className="text-[10px] text-slate-500 font-medium">+{row.items.length - 2} more</span>}
                         </div>
                       </td>
                       <td className="table-cell text-center font-medium">
