@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { apiGet } from "../config/api.js";
 import {
   FaFileContract,
@@ -55,7 +55,10 @@ export default function AuditSummary() {
     }
   };
 
+  const hasFetched = useRef(false);
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
     fetchSummary();
   }, []);
 

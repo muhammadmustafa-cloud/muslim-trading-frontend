@@ -24,6 +24,7 @@ export default {
           hover: '#334155',
           active: '#0f172a',
           border: '#334155',
+          darken: '#0f172a',
         },
       },
       boxShadow: {
