@@ -110,6 +110,7 @@ export default function Transactions() {
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
@@ -189,11 +190,17 @@ export default function Transactions() {
         rawMaterialHeadId: filters.rawMaterialHeadId || undefined,
         dateFrom: filters.dateFrom || undefined,
         dateTo: filters.dateTo || undefined,
+        page,
+        limit: pageSize,
+        sortKey,
+        sortDir,
       });
       setList(data.data || []);
+      setTotalItems(data.totalCount || 0);
     } catch (e) {
       setError(e.message);
       setList([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -210,7 +217,7 @@ export default function Transactions() {
   }, []);
   useEffect(() => {
     fetchList();
-  }, [filters.accountId, filters.dateFrom, filters.dateTo, filters.rawMaterialHeadId]);
+  }, [filters.accountId, filters.dateFrom, filters.dateTo, filters.rawMaterialHeadId, page, pageSize, sortKey, sortDir]);
 
   const resetForm = () => {
     setForm({
@@ -231,6 +238,7 @@ export default function Transactions() {
       paymentMethod: "cash",
       chequeNumber: "",
       chequeDate: "",
+      isSignatureBook: false,
     });
     setEditingId(null);
     setModalOpen(false);
@@ -269,6 +277,7 @@ export default function Transactions() {
       paymentMethod: row.paymentMethod || "cash",
       chequeNumber: row.chequeNumber || "",
       chequeDate: row.chequeDate ? new Date(row.chequeDate).toISOString().split('T')[0] : "",
+      isSignatureBook: row.isSignatureBook || false,
     });
     setModalOpen(true);
   };
@@ -365,6 +374,7 @@ export default function Transactions() {
         formData.append("chequeNumber", form.chequeNumber.trim());
         if (form.chequeDate) formData.append("chequeDate", form.chequeDate);
       }
+      formData.append("isSignatureBook", form.isSignatureBook);
 
       if (editingId) {
         await apiPutFormData(`/transactions/${editingId}`, formData);
@@ -387,35 +397,36 @@ export default function Transactions() {
       setSortKey(key);
       setSortDir(key === "date" ? "desc" : "asc");
     }
+    setPage(1);
   };
 
-  const sortedList = useMemo(() => {
-    const arr = [...list];
-    arr.sort((a, b) => {
-      if (sortKey === "date") {
-        const va = new Date(a.date).getTime();
-        const vb = new Date(b.date).getTime();
-        return sortDir === "asc" ? va - vb : vb - va;
+  const exportData = async (type) => {
+    try {
+      const data = await apiGet("/transactions", {
+        unified: "true",
+        accountId: filters.accountId || undefined,
+        rawMaterialHeadId: filters.rawMaterialHeadId || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        sortKey,
+        sortDir,
+        export: "true"
+      });
+      const exportList = data.data || [];
+      if (exportList.length === 0) {
+        alert("No data to export");
+        return;
       }
-      if (sortKey === "amount") {
-        const va = Number(a.amount) || 0;
-        const vb = Number(b.amount) || 0;
-        return sortDir === "asc" ? va - vb : vb - va;
+      if (type === 'pdf') {
+        downloadTransactionsPdf(exportList, { ...filters, isTraditional });
+      } else {
+        const csv = buildCsv(exportList, [{ key: "date", label: "Date" }, { key: "type", label: "Type" }, { key: "fromAccountId.name", label: "From Account" }, { key: "toAccountId.name", label: "To Account" }, { key: "amount", label: "Amount" }, { key: "category", label: "Category" }, { key: "note", label: "Note" }]); 
+        downloadCsv(csv, "transactions.csv");
       }
-      if (sortKey === "type") {
-        const va = (a.type || "").toLowerCase();
-        const vb = (b.type || "").toLowerCase();
-        return sortDir === "asc" ? va.localeCompare(vb) : -va.localeCompare(vb);
-      }
-      return 0;
-    });
-    return arr;
-  }, [list, sortKey, sortDir]);
-
-  const paginatedList = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedList.slice(start, start + pageSize);
-  }, [sortedList, page, pageSize]);
+    } catch (e) {
+      alert("Export failed: " + e.message);
+    }
+  };
 
   const SortIcon = ({ columnKey }) => {
     if (sortKey !== columnKey) return <FaSort className="w-3.5 h-3.5 ml-1 opacity-50" />;
@@ -695,6 +706,12 @@ export default function Transactions() {
               <label className="input-label">Note / Category {form.type === "salary" ? "(e.g. Salary for March 2024)" : "(optional)"}</label>
               <input type="text" placeholder="Optional" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className="input-field" />
             </div>
+            <div className="sm:col-span-2 flex items-center gap-2 mt-1 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+              <input type="checkbox" id="isSignatureBook" checked={form.isSignatureBook} onChange={(e) => setForm((f) => ({ ...f, isSignatureBook: e.target.checked }))} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer" />
+              <label htmlFor="isSignatureBook" className="text-sm font-bold text-indigo-900 cursor-pointer select-none">
+                Add to Signature Book (Listing)
+              </label>
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-2 pt-2">
@@ -732,9 +749,9 @@ export default function Transactions() {
             placeholder="Filter by Raw Material"
             className="w-56"
           />
-          <p className="text-sm text-slate-500">{list.length} transaction(s)</p>
-          <button type="button" onClick={() => downloadTransactionsPdf(sortedList, { ...filters, isTraditional })} className="btn-primary flex items-center gap-1.5" disabled={list.length === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
-          <button type="button" onClick={() => { const csv = buildCsv(list, [{ key: "date", label: "Date" }, { key: "type", label: "Type" }, { key: "fromAccountId.name", label: "From Account" }, { key: "toAccountId.name", label: "To Account" }, { key: "amount", label: "Amount" }, { key: "category", label: "Category" }, { key: "note", label: "Note" }]); downloadCsv(csv, "transactions.csv"); }} className="btn-secondary flex items-center gap-1.5" disabled={list.length === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
+          <p className="text-sm text-slate-500">{totalItems} transaction(s)</p>
+          <button type="button" onClick={() => exportData('pdf')} className="btn-primary flex items-center gap-1.5" disabled={totalItems === 0} title="Download PDF"><FaFilePdf className="w-4 h-4" /> Export PDF</button>
+          <button type="button" onClick={() => exportData('csv')} className="btn-secondary flex items-center gap-1.5" disabled={totalItems === 0}><FaFileExport className="w-4 h-4" /> Export CSV</button>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
@@ -767,7 +784,7 @@ export default function Transactions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedList.map((row) => {
+                  {list.map((row) => {
                       const { col1, col2 } = calculateRowColumns(row, filters.accountId, isTraditional);
                       const participant = getParticipant(row);
                       const reference = getReference(row);
@@ -857,25 +874,14 @@ export default function Transactions() {
                   </tbody>
                   <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                     {(() => {
-                      let tKharchTotal = 0;
-                      let tAamadTotal = 0;
                       let pKharchTotal = 0;
                       let pAamadTotal = 0;
 
                       list.forEach((row) => {
                         const { col1, col2 } = calculateRowColumns(row, filters.accountId, isTraditional);
-                        tAamadTotal += col1;
-                        tKharchTotal += col2;
-                      });
-                      
-                      paginatedList.forEach((row) => {
-                        const { col1, col2 } = calculateRowColumns(row, filters.accountId, isTraditional);
                         pAamadTotal += col1;
                         pKharchTotal += col2;
                       });
-
-                      const netBal = tAamadTotal - tKharchTotal;
-                      const isCredit = netBal >= 0;
 
                       return (
                         <>
@@ -891,36 +897,12 @@ export default function Transactions() {
                             </td>
                             <td className="bg-slate-50/30"></td>
                           </tr>
-                          <tr className="font-black text-slate-800 border-b border-slate-200">
-                            <td colSpan="3" className="px-5 py-4 text-right uppercase tracking-[0.2em] text-[10px] text-slate-500 font-black">
-                              Grand Total (All Pages):
-                            </td>
-                            <td className="px-5 py-4 text-right text-emerald-800 bg-emerald-50/50 border-x border-slate-200">
-                              {formatMoney(tAamadTotal)}
-                            </td>
-                            <td className="px-5 py-4 text-right text-rose-800 bg-rose-50/50 border-x border-slate-200">
-                              {formatMoney(tKharchTotal)}
-                            </td>
-                            <td className="bg-slate-50/30"></td>
-                          </tr>
-                          <tr className="font-black text-slate-800 bg-slate-200/50">
-                            <td colSpan="3" className="px-5 py-3 text-right uppercase tracking-[0.2em] text-[10px] text-slate-600 font-black">
-                              Net Period Balance (Standing):
-                            </td>
-                            <td colSpan="2" className="px-5 py-3 text-center text-indigo-900 border-x border-slate-300">
-                              <span className="text-lg mr-2">{formatMoney(Math.abs(netBal))}</span>
-                              <span className={`px-2 py-0.5 rounded text-xs ${isCredit ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
-                                {isCredit ? 'CR' : 'DR'}
-                              </span>
-                            </td>
-                            <td className="bg-white"></td>
-                          </tr>
                         </>
                       );
                     })()}
                   </tfoot>
               </table>
-              <TablePagination page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} totalItems={sortedList.length} />
+              <TablePagination page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} totalItems={totalItems} />
             </>
           )}
           {!loading && list.length === 0 && (

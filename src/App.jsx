@@ -20,6 +20,7 @@ import Purchases from "./pages/Purchases.jsx";
 import CurrentStock from "./pages/CurrentStock";
 import Sales from "./pages/Sales";
 import Transactions from "./pages/Transactions";
+import SignatureBook from "./pages/SignatureBook";
 import DailyKhata from "./pages/DailyKhata";
 import UniversalLedger from "./pages/UniversalLedger";
 import MillKhata from "./pages/MillKhata";
@@ -82,6 +83,7 @@ function App() {
           <Route path="current-stock" element={<CurrentStock />} />
           <Route path="sales" element={<Sales />} />
           <Route path="transactions" element={<Transactions />} />
+          <Route path="signature-book" element={<SignatureBook />} />
           <Route path="daily-khata" element={<DailyKhata />} />
           <Route path="universal-ledger" element={<UniversalLedger />} />
           <Route path="daily-cash-memo" element={<DailyKhata />} />

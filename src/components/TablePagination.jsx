@@ -23,11 +23,12 @@ export default function TablePagination({
             setPageSize(Number(e.target.value));
             setPage(1);
           }}
-          className="input-field w-20 py-1.5 text-sm"
+          className="input-field py-1.5 text-sm"
         >
           {PAGE_SIZES.map((n) => (
             <option key={n} value={n}>{n}</option>
           ))}
+          <option value={1000000}>All</option>
         </select>
         <span className="text-sm text-slate-500">
           {start}-{end} of {totalItems}

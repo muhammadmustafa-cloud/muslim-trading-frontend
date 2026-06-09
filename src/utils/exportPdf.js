@@ -1987,3 +1987,75 @@ export function downloadAllGatePassPdf(sales, filters = {}, isPurchase = false) 
   addPageNumbers(doc);
   doc.save("all-gate-pass-report.pdf");
 }
+
+/**
+ * Signature Book PDF.
+ */
+export function downloadSignatureBookPdf(transactions, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const subtitleLines = [];
+  if (filters.dateFrom || filters.dateTo)
+    subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
+  
+  subtitleLines.push(`Total records: ${transactions.length}`);
+
+  let startY = addReportHeader(doc, "Signature Book", subtitleLines);
+
+  if (!transactions.length) {
+    doc.setFontSize(10);
+    doc.text("No records in this period.", MARGIN, startY);
+    doc.save(`Signature_Book.pdf`);
+    return;
+  }
+
+  let totalAmount = 0;
+
+  const formattedRows = transactions.map((row) => {
+    totalAmount += Number(row.amount) || 0;
+
+    let name = row.customerId?.name || row.supplierId?.name || row.mazdoorId?.name || "—";
+    
+    let accountName = "—";
+    if (row.type === 'deposit') accountName = row.toAccountId?.name || "—";
+    else if (row.type === 'withdraw' || row.type === 'tax' || row.type === 'expense' || row.type === 'salary') accountName = row.fromAccountId?.name || "—";
+    else if (row.type === 'transfer') accountName = `${row.fromAccountId?.name || "—"} -> ${row.toAccountId?.name || "—"}`;
+    else accountName = row.fromAccountId?.name || row.toAccountId?.name || "—";
+
+    let chequeInfo = row.chequeNumber || "—";
+    let chequeDate = formatDate(row.chequeDate);
+
+    return [
+      formatDate(row.date),
+      name,
+      accountName,
+      formatMoney(row.amount),
+      chequeInfo,
+      chequeDate,
+      "" // Signature column
+    ];
+  });
+
+  autoTable(doc, {
+    startY,
+    head: [["Date", "Name", "Account", "Amount", "Cheque No", "Cheque Date", "Signature"]],
+    body: formattedRows,
+    foot: [["", "GRAND TOTAL", "", formatMoney(totalAmount), "", "", ""]],
+    ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 8.5, lineWidth: 0.1 },
+    headStyles: { ...tableTheme.headStyles, fontSize: 9 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 25, halign: "right" },
+      4: { cellWidth: 20 },
+      5: { cellWidth: 22 },
+      6: { cellWidth: 25 },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`Signature_Book.pdf`);
+}
