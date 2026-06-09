@@ -728,7 +728,7 @@ export function drawPurchaseInvoice(doc, entry) {
   doc.setFont("helvetica", "normal");
   doc.text("Opposite Begam Saeeda House Near", 15, 32);
   doc.text("Shell Pump Quetta Road Jaccobabad", 15, 36);
-  doc.text("Haji Saleh M : 03023392243", 15, 40);
+  // doc.text("Haji Saleh M : 03023392243", 15, 40);
   doc.text("Haji Saleh M : 03362320267", 15, 44);
 
   doc.text("Channa Dall Jawar Taramera Till ETC", 75, 32);
