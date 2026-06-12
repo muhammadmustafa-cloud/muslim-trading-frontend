@@ -41,6 +41,7 @@ import SubItemSummaryReport from "./pages/SubItemSummaryReport";
 import Login from "./pages/Login";
 import Users from "./pages/Users";
 import SetupOpeningBalances from "./pages/SetupOpeningBalances";
+import DigitalArchive from "./pages/DigitalArchive";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function ProtectedRoute({ children }) {
@@ -101,6 +102,7 @@ function App() {
           <Route path="consolidated-ledger" element={<ConsolidatedLedger />} />
           <Route path="users" element={<Users />} />
           <Route path="setup-opening-balances" element={<SetupOpeningBalances />} />
+          <Route path="digital-archive" element={<DigitalArchive />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

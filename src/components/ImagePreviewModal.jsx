@@ -15,7 +15,8 @@ export default function ImagePreviewModal({ open, onClose, imageUrl, title = "Im
   if (!imageUrl) return null;
 
   const isCompleteUrl = imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
-  const fullUrl = isCompleteUrl ? imageUrl : `${BASE_URL}/uploads/${imageUrl}`;
+  const isBase64Url = imageUrl.startsWith("data:image/");
+  const fullUrl = isCompleteUrl || isBase64Url ? imageUrl : `${BASE_URL}/uploads/${imageUrl}`;
 
   return (
     <Modal open={open} onClose={onClose} title={title}>

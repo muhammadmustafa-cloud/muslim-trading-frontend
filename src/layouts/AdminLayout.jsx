@@ -57,6 +57,7 @@ const navItems = [
   { to: "/machinery-ledger", icon: FaBook, label: "Machinery Ledger" },
   { to: "/transactions", icon: FaExchangeAlt, label: "Transactions" },
   { to: "/signature-book", icon: FaBookOpen, label: "Signature Book" },
+  { to: "/digital-archive", icon: FaBookOpen, label: "Digital Archive" },
   { to: "/expense-types", icon: FaReceipt, label: "Expense Management" },
   { to: "/tax-types", icon: FaBalanceScale, label: "Tax Management" },
   { to: "/raw-materials", icon: FaBoxes, label: "Raw Material Setup" },
