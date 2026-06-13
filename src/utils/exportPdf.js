@@ -556,6 +556,10 @@ export function drawSaleInvoice(doc, sale) {
   yPos += 15;
   doc.setFont("helvetica", "normal");
 
+  let totalSaleBags = 0;
+  let totalSaleMun = 0;
+  let totalSaleNet = 0;
+
   if (sale.items && sale.items.length > 0) {
     sale.items.forEach((it, idx) => {
       const mainName = it.itemId?.name || "Product";
@@ -564,13 +568,17 @@ export function drawSaleInvoice(doc, sale) {
       doc.text(itName, 18, yPos);
       doc.text(String(it.kattay || 0), 95, yPos);
       
-      const itMun = it.quantity ? (it.quantity / 40).toFixed(3) : "0.000";
-      doc.text(String(itMun), 120, yPos);
+      const itMun = it.quantity ? Number((it.quantity / 40).toFixed(3)) : 0;
+      totalSaleBags += Number(it.kattay || 0);
+      totalSaleMun += itMun;
+      
+      doc.text(itMun.toFixed(3), 120, yPos);
       doc.text(String(it.kgPerKata || 0), 140, yPos);
       doc.text(formatMoney(it.rate), 155, yPos);
       
       // Show Real Amount: (quantity / 40) * rate - base calculation without adjustments
       const itBaseAmount = Math.round((it.quantity / 40) * (it.rate || 0));
+      totalSaleNet += itBaseAmount;
       doc.text(formatMoney(itBaseAmount), 175, yPos);
       
       yPos += 7;
@@ -579,6 +587,20 @@ export function drawSaleInvoice(doc, sale) {
         yPos = 20; 
       }
     });
+
+    if (sale.items.length > 1) {
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.2);
+      doc.line(15, yPos - 3, 195, yPos - 3);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, yPos - 4.5, 180, 8, "F");
+      doc.setFont("helvetica", "bold");
+      doc.text("TOTAL", 18, yPos);
+      doc.text(String(totalSaleBags), 95, yPos);
+      doc.text(totalSaleMun.toFixed(3), 120, yPos);
+      doc.text(formatMoney(totalSaleNet), 175, yPos);
+      yPos += 10;
+    }
   } else {
     doc.text(sale.itemName || "Product", 18, yPos);
     doc.text(String(sale.kattay || 0), 95, yPos);
@@ -813,24 +835,46 @@ export function drawPurchaseInvoice(doc, entry) {
   yPos += 15;
   doc.setFont("helvetica", "normal");
 
+  let totalPurchaseBags = 0;
+  let totalPurchaseMun = 0;
+  let totalPurchaseNet = 0;
+
   if (entry.items && entry.items.length > 0) {
     entry.items.forEach((it, idx) => {
       const itName = it.itemId?.name || "Product";
       doc.text(itName, 18, yPos);
       doc.text(String(it.kattay || 0), 95, yPos);
       
-      const itMun = it.itemNetWeight ? (it.itemNetWeight / 40).toFixed(3) : "0";
-      doc.text(String(itMun), 120, yPos);
+      const itMun = it.itemNetWeight ? Number((it.itemNetWeight / 40).toFixed(3)) : 0;
+      totalPurchaseBags += Number(it.kattay || 0);
+      totalPurchaseMun += itMun;
+      
+      doc.text(itMun.toFixed(3), 120, yPos);
       doc.text("40", 140, yPos); // Standard KG per MUN
       doc.text(formatMoney(it.rate), 155, yPos);
       
       // Show base amount (Rate × MUN) in Net Amount column
       const baseAmount = Math.round((it.itemNetWeight / 40) * (it.rate || 0));
+      totalPurchaseNet += baseAmount;
       doc.text(formatMoney(baseAmount), 175, yPos);
       
       yPos += 7;
       if (yPos > 190) { doc.addPage(); yPos = 20; }
     });
+
+    if (entry.items.length > 1) {
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.2);
+      doc.line(15, yPos - 3, 195, yPos - 3);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, yPos - 4.5, 180, 8, "F");
+      doc.setFont("helvetica", "bold");
+      doc.text("TOTAL", 18, yPos);
+      doc.text(String(totalPurchaseBags), 95, yPos);
+      doc.text(totalPurchaseMun.toFixed(3), 120, yPos);
+      doc.text(formatMoney(totalPurchaseNet), 175, yPos);
+      yPos += 10;
+    }
   } else {
     // Fallback old data
     doc.text(entry.itemId?.name || "Product", 18, yPos);
