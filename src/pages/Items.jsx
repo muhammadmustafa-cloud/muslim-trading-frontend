@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash } from "react-icons/fa";
+import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash, FaWarehouse } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -239,6 +239,7 @@ export default function Items() {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-2">
                            <button type="button" onClick={() => navigate(`/items/${row._id}/khata`)} className="btn-ghost-primary flex items-center gap-1.5"><FaBook /> Khata</button>
+                           <button type="button" onClick={() => navigate(`/items/${row._id}/warehouse-ledger`)} className="btn-ghost-primary flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"><FaWarehouse /> Warehouse In/Out</button>
                            <button type="button" onClick={() => navigate(`/items/${row._id}/sub-items-summary-report`)} className="btn-ghost-primary flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"><FaSitemap /> Summary</button>
                            <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
                            {isAdmin && (

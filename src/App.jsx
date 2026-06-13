@@ -42,6 +42,7 @@ import Login from "./pages/Login";
 import Users from "./pages/Users";
 import SetupOpeningBalances from "./pages/SetupOpeningBalances";
 import DigitalArchive from "./pages/DigitalArchive";
+import WarehouseItemLedger from "./pages/WarehouseItemLedger";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 function ProtectedRoute({ children }) {
@@ -77,6 +78,7 @@ function App() {
           <Route path="categories" element={<Categories />} />
           <Route path="items" element={<Items />} />
           <Route path="items/:id/khata" element={<ItemKhata />} />
+          <Route path="items/:id/warehouse-ledger" element={<WarehouseItemLedger />} />
           <Route path="items/:id/sub-khata" element={<SubItemLedger />} />
           <Route path="items/:id/sub-items-summary-report" element={<SubItemSummaryReport />} />
           <Route path="sub-item-ledger" element={<SubItemHistorySelector />} />

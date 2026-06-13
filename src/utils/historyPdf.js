@@ -794,3 +794,109 @@ export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
   addPageNumbers(doc);
   doc.save(`${(mainItemName || "item").replace(/\s+/g, "-")}-sub-items-summary.pdf`);
 }
+
+/**
+ * Warehouse Item Ledger PDF: Detailed IN/OUT rows for warehouse.
+ */
+export function downloadWarehouseLedgerPdf(data, filters = {}) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  let y = 15;
+
+  doc.setFontSize(16);
+  doc.setFont(undefined, "bold");
+  doc.text(`Warehouse Ledger — ${data.itemName || "Item"}`, MARGIN, y);
+  y += 8;
+  doc.setFont(undefined, "normal");
+  y = addGeneratedLine(doc, y);
+
+  if (filters.dateFrom || filters.dateTo) {
+    doc.setFontSize(9);
+    const filterStr = [
+      filters.dateFrom && `From: ${filters.dateFrom}`,
+      filters.dateTo && `To: ${filters.dateTo}`,
+    ].filter(Boolean).join(" | ");
+    doc.text(filterStr, MARGIN, y);
+    y += 8;
+  }
+
+  const totals = data.totals || {};
+
+  doc.setFontSize(9);
+  doc.text(
+    `Total IN: ${totals.totalInBags || 0} Bags | ${(totals.totalInWeight / 40 || 0).toFixed(3)} MUN   -   Total OUT: ${totals.totalOutBags || 0} Bags | ${(totals.totalOutWeight / 40 || 0).toFixed(3)} MUN`,
+    MARGIN,
+    y
+  );
+  y += 6;
+  doc.setFont(undefined, "bold");
+  doc.text(
+    `Current Balance: ${totals.balanceBags || 0} Bags | ${(totals.balanceWeight / 40 || 0).toFixed(3)} MUN`,
+    MARGIN,
+    y
+  );
+  y += 10;
+
+  const body = (data.ledger || []).map((row) => [
+    formatDate(row.date),
+    `${row.partyName}\n[${row.source}]${row.note ? ` - ${row.note}` : ""}`,
+    row.itemName || "—",
+    row.type === 'IN' && row.bagsIn > 0 ? row.bagsIn : "—",
+    row.type === 'IN' && row.weightIn > 0 ? (row.weightIn / 40).toFixed(3) : "—",
+    row.type === 'OUT' && row.bagsOut > 0 ? row.bagsOut : "—",
+    row.type === 'OUT' && row.weightOut > 0 ? (row.weightOut / 40).toFixed(3) : "—",
+    row.balanceBags || 0,
+    (row.balanceWeight / 40).toFixed(3),
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [
+      [
+        { content: "Date", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
+        { content: "Particulars", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
+        { content: "Item", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
+        { content: "Stock IN (Aamad)", colSpan: 2, styles: { halign: "center", fillColor: [4, 120, 87] } },
+        { content: "Stock OUT (Rawangi)", colSpan: 2, styles: { halign: "center", fillColor: [67, 56, 202] } },
+        { content: "Balance (Baqi)", colSpan: 2, styles: { halign: "center", fillColor: [161, 98, 7] } },
+      ],
+      [
+        { content: "Bags", styles: { halign: "center", fillColor: [16, 185, 129] } },
+        { content: "MUN", styles: { halign: "center", fillColor: [16, 185, 129] } },
+        { content: "Bags", styles: { halign: "center", fillColor: [99, 102, 241] } },
+        { content: "MUN", styles: { halign: "center", fillColor: [99, 102, 241] } },
+        { content: "Bags", styles: { halign: "center", fillColor: [217, 119, 6] } },
+        { content: "MUN", styles: { halign: "center", fillColor: [217, 119, 6] } },
+      ],
+    ],
+    body,
+    foot: [[
+      { content: "TOTALS", colSpan: 3, styles: { halign: "right", fontStyle: "bold" } },
+      { content: String(totals.totalInBags || 0), styles: { halign: "center" } },
+      { content: (totals.totalInWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: String(totals.totalOutBags || 0), styles: { halign: "center" } },
+      { content: (totals.totalOutWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: String(totals.balanceBags || 0), styles: { halign: "center" } },
+      { content: (totals.balanceWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+    ]],
+    theme: "grid",
+    margin: { left: MARGIN, right: MARGIN },
+    styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.1, textColor: [30, 41, 59] },
+    headStyles: { textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 20 },
+      1: { cellWidth: "auto" },
+      2: { cellWidth: 25 },
+      3: { halign: "center", cellWidth: 12 },
+      4: { halign: "center", cellWidth: 18, fontStyle: "bold" },
+      5: { halign: "center", cellWidth: 12 },
+      6: { halign: "center", cellWidth: 18, fontStyle: "bold" },
+      7: { halign: "center", cellWidth: 12 },
+      8: { halign: "center", cellWidth: 18, fontStyle: "bold" },
+    },
+  });
+
+  addPageNumbers(doc);
+  doc.save(`${(data.itemName || "item").replace(/\s+/g, "-")}-warehouse-ledger.pdf`);
+}
