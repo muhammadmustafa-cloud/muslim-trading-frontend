@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FaCloudUploadAlt, FaSearch, FaTrash, FaEye } from "react-icons/fa";
+import { apiGet, apiDelete } from "../config/api.js";
 import UploadScannedDocumentModal from "../components/UploadScannedDocumentModal";
 import ImagePreviewModal from "../components/ImagePreviewModal";
 
@@ -19,26 +20,15 @@ export default function DigitalArchive() {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("mill_token");
-      const clientId = localStorage.getItem("mill_client_id");
-      
-      const queryParams = new URLSearchParams({
+      setError("");
+
+      const data = await apiGet("/scanned-documents", {
         documentType: activeTab,
-        ...(filters.startDate && { startDate: filters.startDate }),
-        ...(filters.endDate && { endDate: filters.endDate }),
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
         limit: 50,
       });
 
-      const res = await fetch(`http://localhost:5000/api/scanned-documents?${queryParams}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-client-id": clientId,
-        },
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch documents");
-      
       setDocuments(data.data);
     } catch (err) {
       setError(err.message);
@@ -55,19 +45,7 @@ export default function DigitalArchive() {
     if (!window.confirm("Are you sure you want to delete this document?")) return;
     
     try {
-      const token = localStorage.getItem("mill_token");
-      const clientId = localStorage.getItem("mill_client_id");
-      
-      const res = await fetch(`http://localhost:5000/api/scanned-documents/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-client-id": clientId,
-        },
-      });
-
-      if (!res.ok) throw new Error("Failed to delete document");
-      
+      await apiDelete(`/scanned-documents/${id}`);
       setDocuments(documents.filter(d => d._id !== id));
     } catch (err) {
       alert(err.message);
