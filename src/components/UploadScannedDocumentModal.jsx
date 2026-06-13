@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { apiPost } from "../config/api.js";
 import Modal from "./Modal";
 
 export default function UploadScannedDocumentModal({ open, onClose, onSuccess, initialType = "SignatureBook" }) {
@@ -46,21 +46,8 @@ export default function UploadScannedDocumentModal({ open, onClose, onSuccess, i
         imageUrl: base64Image,
       };
 
-      const token = localStorage.getItem("mill_token");
-      const clientId = localStorage.getItem("mill_client_id");
-
-      const response = await fetch("http://localhost:5000/api/scanned-documents", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "x-client-id": clientId,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to upload document");
+      const data = await apiPost("/scanned-documents", payload);
+      if (!data) throw new Error('Failed to upload document');
 
       onSuccess(data.data);
       setBase64Image("");
