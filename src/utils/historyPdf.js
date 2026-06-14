@@ -838,14 +838,12 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
 
   const body = (data.ledger || []).map((row) => [
     formatDate(row.date),
-    `${row.partyName}\n[${row.source}]${row.note ? ` - ${row.note}` : ""}`,
+    `${row.partyName}${row.truckNumber ? ` (Truck: ${row.truckNumber})` : ""}\n[${row.source}]${row.note ? ` - ${row.note}` : ""}`,
     row.itemName || "—",
     row.type === 'IN' && row.bagsIn > 0 ? row.bagsIn : "—",
     row.type === 'IN' && row.weightIn > 0 ? (row.weightIn / 40).toFixed(3) : "—",
     row.type === 'OUT' && row.bagsOut > 0 ? row.bagsOut : "—",
     row.type === 'OUT' && row.weightOut > 0 ? (row.weightOut / 40).toFixed(3) : "—",
-    row.balanceBags || 0,
-    (row.balanceWeight / 40).toFixed(3),
   ]);
 
   autoTable(doc, {
@@ -855,17 +853,14 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
         { content: "Date", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
         { content: "Particulars", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
         { content: "Item", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
-        { content: "Stock IN (Aamad)", colSpan: 2, styles: { halign: "center", fillColor: [4, 120, 87] } },
-        { content: "Stock OUT (Rawangi)", colSpan: 2, styles: { halign: "center", fillColor: [67, 56, 202] } },
-        { content: "Balance (Baqi)", colSpan: 2, styles: { halign: "center", fillColor: [161, 98, 7] } },
+        { content: "Credit (Stock IN)", colSpan: 2, styles: { halign: "center", fillColor: [4, 120, 87] } },
+        { content: "Debit (Stock OUT)", colSpan: 2, styles: { halign: "center", fillColor: [67, 56, 202] } },
       ],
       [
         { content: "Bags", styles: { halign: "center", fillColor: [16, 185, 129] } },
         { content: "MUN", styles: { halign: "center", fillColor: [16, 185, 129] } },
         { content: "Bags", styles: { halign: "center", fillColor: [99, 102, 241] } },
         { content: "MUN", styles: { halign: "center", fillColor: [99, 102, 241] } },
-        { content: "Bags", styles: { halign: "center", fillColor: [217, 119, 6] } },
-        { content: "MUN", styles: { halign: "center", fillColor: [217, 119, 6] } },
       ],
     ],
     body,
@@ -875,8 +870,6 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
       { content: (totals.totalInWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
       { content: String(totals.totalOutBags || 0), styles: { halign: "center" } },
       { content: (totals.totalOutWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
-      { content: String(totals.balanceBags || 0), styles: { halign: "center" } },
-      { content: (totals.balanceWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
     ]],
     theme: "grid",
     margin: { left: MARGIN, right: MARGIN },
@@ -888,12 +881,10 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
       0: { cellWidth: 20 },
       1: { cellWidth: "auto" },
       2: { cellWidth: 25 },
-      3: { halign: "center", cellWidth: 12 },
-      4: { halign: "center", cellWidth: 18, fontStyle: "bold" },
-      5: { halign: "center", cellWidth: 12 },
-      6: { halign: "center", cellWidth: 18, fontStyle: "bold" },
-      7: { halign: "center", cellWidth: 12 },
-      8: { halign: "center", cellWidth: 18, fontStyle: "bold" },
+      3: { halign: "center", cellWidth: 15 },
+      4: { halign: "center", cellWidth: 20, fontStyle: "bold" },
+      5: { halign: "center", cellWidth: 15 },
+      6: { halign: "center", cellWidth: 20, fontStyle: "bold" },
     },
   });
 

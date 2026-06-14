@@ -178,23 +178,20 @@ export default function WarehouseItemLedger() {
                     <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300 w-24">Date</th>
                     <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300 w-48">Particulars (Party / Note)</th>
                     <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300 w-32">Item</th>
-                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-emerald-100/50 text-emerald-900">Stock IN (Aamad)</th>
-                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-indigo-100/50 text-indigo-900">Stock OUT (Rawangi)</th>
-                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-amber-100/50 text-amber-900">Balance (Baqi)</th>
+                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-emerald-100/50 text-emerald-900">Credit (Stock In)</th>
+                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-indigo-100/50 text-indigo-900">Debit (Stock Out)</th>
                   </tr>
                   <tr className="bg-slate-100 text-slate-600 font-black text-[8px] uppercase tracking-widest border-b border-slate-200">
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50">Bags</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50">MUN</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">Bags</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">MUN</th>
-                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">Bags</th>
-                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">MUN</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {data.ledger.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="py-20 text-center text-slate-400 font-medium">
+                      <td colSpan="7" className="py-20 text-center text-slate-400 font-medium">
                         Koi In/Out record nahi mila.
                       </td>
                     </tr>
@@ -205,10 +202,11 @@ export default function WarehouseItemLedger() {
                           {formatDate(row.date)}
                         </td>
                         <td className="py-3 px-3 border-r border-slate-100">
-                          <div className="font-black text-slate-800 uppercase tracking-tighter">
+                          <div className="font-black text-slate-800 uppercase tracking-tighter flex flex-wrap items-center gap-2">
                             {row.partyName}
+                            {row.truckNumber && <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium normal-case tracking-normal border border-slate-200">🚚 {row.truckNumber}</span>}
                           </div>
-                          <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                          <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
                             <span className={`px-1 rounded text-[8px] ${row.type === 'IN' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}`}>{row.source}</span>
                             {row.note}
                           </div>
@@ -234,14 +232,6 @@ export default function WarehouseItemLedger() {
                         <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/30 font-black text-indigo-900">
                           {row.type === 'OUT' && row.weightOut > 0 ? (row.weightOut / 40).toFixed(3) : '—'}
                         </td>
-
-                        {/* Balance */}
-                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/10 font-bold">
-                          {row.balanceBags}
-                        </td>
-                        <td className={`py-3 px-2 text-center border-r border-slate-100 bg-amber-50/30 font-black ${row.balanceWeight < 0 ? 'text-red-600' : 'text-amber-800'}`}>
-                          {(row.balanceWeight / 40).toFixed(3)}
-                        </td>
                       </tr>
                     ))
                   )}
@@ -253,8 +243,6 @@ export default function WarehouseItemLedger() {
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-300 text-xs">{(totals.totalInWeight / 40 || 0).toFixed(3)}</td>
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-400">{totals.totalOutBags || 0}</td>
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-300 text-xs">{(totals.totalOutWeight / 40 || 0).toFixed(3)}</td>
-                    <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-400">{totals.balanceBags || 0}</td>
-                    <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-300 text-xs">{(totals.balanceWeight / 40 || 0).toFixed(3)}</td>
                   </tr>
                 </tfoot>
               </table>
