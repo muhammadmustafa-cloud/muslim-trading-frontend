@@ -69,11 +69,7 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
     y += 8;
   }
 
-  let runningBags = 0;
-  let runningCredit = 0;
-  let runningDebit = 0;
-  let runningBalance = 0;
-  let processedRows = 0;
+  let lastDrawnRowIndex = -1;
 
   autoTable(doc, {
     startY: y,
@@ -115,27 +111,42 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
     theme: "grid",
     styles: { ...tableTheme.styles, lineWidth: 0.1, lineColor: [200, 200, 200] },
     willDrawCell: (data) => {
-      if (data.row.section === 'body' && data.column.index === 0) {
-        processedRows++;
-        runningBags += Number(data.row.raw[3]) || 0;
-
-        const parseMoneyStr = (val) => {
-          if (!val || val === "—") return 0;
-          return Number(val.toString().replace(/,/g, "")) || 0;
-        };
-
-        const credit = parseMoneyStr(data.row.raw[6]);
-        const debit = parseMoneyStr(data.row.raw[7]);
-
-        runningCredit += credit;
-        runningDebit += debit;
-        runningBalance = runningDebit - runningCredit;
+      if (data.row.section === 'body') {
+        lastDrawnRowIndex = Math.max(lastDrawnRowIndex, data.row.index);
       }
 
       if (data.row.section === 'foot') {
-        const isLastPage = (processedRows === ledger.length);
-        const balSign = runningBalance >= 0 ? " Dr" : " Cr";
-        const formattedBalance = formatMoney(Math.abs(runningBalance)) + balSign;
+        const isLastPage = (lastDrawnRowIndex === ledger.length - 1);
+        
+        let runningBags = 0;
+        let runningCredit = 0;
+        let runningDebit = 0;
+        let runningBalance = 0;
+
+        // Calculate deterministic running totals up to the current row
+        for (let i = 0; i <= lastDrawnRowIndex; i++) {
+          const item = ledger[i];
+          if (item) {
+            runningBags += Number(item.bags) || 0;
+            runningCredit += Number(item.credit) || 0;
+            runningDebit += Number(item.debit) || 0;
+            runningBalance = item.balance !== undefined ? item.balance : (runningDebit - runningCredit);
+          }
+        }
+        
+        let displayCredit = runningCredit;
+        let displayDebit = runningDebit;
+        let displayBalance = runningBalance;
+
+        // On the final page, prefer the backend summary object if provided
+        if (isLastPage && summary) {
+          displayCredit = summary.totalCredit !== undefined ? summary.totalCredit : runningCredit;
+          displayDebit = summary.totalDebit !== undefined ? summary.totalDebit : runningDebit;
+          displayBalance = summary.finalBalance !== undefined ? summary.finalBalance : runningBalance;
+        }
+
+        const balSign = displayBalance >= 0 ? " Dr" : " Cr";
+        const formattedBalance = formatMoney(Math.abs(displayBalance)) + balSign;
 
         if (data.column.index === 0) {
           data.cell.text = [""];
@@ -146,9 +157,9 @@ export function downloadCustomerHistoryPdf(name, ledger, summary, filters = {}) 
         } else if (data.column.index === 3) {
           data.cell.text = [runningBags > 0 ? formatMoney(runningBags) : "—"];
         } else if (data.column.index === 6) {
-          data.cell.text = [formatMoney(runningCredit)];
+          data.cell.text = [formatMoney(displayCredit)];
         } else if (data.column.index === 7) {
-          data.cell.text = [formatMoney(runningDebit)];
+          data.cell.text = [formatMoney(displayDebit)];
         } else if (data.column.index === 8) {
           data.cell.text = [formattedBalance];
         }
@@ -185,11 +196,7 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
     y += 8;
   }
 
-  let runningBags = 0;
-  let runningCredit = 0;
-  let runningDebit = 0;
-  let runningBalance = 0;
-  let processedRows = 0;
+  let lastDrawnRowIndex = -1;
 
   autoTable(doc, {
     startY: y,
@@ -231,24 +238,42 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
     theme: "grid",
     styles: { ...tableTheme.styles, lineWidth: 0.1, lineColor: [200, 200, 200] },
     willDrawCell: (data) => {
-      if (data.row.section === 'body' && data.column.index === 0) {
-        processedRows++;
-        runningBags += Number(data.row.raw[3]) || 0;
-
-        const parseMoneyStr = (val) => {
-          if (!val || val === "—") return 0;
-          return Number(val.toString().replace(/,/g, "")) || 0;
-        };
-
-        runningCredit += parseMoneyStr(data.row.raw[6]);
-        runningDebit += parseMoneyStr(data.row.raw[7]);
-        runningBalance = runningDebit - runningCredit;
+      if (data.row.section === 'body') {
+        lastDrawnRowIndex = Math.max(lastDrawnRowIndex, data.row.index);
       }
 
       if (data.row.section === 'foot') {
-        const isLastPage = (processedRows === ledger.length);
-        const balSign = runningBalance >= 0 ? " Dr" : " Cr";
-        const formattedBalance = formatMoney(Math.abs(runningBalance)) + balSign;
+        const isLastPage = (lastDrawnRowIndex === ledger.length - 1);
+        
+        let runningBags = 0;
+        let runningCredit = 0;
+        let runningDebit = 0;
+        let runningBalance = 0;
+
+        // Calculate deterministic running totals up to the current row
+        for (let i = 0; i <= lastDrawnRowIndex; i++) {
+          const item = ledger[i];
+          if (item) {
+            runningBags += Number(item.bags) || 0;
+            runningCredit += Number(item.credit) || 0;
+            runningDebit += Number(item.debit) || 0;
+            runningBalance = item.balance !== undefined ? item.balance : (runningDebit - runningCredit);
+          }
+        }
+        
+        let displayCredit = runningCredit;
+        let displayDebit = runningDebit;
+        let displayBalance = runningBalance;
+
+        // On the final page, prefer the backend summary object if provided
+        if (isLastPage && summary) {
+          displayCredit = summary.totalCredit !== undefined ? summary.totalCredit : runningCredit;
+          displayDebit = summary.totalDebit !== undefined ? summary.totalDebit : runningDebit;
+          displayBalance = summary.finalBalance !== undefined ? summary.finalBalance : runningBalance;
+        }
+
+        const balSign = displayBalance <= 0 ? " Cr" : " Dr";
+        const formattedBalance = formatMoney(Math.abs(displayBalance)) + balSign;
 
         if (data.column.index === 0) {
           data.cell.text = [""];
@@ -259,9 +284,9 @@ export function downloadSupplierHistoryPdf(name, ledger, summary, filters = {}) 
         } else if (data.column.index === 3) {
           data.cell.text = [runningBags > 0 ? formatMoney(runningBags) : "—"];
         } else if (data.column.index === 6) {
-          data.cell.text = [formatMoney(runningCredit)];
+          data.cell.text = [formatMoney(displayCredit)];
         } else if (data.column.index === 7) {
-          data.cell.text = [formatMoney(runningDebit)];
+          data.cell.text = [formatMoney(displayDebit)];
         } else if (data.column.index === 8) {
           data.cell.text = [formattedBalance];
         }
