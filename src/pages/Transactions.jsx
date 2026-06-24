@@ -8,6 +8,7 @@ import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 const today = (() => {
   const d = new Date();
@@ -112,6 +113,7 @@ export default function Transactions() {
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [editingId, setEditingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, source }
 
   useEffect(() => {
     if (accountIdFromUrl && filters.accountId !== accountIdFromUrl) {
@@ -282,14 +284,17 @@ export default function Transactions() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id, source) => {
+  const handleDelete = (id, source) => {
     if (source !== 'transaction') {
       alert("System-generated transactions (Sales/Purchases) ko yahan se delete nahi kiya ja sakta.");
       return;
     }
-    if (!window.confirm("Kya aap waqai is transaction ko delete karna chahte hain?")) return;
+    setDeleteTarget({ id, source });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/transactions/${id}`);
+      await apiDelete(`/transactions/${deleteTarget.id}`);
       fetchList();
     } catch (e) {
       alert(e.message);
@@ -925,6 +930,14 @@ export default function Transactions() {
         onClose={() => setPreviewImage(null)}
         imageUrl={previewImage}
         title="Transaction Receipt Preview"
+      />
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Transaction Delete Karen"
+        message="Kya aap waqai is transaction ko delete karna chahte hain?"
       />
     </div>
   );

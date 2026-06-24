@@ -5,6 +5,7 @@ import { FaTools, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaTras
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -31,6 +32,7 @@ export default function MachineryPurchases() {
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
 
   const fetchData = async () => {
     try {
@@ -108,10 +110,13 @@ export default function MachineryPurchases() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure? Financial records will also be corrected.")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/machinery-purchases/${id}`);
+      await apiDelete(`/machinery-purchases/${deleteTarget.id}`);
       fetchList();
     } catch (e) {
       alert(e.message);
@@ -245,6 +250,14 @@ export default function MachineryPurchases() {
           )}
         </div>
       </section>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Machinery Purchase Delete Karen"
+        message="Kya aap waqai is machinery purchase ko delete karna chahte hain? Financial records bhi correct ho jayenge."
+      />
     </div>
   );
 }

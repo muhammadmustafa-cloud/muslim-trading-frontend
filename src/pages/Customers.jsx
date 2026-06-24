@@ -4,6 +4,7 @@ import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.
 import { FaUsers, FaSearch, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown, FaHistory, FaTrash } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function Customers() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "", isWarehouse: false, isAlsoSupplier: false, linkedSupplierId: "", createLinkedSupplier: false });
   const [sortKey, setSortKey] = useState("name");
@@ -76,10 +78,13 @@ export default function Customers() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id, name) => {
-    if (!confirm(`Kya aap sure hain ke "${name}" ko delete karna chahte hain?`)) return;
+  const handleDelete = (id, name) => {
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/customers/${id}`);
+      await apiDelete(`/customers/${deleteTarget.id}`);
       fetchList();
     } catch (e) {
       setError(e.message);
@@ -290,6 +295,13 @@ export default function Customers() {
         </div>
       </section>
 
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Customer Delete Karen"
+        message={deleteTarget ? `Kya aap waqai "${deleteTarget.name}" ko delete karna chahte hain?` : ""}
+      />
     </div>
   );
 }

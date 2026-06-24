@@ -10,6 +10,7 @@ import TablePagination from "../components/TablePagination.jsx";
 import CollectPaymentModal from "../components/CollectPaymentModal.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import ImagePreviewModal from "../components/ImagePreviewModal.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 const today = (() => {
   const d = new Date();
@@ -27,6 +28,7 @@ export default function Sales() {
   const [error, setError] = useState("");
   const [view, setView] = useState("list"); // "list" or "form"
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
   const [form, setForm] = useState({
     date: today,
     customerId: "",
@@ -415,10 +417,13 @@ export default function Sales() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Kya aap waqai is sale ko delete karna chahte hain? Is se tamam linked payments bhi delete ho jayengi.")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/sales/${id}`);
+      await apiDelete(`/sales/${deleteTarget.id}`);
       fetchList();
       fetchStockData();
     } catch (e) {
@@ -798,6 +803,14 @@ export default function Sales() {
           </div>
         </div>
       </Modal>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Sale Delete Karen"
+        message="Kya aap waqai is sale ko delete karna chahte hain? Is se tamam linked payments bhi delete ho jayengi."
+      />
     </div>
   );
 }

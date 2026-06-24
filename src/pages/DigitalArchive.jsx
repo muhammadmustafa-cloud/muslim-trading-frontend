@@ -3,6 +3,7 @@ import { FaCloudUploadAlt, FaSearch, FaTrash, FaEye } from "react-icons/fa";
 import { apiGet, apiDelete } from "../config/api.js";
 import UploadScannedDocumentModal from "../components/UploadScannedDocumentModal";
 import ImagePreviewModal from "../components/ImagePreviewModal";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function DigitalArchive() {
   const [activeTab, setActiveTab] = useState("SignatureBook");
@@ -11,6 +12,7 @@ export default function DigitalArchive() {
   const [error, setError] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
   
   const [filters, setFilters] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0],
@@ -41,12 +43,14 @@ export default function DigitalArchive() {
     fetchDocuments();
   }, [activeTab, filters]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this document?")) return;
-    
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/scanned-documents/${id}`);
-      setDocuments(documents.filter(d => d._id !== id));
+      await apiDelete(`/scanned-documents/${deleteTarget.id}`);
+      setDocuments(documents.filter(d => d._id !== deleteTarget.id));
     } catch (err) {
       alert(err.message);
     }
@@ -199,6 +203,14 @@ export default function DigitalArchive() {
           title={`${activeTab.replace(/([A-Z])/g, ' $1').trim()} Preview`}
         />
       )}
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Document Delete Karen"
+        message="Kya aap waqai is document ko delete karna chahte hain?"
+      />
     </div>
   );
 }

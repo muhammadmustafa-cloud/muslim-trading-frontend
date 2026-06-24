@@ -5,6 +5,7 @@ import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, 
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function Items() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function Items() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", categoryId: "", quality: "" });
   const [sortKey, setSortKey] = useState("name");
@@ -110,10 +112,13 @@ export default function Items() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Kya aap waqai is item ko delete karna chahte hain? Is se tamam linked sub-items bhi delete ho jayenge.")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/items/${id}`);
+      await apiDelete(`/items/${deleteTarget.id}`);
       fetchList();
     } catch (e) {
       alert(e.message);
@@ -256,6 +261,14 @@ export default function Items() {
           )}
         </div>
       </section>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Item Delete Karen"
+        message="Kya aap waqai is item ko delete karna chahte hain? Is se tamam linked sub-items bhi delete ho jayenge."
+      />
     </div>
   );
 }

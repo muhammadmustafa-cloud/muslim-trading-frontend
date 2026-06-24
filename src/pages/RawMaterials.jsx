@@ -3,6 +3,7 @@ import { apiGet, apiPost, apiDelete, apiPut } from "../config/api.js";
 import { FaBoxes, FaPlus, FaTrash, FaEdit, FaBook } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function RawMaterials() {
   const [list, setList] = useState([]);
@@ -12,6 +13,7 @@ export default function RawMaterials() {
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
   const navigate = useNavigate();
 
   const fetchList = async () => {
@@ -60,10 +62,13 @@ export default function RawMaterials() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Kiya aap waqae is Raw Material category ko delete karna chahte hain?")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/raw-material-heads/${id}`);
+      await apiDelete(`/raw-material-heads/${deleteTarget.id}`);
       fetchList();
     } catch (err) {
       setError(err.message);
@@ -148,6 +153,14 @@ export default function RawMaterials() {
           </div>
         </form>
       </Modal>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Raw Material Delete Karen"
+        message="Kya aap waqai is Raw Material category ko delete karna chahte hain?"
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { FaSitemap, FaSearch, FaBook, FaSort, FaSortUp, FaSortDown, FaBox, FaPlu
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function SubItems() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function SubItems() {
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
 
   const fetchData = async () => {
     setLoading(true);
@@ -94,12 +96,15 @@ export default function SubItems() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-     if (!window.confirm("Are you sure? Is sub-item ko delete karne se stock record pe asar par sakta hai.")) return;
-     try {
-       await apiDelete(`/items/${id}`);
-       fetchData();
-     } catch (e) { alert(e.message); }
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await apiDelete(`/items/${deleteTarget.id}`);
+      fetchData();
+    } catch (e) { alert(e.message); }
   };
 
   const filteredList = useMemo(() => {
@@ -226,6 +231,14 @@ export default function SubItems() {
           )}
         </div>
       </section>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Sub-Item Delete Karen"
+        message="Kya aap waqai is sub-item ko delete karna chahte hain? Stock record pe asar par sakta hai."
+      />
     </div>
   );
 }

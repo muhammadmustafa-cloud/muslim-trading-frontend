@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiGet, apiPost, apiDelete } from "../config/api.js";
 import { FaBalanceScale, FaPlus, FaTrash, FaHistory, FaSearch } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function TaxTypes() {
   const [list, setList] = useState([]);
@@ -12,6 +13,7 @@ export default function TaxTypes() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
 
   const fetchList = async () => {
     setLoading(true);
@@ -45,10 +47,13 @@ export default function TaxTypes() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure? This will only work if no payments are recorded for this tax type.")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/tax-types/${id}`);
+      await apiDelete(`/tax-types/${deleteTarget.id}`);
       fetchList();
     } catch (e) {
       alert(e.message);
@@ -149,6 +154,14 @@ export default function TaxTypes() {
           </div>
         </form>
       </Modal>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Tax Type Delete Karen"
+        message="Kya aap waqai is tax type ko delete karna chahte hain?"
+      />
     </div>
   );
 }

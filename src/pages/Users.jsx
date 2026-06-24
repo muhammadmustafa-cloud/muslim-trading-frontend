@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { API_BASE_URL, apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
 import { FaUsers, FaUserPlus, FaEdit, FaTrash, FaShieldAlt, FaUserTag, FaLock } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -11,6 +12,7 @@ export default function Users() {
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", username: "", password: "", role: "user" });
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -40,10 +42,13 @@ export default function Users() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/users/${id}`);
+      await apiDelete(`/users/${deleteTarget.id}`);
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -172,6 +177,14 @@ export default function Users() {
           </div>
         </form>
       </Modal>
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="User Delete Karen"
+        message="Kya aap waqai is user ko delete karna chahte hain?"
+      />
     </div>
   );
 }

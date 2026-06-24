@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 import { downloadUniversalLedgerPdf } from "../utils/universalLedgerPdf.js";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 const formatMoney = (n) => (n == null || n === 0 ? "—" : Number(n).toLocaleString("en-PK"));
 const formatDate = (d) =>
@@ -41,6 +42,7 @@ export default function UniversalLedger() {
 
   const [showDastiModal, setShowDastiModal] = useState(false);
   const [newDasti, setNewDasti] = useState({ name: "", type: "credit", amount: "", note: "", date: today });
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
 
   const fetchAccounts = async () => {
     try {
@@ -92,10 +94,13 @@ export default function UniversalLedger() {
     }
   };
 
-  const handleDeleteDasti = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this Dasti entry?")) return;
+  const handleDeleteDasti = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/daily-dasti/${id}`);
+      await apiDelete(`/daily-dasti/${deleteTarget.id}`);
       fetchLedger();
     } catch (e) {
       alert(e.message);
@@ -441,6 +446,14 @@ export default function UniversalLedger() {
           </div>
         </div>
       )}
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Dasti Entry Delete Karen"
+        message="Kya aap waqai is Dasti entry ko delete karna chahte hain?"
+      />
     </div>
   );
 }

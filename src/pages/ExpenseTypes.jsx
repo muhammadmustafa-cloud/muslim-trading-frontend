@@ -9,6 +9,7 @@ import {
   FaReceipt,
   FaSearch,
 } from "react-icons/fa";
+import DeletePasswordModal from "../components/DeletePasswordModal.jsx";
 
 export default function ExpenseTypes() {
   const [types, setTypes] = useState([]);
@@ -18,6 +19,7 @@ export default function ExpenseTypes() {
   const [newType, setNewType] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id }
 
   const fetchTypes = async () => {
     setLoading(true);
@@ -51,10 +53,13 @@ export default function ExpenseTypes() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure? This will only work if no transactions are linked.")) return;
+  const handleDelete = (id) => {
+    setDeleteTarget({ id });
+  };
+
+  const confirmDelete = async () => {
     try {
-      await apiDelete(`/expense-types/${id}`);
+      await apiDelete(`/expense-types/${deleteTarget.id}`);
       fetchTypes();
     } catch (e) {
       alert(e.message);
@@ -217,6 +222,14 @@ export default function ExpenseTypes() {
           </div>
         </div>
       )}
+
+      <DeletePasswordModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Expense Type Delete Karen"
+        message="Kya aap waqai is expense type ko delete karna chahte hain? Yeh sirf tab work karega jab koi transaction linked na ho."
+      />
     </div>
   );
 }
