@@ -53,7 +53,8 @@ export default function Purchases() {
     notes: "",
     paymentTerms: "cash",
     dueDate: "",
-    image: null,
+    newImages: [],
+    existingImages: [],
   });
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", supplierId: "" });
   const [sortKey, setSortKey] = useState("date");
@@ -62,7 +63,7 @@ export default function Purchases() {
   const [pageSize, setPageSize] = useState(10);
   const [payEntry, setPayEntry] = useState(null);
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewImages, setPreviewImages] = useState({ open: false, images: [], title: "" });
 
   const fetchItems = async () => {
     try {
@@ -141,7 +142,8 @@ export default function Purchases() {
       notes: "",
       paymentTerms: "cash",
       dueDate: "",
-      image: null,
+      newImages: [],
+      existingImages: [],
     });
     setEditingId(null);
     setView("list");
@@ -189,7 +191,8 @@ export default function Purchases() {
       dueDate: row.dueDate ? formatDateForInput(row.dueDate) : "",
       notes: row.notes || "",
       paymentTerms: row.paymentTerms || "custom",
-      image: null,
+      newImages: [],
+      existingImages: row.images && row.images.length > 0 ? row.images : (row.image ? [row.image] : []),
     });
     setView("form");
   };
@@ -386,9 +389,12 @@ export default function Purchases() {
           formData.append(key, payload[key]);
         }
       });
-      if (form.image) {
-        formData.append("image", form.image);
+      if (form.newImages && form.newImages.length > 0) {
+        form.newImages.forEach(file => {
+          formData.append("images", file);
+        });
       }
+      formData.append("existingImages", JSON.stringify(form.existingImages));
       
       if (editingId) {
         await apiPutFormData(`/stock-entries/${editingId}`, formData);
@@ -673,8 +679,31 @@ export default function Purchases() {
                 </div>
               </div>
               <div>
-                <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label>
-                <input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" />
+                <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Images / Receipts (Multiple)</label>
+                <input type="file" accept="image/*" multiple onChange={(e) => {
+                  const files = Array.from(e.target.files);
+                  setForm(f => ({ ...f, newImages: [...f.newImages, ...files] }));
+                  e.target.value = null; // reset input
+                }} className="input-field" />
+                <div className="mt-4 flex flex-wrap gap-4">
+                  {form.existingImages.map((imgUrl, idx) => (
+                    <div key={`existing-${idx}`} className="relative group w-24 h-24 border rounded-xl overflow-hidden bg-slate-100 shadow-sm">
+                      <img src={imgUrl.startsWith('http') ? imgUrl : (imgUrl.startsWith('mill_receipts/') ? `https://res.cloudinary.com/dbs72ujyh/image/upload/${imgUrl}` : `${API_BASE_URL.replace(/\/api$/, "")}/uploads/${imgUrl}`)} className="w-full h-full object-cover" alt="receipt" />
+                      <button type="button" onClick={() => setForm(f => ({ ...f, existingImages: f.existingImages.filter((_, i) => i !== idx) }))} className="absolute top-1 right-1 bg-rose-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-rose-600 scale-75 z-10">
+                        <FaPlus className="w-4 h-4 rotate-45" />
+                      </button>
+                    </div>
+                  ))}
+                  {form.newImages.map((file, idx) => (
+                    <div key={`new-${idx}`} className="relative group w-24 h-24 border border-emerald-300 rounded-xl overflow-hidden bg-emerald-50 shadow-sm">
+                      <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="preview" />
+                      <div className="absolute inset-0 bg-emerald-500/10 pointer-events-none"></div>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, newImages: f.newImages.filter((_, i) => i !== idx) }))} className="absolute top-1 right-1 bg-rose-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-rose-600 scale-75 z-10">
+                        <FaPlus className="w-4 h-4 rotate-45" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="input-label">Special Notes</label>
@@ -891,11 +920,22 @@ export default function Purchases() {
                       </td>
                       <td className="table-cell">
                         <div className="flex items-center gap-1">
-                          {row.image && (
-                            <button type="button" onClick={() => setPreviewImage(row.image)} className="btn-ghost-primary flex items-center gap-1 text-indigo-500 hover:text-indigo-700 bg-indigo-50" title="Preview Image">
-                              <FaImage className="w-3.5 h-3.5" /> 
-                            </button>
-                          )}
+                          {(() => {
+                            const imgs = row.images && row.images.length > 0 ? row.images : (row.image ? [row.image] : []);
+                            return imgs.length > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImages({ open: true, images: imgs, title: `${row.supplierId?.name || "Purchase"} — Receipts` })}
+                                className="relative btn-ghost-primary flex items-center gap-1 text-indigo-500 hover:text-indigo-700 bg-indigo-50"
+                                title={`View ${imgs.length} image(s)`}
+                              >
+                                <FaImage className="w-3.5 h-3.5" />
+                                {imgs.length > 1 && (
+                                  <span className="absolute -top-1.5 -right-1.5 bg-indigo-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">{imgs.length}</span>
+                                )}
+                              </button>
+                            ) : null;
+                          })()}
                           {row.paymentStatus !== "paid" && (
                             <button
                               type="button"
@@ -946,10 +986,10 @@ export default function Purchases() {
       />
 
       <ImagePreviewModal
-        open={!!previewImage}
-        onClose={() => setPreviewImage(null)}
-        imageUrl={previewImage}
-        title="Purchase Receipt Preview"
+        open={previewImages.open}
+        onClose={() => setPreviewImages({ open: false, images: [], title: "" })}
+        images={previewImages.images}
+        title={previewImages.title || "Purchase Receipt Preview"}
       />
     </div>
   );

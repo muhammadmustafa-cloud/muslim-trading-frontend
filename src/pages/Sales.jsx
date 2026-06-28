@@ -58,7 +58,8 @@ export default function Sales() {
     notes: "",
     paymentTerms: "cash",
     dueDate: "",
-    image: null,
+    newImages: [],
+    existingImages: [],
   });
   const [editingId, setEditingId] = useState(null);
   const [filters, setFilters] = useState({ dateFrom: "", dateTo: "", itemId: "", customerId: "" });
@@ -68,7 +69,7 @@ export default function Sales() {
   const [pageSize, setPageSize] = useState(10);
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedCollectEntry, setSelectedCollectEntry] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewImages, setPreviewImages] = useState({ open: false, images: [], title: "" });
   const [gatePassModalOpen, setGatePassModalOpen] = useState(false);
   const [gatePassSource, setGatePassSource] = useState("");
 
@@ -161,7 +162,8 @@ export default function Sales() {
       notes: "",
       paymentTerms: "cash",
       dueDate: "",
-      image: null,
+      newImages: [],
+      existingImages: [],
     });
     setEditingId(null);
     setView("list");
@@ -321,7 +323,8 @@ export default function Sales() {
       notes: row.notes || "",
       paymentTerms: row.paymentTerms || "custom",
       dueDate: row.dueDate ? formatDateForInput(row.dueDate) : "",
-      image: null,
+      newImages: [],
+      existingImages: row.images && row.images.length > 0 ? row.images : (row.image ? [row.image] : []),
     });
     setView("form");
   };
@@ -394,9 +397,12 @@ export default function Sales() {
         }
       });
       
-      if (form.image) {
-        formData.append("image", form.image);
+      if (form.newImages && form.newImages.length > 0) {
+        form.newImages.forEach(file => {
+          formData.append("images", file);
+        });
       }
+      formData.append("existingImages", JSON.stringify(form.existingImages));
       
       if (editingId) {
         await apiPutFormData(`/sales/${editingId}`, formData);
@@ -637,7 +643,33 @@ export default function Sales() {
                 <div><label className="input-label font-bold text-slate-600">Total Mazdori (Truck)</label><input type="number" value={form.totalMazdori} onChange={(e) => setForm(f => ({ ...f, totalMazdori: e.target.value }))} className="input-field bg-slate-50 border-slate-200" placeholder="0" /></div>
                 <div><label className="input-label text-rose-600 font-bold">Extras (Deduction)</label><input type="number" value={form.extras} onChange={(e) => setForm(f => ({ ...f, extras: e.target.value }))} className="input-field border-rose-300 bg-rose-50" placeholder="e.g. 870" /></div>
               </div>
-              <div><label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Image / Receipt</label><input type="file" accept="image/*" onChange={(e) => setForm(f => ({ ...f, image: e.target.files[0] }))} className="input-field" /></div>
+              <div className="md:col-span-2">
+                <label className="input-label flex items-center gap-2"><FaImage className="text-slate-400" /> Images / Receipts (Multiple)</label>
+                <input type="file" accept="image/*" multiple onChange={(e) => {
+                  const files = Array.from(e.target.files);
+                  setForm(f => ({ ...f, newImages: [...f.newImages, ...files] }));
+                  e.target.value = null; // reset input
+                }} className="input-field" />
+                <div className="mt-4 flex flex-wrap gap-4">
+                  {form.existingImages.map((imgUrl, idx) => (
+                    <div key={`existing-${idx}`} className="relative group w-24 h-24 border rounded-xl overflow-hidden bg-slate-100 shadow-sm">
+                      <img src={imgUrl.startsWith('http') ? imgUrl : (imgUrl.startsWith('mill_receipts/') ? `https://res.cloudinary.com/dbs72ujyh/image/upload/${imgUrl}` : `${API_BASE_URL.replace(/\/api$/, "")}/uploads/${imgUrl}`)} className="w-full h-full object-cover" alt="receipt" />
+                      <button type="button" onClick={() => setForm(f => ({ ...f, existingImages: f.existingImages.filter((_, i) => i !== idx) }))} className="absolute top-1 right-1 bg-rose-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-rose-600 scale-75 z-10">
+                        <FaPlus className="w-4 h-4 rotate-45" />
+                      </button>
+                    </div>
+                  ))}
+                  {form.newImages.map((file, idx) => (
+                    <div key={`new-${idx}`} className="relative group w-24 h-24 border border-emerald-300 rounded-xl overflow-hidden bg-emerald-50 shadow-sm">
+                      <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="preview" />
+                      <div className="absolute inset-0 bg-emerald-500/10 pointer-events-none"></div>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, newImages: f.newImages.filter((_, i) => i !== idx) }))} className="absolute top-1 right-1 bg-rose-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-rose-600 scale-75 z-10">
+                        <FaPlus className="w-4 h-4 rotate-45" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div><label className="input-label">Special Notes</label><textarea value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} className="input-field h-20" placeholder="Koi khaas baat likhni ho tw..." /></div>
             </div>
 
@@ -731,9 +763,25 @@ export default function Sales() {
                          </div>
                       </td>
                       <td className="px-5 py-4 text-right font-black text-slate-900">Rs. {formatMoney(row.totalAmount)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
+                       <td className="px-5 py-4">
+                         <div className="flex items-center justify-center gap-2">
+                            {(() => {
+                              const imgs = row.images && row.images.length > 0 ? row.images : (row.image ? [row.image] : []);
+                              return imgs.length > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImages({ open: true, images: imgs, title: `${row.customerId?.name || "Sale"} — Receipts` })}
+                                  className="relative p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                  title={`View ${imgs.length} image(s)`}
+                                >
+                                  <FaImage className="w-4 h-4" />
+                                  {imgs.length > 1 && (
+                                    <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">{imgs.length}</span>
+                                  )}
+                                </button>
+                              ) : null;
+                            })()}
+                            <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
                            <button type="button" onClick={() => downloadGatePassPdf(row)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Gate Pass"><FaFileExport className="w-4 h-4" /></button>
                            <button type="button" onClick={() => downloadSaleInvoicePdf(row)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Invoice"><FaFilePdf className="w-4 h-4" /></button>
                            {isAdmin && (
@@ -810,6 +858,13 @@ export default function Sales() {
         onConfirm={confirmDelete}
         title="Sale Delete Karen"
         message="Kya aap waqai is sale ko delete karna chahte hain? Is se tamam linked payments bhi delete ho jayengi."
+      />
+
+      <ImagePreviewModal
+        open={previewImages.open}
+        onClose={() => setPreviewImages({ open: false, images: [], title: "" })}
+        images={previewImages.images}
+        title={previewImages.title || "Sale Receipt Preview"}
       />
     </div>
   );
