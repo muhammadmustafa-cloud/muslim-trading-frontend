@@ -16,7 +16,18 @@ export default function ImagePreviewModal({ open, onClose, imageUrl, title = "Im
 
   const isCompleteUrl = imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
   const isBase64Url = imageUrl.startsWith("data:image/");
-  const fullUrl = isCompleteUrl || isBase64Url ? imageUrl : `${BASE_URL}/uploads/${imageUrl}`;
+  const isCloudinaryLegacy = imageUrl.startsWith("mill_receipts/");
+  
+  let fullUrl = imageUrl;
+  if (!isCompleteUrl && !isBase64Url) {
+    if (isCloudinaryLegacy) {
+      // Legacy records that only stored Cloudinary Public ID
+      fullUrl = `https://res.cloudinary.com/dbs72ujyh/image/upload/${imageUrl}`;
+    } else {
+      // Fallback for local files if any
+      fullUrl = `${BASE_URL}/uploads/${imageUrl}`;
+    }
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={title}>
