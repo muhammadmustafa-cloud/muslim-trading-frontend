@@ -166,8 +166,11 @@ export default function ImagePreviewModal({ open, onClose, images = [], title = 
         <div className="flex items-center gap-3">
           <a
             href={currentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(currentUrl, "_blank", "noopener,noreferrer");
+            }}
             className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all backdrop-blur-sm border border-white/20"
           >
             <FaExpand className="w-4 h-4" />
@@ -176,6 +179,7 @@ export default function ImagePreviewModal({ open, onClose, images = [], title = 
           <a
             href={currentUrl}
             download={`receipt-${activeIndex + 1}.jpg`}
+            onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/30"
           >
             <FaDownload className="w-4 h-4" />
