@@ -195,14 +195,12 @@ export default function DigitalArchive() {
         />
       )}
 
-      {previewImage && (
-        <ImagePreviewModal
-          open={!!previewImage}
-          onClose={() => setPreviewImage(null)}
-          imageUrl={previewImage}
-          title={`${activeTab.replace(/([A-Z])/g, ' $1').trim()} Preview`}
-        />
-      )}
+      <ImagePreviewModal
+        open={!!previewImage}
+        onClose={() => setPreviewImage(null)}
+        images={previewImage ? [previewImage] : []}
+        title={`${activeTab.replace(/([A-Z])/g, ' $1').trim()} Preview`}
+      />
 
       <DeletePasswordModal
         open={!!deleteTarget}
