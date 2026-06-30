@@ -184,19 +184,22 @@ export default function ItemKhata() {
                       })}
                     </tbody>
                     <tfoot className="text-xs border-t-2 border-slate-300 uppercase tracking-tight font-black">
-                      <tr className="bg-emerald-900 text-white">
-                        <td colSpan="2" className="px-4 py-2.5 text-right border-r border-emerald-800">Purchased (In):</td>
-                        <td className="px-4 py-2.5 text-center border-r border-emerald-800 text-emerald-300">{data.totalBagsPurchased}</td>
-                        <td className="px-4 py-2.5 text-center border-r border-emerald-800 text-emerald-300">{(data.totalMunPurchased || 0).toFixed(3)}</td>
-                        <td className="px-4 py-2.5 text-right border-r border-emerald-800">—</td>
-                        <td className="px-4 py-2.5 text-right text-emerald-300">{formatMoney(totalCost)}</td>
-                      </tr>
-                      <tr className="bg-rose-900 text-white">
-                        <td colSpan="2" className="px-4 py-2.5 text-right border-r border-rose-800">Sold (Out):</td>
-                        <td className="px-4 py-2.5 text-center border-r border-rose-800 text-rose-300">{data.totalBagsSold}</td>
-                        <td className="px-4 py-2.5 text-center border-r border-rose-800 text-rose-300">{(data.totalMunSold || 0).toFixed(3)}</td>
-                        <td className="px-4 py-2.5 text-right border-r border-rose-800 text-rose-300">{formatMoney(totalRevenue)}</td>
-                        <td className="px-4 py-2.5 text-right">—</td>
+                      <tr className="bg-slate-800 text-white">
+                        <td colSpan="4" className="px-4 py-3 text-right border-r border-slate-700">Grand Totals:</td>
+                        <td className="px-4 py-3 text-right border-r border-slate-700">
+                          <div className="flex flex-col gap-1 items-end">
+                            <span className="text-emerald-200">Sale Bags: {data.totalBagsSold || 0}</span>
+                            <span className="text-emerald-200">Sale Mun: {(data.totalMunSold || 0).toFixed(3)}</span>
+                            <span className="text-emerald-400 font-black mt-1 border-t border-emerald-900/50 pt-1">Total: {formatMoney(totalRevenue)}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex flex-col gap-1 items-end">
+                            <span className="text-rose-200">Purchase Bags: {data.totalBagsPurchased || 0}</span>
+                            <span className="text-rose-200">Purchase Mun: {(data.totalMunPurchased || 0).toFixed(3)}</span>
+                            <span className="text-rose-400 font-black mt-1 border-t border-rose-900/50 pt-1">Total: {formatMoney(totalCost)}</span>
+                          </div>
+                        </td>
                       </tr>
                       <tr className="bg-slate-900 text-white">
                         <td colSpan="2" className="px-4 py-3 text-right border-r border-slate-800">Balance (Remaining):</td>
