@@ -533,7 +533,8 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   doc.setFontSize(11);
   doc.setFont(undefined, "bold");
   const finalSaleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
-  doc.text(`Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`, pageWidth - MARGIN, finalY, { align: "right" });
+  doc.text(`Sale Bags: ${data.totalBagsSold || 0}  |  Sale Mun: ${(data.totalMunSold || 0).toFixed(3)}  |  Purchase Bags: ${data.totalBagsPurchased || 0}  |  Purchase Mun: ${(data.totalMunPurchased || 0).toFixed(3)}`, pageWidth - MARGIN, finalY, { align: "right" });
+  doc.text(`Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`, pageWidth - MARGIN, finalY + 7, { align: "right" });
 
   addPageNumbers(doc);
   doc.save(`${(data.name || "item").replace(/\s+/g, "-")}-khata.pdf`);
