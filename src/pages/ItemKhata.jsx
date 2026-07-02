@@ -149,10 +149,13 @@ export default function ItemKhata() {
                   <table className="w-full">
                     <thead className="bg-slate-800 text-white font-bold text-[10px] uppercase tracking-wider">
                       <tr>
-                        <th className="py-3 px-4 text-left border-r border-slate-700">Date</th>
-                        <th className="py-3 px-4 text-left border-r border-slate-700">Audit Detail (Party / Note)</th>
-                        <th className="py-3 px-4 text-center border-r border-slate-700">Bags</th>
-                        <th className="py-3 px-4 text-center border-r border-slate-700">Mun (40kg)</th>
+                        <th className="py-3 px-4 text-left border-r border-slate-700 w-[100px]">Date</th>
+                        <th className="py-3 px-4 text-left border-r border-slate-700 w-[80px]">Day</th>
+                        <th className="py-3 px-4 text-left border-r border-slate-700">Customer/Supplier</th>
+                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Bag</th>
+                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Mun</th>
+                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-rose-900/30">Pur Bag</th>
+                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-rose-900/30">Pur Mun</th>
                         <th className="py-3 px-4 text-right border-r border-slate-700 text-emerald-300">Sale (Cr)</th>
                         <th className="py-3 px-4 text-right text-rose-300">Purchase (Dr)</th>
                       </tr>
@@ -166,17 +169,23 @@ export default function ItemKhata() {
                         const weight = Number(isSale ? row.quantity : row.receivedWeight) || 0;
                         const mun = weight > 0 ? (weight / 40).toFixed(3) : 0;
 
+                        const dateObj = new Date(row.date);
+                        const day = isNaN(dateObj) ? "—" : dateObj.toLocaleDateString("en-PK", { weekday: 'short' });
+
                         return (
                           <tr key={row._id} className="table-row-hover border-b border-slate-100 text-[11px]">
                             <td className="py-3 px-4 text-slate-500 italic font-medium border-r border-slate-100">{formatDate(row.date)}</td>
+                            <td className="py-3 px-4 text-slate-400 font-bold border-r border-slate-100 uppercase">{day}</td>
                             <td className="py-3 px-4 border-r border-slate-100">
                               <div className="flex flex-col">
                                 <span className="font-bold text-slate-900 uppercase">{participant}</span>
                                 {row.note && <span className="text-[10px] text-slate-500 font-normal italic truncate max-w-[200px]">{row.note}</span>}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-center font-bold text-slate-700 border-r border-slate-100 bg-slate-50/30">{bags || "—"}</td>
-                            <td className="py-3 px-4 text-center font-bold text-indigo-700 border-r border-slate-100 bg-indigo-50/10">{mun > 0 ? mun : "—"}</td>
+                            <td className="py-3 px-2 text-center font-bold text-emerald-700 border-r border-slate-100 bg-emerald-50/20">{isSale && bags > 0 ? bags : "—"}</td>
+                            <td className="py-3 px-2 text-center font-bold text-emerald-700 border-r border-slate-100 bg-emerald-50/20">{isSale && mun > 0 ? mun : "—"}</td>
+                            <td className="py-3 px-2 text-center font-bold text-rose-700 border-r border-slate-100 bg-rose-50/20">{!isSale && bags > 0 ? bags : "—"}</td>
+                            <td className="py-3 px-2 text-center font-bold text-rose-700 border-r border-slate-100 bg-rose-50/20">{!isSale && mun > 0 ? mun : "—"}</td>
                             <td className="py-3 px-4 text-right font-black text-emerald-600 border-r border-slate-100 bg-emerald-50/10">{isSale ? formatMoney(amount) : "—"}</td>
                             <td className="py-3 px-4 text-right font-black text-rose-700 bg-rose-50/10">{!isSale ? formatMoney(amount) : "—"}</td>
                           </tr>
@@ -184,29 +193,14 @@ export default function ItemKhata() {
                       })}
                     </tbody>
                     <tfoot className="text-xs border-t-2 border-slate-300 uppercase tracking-tight font-black">
-                      <tr className="bg-slate-800 text-white">
-                        <td colSpan="4" className="px-4 py-3 text-right border-r border-slate-700">Grand Totals:</td>
-                        <td className="px-4 py-3 text-right border-r border-slate-700">
-                          <div className="flex flex-col gap-1 items-end">
-                            <span className="text-emerald-200">Sale Bags: {data.totalBagsSold || 0}</span>
-                            <span className="text-emerald-200">Sale Mun: {(data.totalMunSold || 0).toFixed(3)}</span>
-                            <span className="text-emerald-400 font-black mt-1 border-t border-emerald-900/50 pt-1">Total: {formatMoney(totalRevenue)}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex flex-col gap-1 items-end">
-                            <span className="text-rose-200">Purchase Bags: {data.totalBagsPurchased || 0}</span>
-                            <span className="text-rose-200">Purchase Mun: {(data.totalMunPurchased || 0).toFixed(3)}</span>
-                            <span className="text-rose-400 font-black mt-1 border-t border-rose-900/50 pt-1">Total: {formatMoney(totalCost)}</span>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="bg-slate-900 text-white">
-                        <td colSpan="2" className="px-4 py-3 text-right border-r border-slate-800">Balance (Remaining):</td>
-                        <td className="px-4 py-3 text-center border-r border-slate-800 text-amber-400">{Math.abs(data.totalBagsPurchased - data.totalBagsSold)}</td>
-                        <td className="px-4 py-3 text-center border-r border-slate-800 text-amber-400">{Math.abs((data.totalMunPurchased || 0) - (data.totalMunSold || 0)).toFixed(3)}</td>
-                        <td className="px-4 py-3 text-right border-r border-slate-800 text-emerald-400">{formatMoney(totalRevenue)}</td>
-                        <td className="px-4 py-3 text-right text-rose-400">{formatMoney(totalCost)}</td>
+                      <tr className="bg-slate-800 text-white text-sm">
+                        <td colSpan="3" className="px-4 py-3 text-right border-r border-slate-700">Grand Totals:</td>
+                        <td className="px-2 py-3 text-center border-r border-slate-700 text-emerald-300">{data.totalBagsSold || "—"}</td>
+                        <td className="px-2 py-3 text-center border-r border-slate-700 text-emerald-300">{(data.totalMunSold || 0).toFixed(3)}</td>
+                        <td className="px-2 py-3 text-center border-r border-slate-700 text-rose-300">{data.totalBagsPurchased || "—"}</td>
+                        <td className="px-2 py-3 text-center border-r border-slate-700 text-rose-300">{(data.totalMunPurchased || 0).toFixed(3)}</td>
+                        <td className="px-4 py-3 text-right border-r border-slate-700 text-emerald-300">{formatMoney(totalRevenue)}</td>
+                        <td className="px-4 py-3 text-right text-rose-300">{formatMoney(totalCost)}</td>
                       </tr>
                     </tfoot>
                   </table>

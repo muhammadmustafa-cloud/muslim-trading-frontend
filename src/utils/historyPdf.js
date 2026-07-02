@@ -475,11 +475,17 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
     const weight = Number(isSale ? row.quantity : row.receivedWeight) || 0;
     const mun = weight > 0 ? (weight / 40).toFixed(3) : 0;
 
+    const dateObj = new Date(row.date);
+    const day = isNaN(dateObj) ? "—" : dateObj.toLocaleDateString("en-PK", { weekday: 'short' });
+
     return [
       formatDate(row.date),
+      day,
       `${participant}${row.note ? `\nNote: ${row.note}` : ""}`,
-      bags || "—",
-      mun > 0 ? mun : "—",
+      isSale && bags > 0 ? bags : "—",
+      isSale && mun > 0 ? mun : "—",
+      !isSale && bags > 0 ? bags : "—",
+      !isSale && mun > 0 ? mun : "—",
       isSale ? formatMoney(amount) : "—",
       !isSale ? formatMoney(amount) : "—",
     ];
@@ -487,43 +493,34 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Audit Detail", "Bags", "Mun", "Sale (Cr)", "Purchase (Dr)"]],
+    head: [["Date", "Day", "Customer/Supplier", "Sale Bag", "Sale Mun", "Pur Bag", "Pur Mun", "Sale (Cr)", "Purchase (Dr)"]],
     body: formattedRows,
     foot: [
       [
-        { content: "PURCHASED (IN)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [6, 78, 59] } },
-        { content: String(data.totalBagsPurchased || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [6, 78, 59] } },
-        { content: (data.totalMunPurchased || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [6, 78, 59] } },
-        { content: "—", styles: { halign: "right", fontStyle: "bold", fillColor: [6, 78, 59] } },
-        { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold", fillColor: [6, 78, 59] } },
-      ],
-      [
-        { content: "SOLD (OUT)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [127, 29, 29] } },
-        { content: String(data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [127, 29, 29] } },
-        { content: (data.totalMunSold || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [127, 29, 29] } },
-        { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [127, 29, 29] } },
-        { content: "—", styles: { halign: "right", fontStyle: "bold", fillColor: [127, 29, 29] } },
-      ],
-      [
-        { content: "BALANCE (REMAINING)", colSpan: 2, styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: String(data.stockBalanceBags || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: (data.stockBalanceMun || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: "GRAND TOTALS", colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: String(data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: (data.totalMunSold || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: String(data.totalBagsPurchased || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: (data.totalMunPurchased || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
       ],
     ],
     ...tableTheme,
     theme: "grid",
-    styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1 },
-    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
-    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
+    styles: { ...tableTheme.styles, fontSize: 7, lineWidth: 0.1 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
     columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 65 },
-      2: { cellWidth: 15, halign: "center" },
-      3: { cellWidth: 20, halign: "center" },
-      4: { cellWidth: 28, halign: "right" },
-      5: { cellWidth: 28, halign: "right" },
+      0: { cellWidth: 20 },
+      1: { cellWidth: 12 },
+      2: { cellWidth: 'auto' },
+      3: { cellWidth: 15, halign: "center" },
+      4: { cellWidth: 18, halign: "center" },
+      5: { cellWidth: 15, halign: "center" },
+      6: { cellWidth: 18, halign: "center" },
+      7: { cellWidth: 22, halign: "right" },
+      8: { cellWidth: 22, halign: "right" },
     },
   });
 
@@ -534,10 +531,6 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   doc.setFont(undefined, "bold");
   const finalSaleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
   const lines = [
-    `Sale Bags: ${data.totalBagsSold || 0}`,
-    `Sale Mun: ${(data.totalMunSold || 0).toFixed(3)}`,
-    `Purchase Bags: ${data.totalBagsPurchased || 0}`,
-    `Purchase Mun: ${(data.totalMunPurchased || 0).toFixed(3)}`,
     `Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`
   ];
   doc.text(lines, pageWidth - MARGIN, finalY, { align: "right" });
