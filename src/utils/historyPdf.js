@@ -531,6 +531,10 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   doc.setFont(undefined, "bold");
   const finalSaleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
   const lines = [
+    `Sale Bags: ${data.totalBagsSold || 0}`,
+    `Sale Mun: ${(data.totalMunSold || 0).toFixed(3)}`,
+    `Purchase Bags: ${data.totalBagsPurchased || 0}`,
+    `Purchase Mun: ${(data.totalMunPurchased || 0).toFixed(3)}`,
     `Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`
   ];
   doc.text(lines, pageWidth - MARGIN, finalY, { align: "right" });
