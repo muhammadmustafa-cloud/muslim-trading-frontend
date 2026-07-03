@@ -493,7 +493,7 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Day", "Customer/Supplier", "Pur Bag", "Sale Bag", "Pur Mun", "Sale Mun", "Purchase Amount (Cr)", "Sale Amount (Dr)"]],
+    head: [["Date", "Day", "Customer/Supplier", "Pur Bag", "Sale Bag", "Pur Mun", "Sale Mun", "Pur Amt (Dr)", "Sale Amt (Cr)"]],
     body: formattedRows,
     foot: [
       [
@@ -530,7 +530,10 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   doc.setFontSize(11);
   doc.setFont(undefined, "bold");
   const finalSaleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
-  doc.text(`Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`, pageWidth - MARGIN, finalY, { align: "right" });
+  const lines = [
+    `Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`
+  ];
+  doc.text(lines, pageWidth - MARGIN, finalY, { align: "right" });
 
   addPageNumbers(doc);
   doc.save(`${(data.name || "item").replace(/\s+/g, "-")}-khata.pdf`);

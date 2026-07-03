@@ -156,8 +156,8 @@ export default function ItemKhata() {
                         <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Bag</th>
                         <th className="py-3 px-2 text-center border-r border-slate-700 bg-rose-900/30">Pur Mun</th>
                         <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Mun</th>
-                        <th className="py-3 px-4 text-right border-r border-slate-700 text-rose-300">Purchase Amount (Cr)</th>
-                        <th className="py-3 px-4 text-right text-emerald-300">Sale Amount (Dr)</th>
+                        <th className="py-3 px-4 text-right border-r border-slate-700 text-rose-300">Purchase (Dr)</th>
+                        <th className="py-3 px-4 text-right text-emerald-300">Sale (Cr)</th>
                       </tr>
                     </thead>
                     <tbody>
