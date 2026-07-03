@@ -482,28 +482,28 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
       formatDate(row.date),
       day,
       `${participant}${row.note ? `\nNote: ${row.note}` : ""}`,
-      isSale && bags > 0 ? bags : "—",
-      isSale && mun > 0 ? mun : "—",
       !isSale && bags > 0 ? bags : "—",
+      isSale && bags > 0 ? bags : "—",
       !isSale && mun > 0 ? mun : "—",
-      isSale ? formatMoney(amount) : "—",
+      isSale && mun > 0 ? mun : "—",
       !isSale ? formatMoney(amount) : "—",
+      isSale ? formatMoney(amount) : "—",
     ];
   });
 
   autoTable(doc, {
     startY: y,
-    head: [["Date", "Day", "Customer/Supplier", "Sale Bag", "Sale Mun", "Pur Bag", "Pur Mun", "Sale (Cr)", "Purchase (Dr)"]],
+    head: [["Date", "Day", "Customer/Supplier", "Pur Bag", "Sale Bag", "Pur Mun", "Sale Mun", "Purchase Amount (Cr)", "Sale Amount (Dr)"]],
     body: formattedRows,
     foot: [
       [
         { content: "GRAND TOTALS", colSpan: 3, styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: String(data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: (data.totalMunSold || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: String(data.totalBagsPurchased || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: String(data.totalBagsSold || 0), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: (data.totalMunPurchased || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
-        { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: (data.totalMunSold || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold", fillColor: [30, 41, 59] } },
         { content: formatMoney(totalCost), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
+        { content: formatMoney(totalRevenue), styles: { halign: "right", fontStyle: "bold", fillColor: [30, 41, 59] } },
       ],
     ],
     ...tableTheme,
@@ -530,14 +530,7 @@ export function downloadKhataPdf(data, purchases, sales, totalCost, totalRevenue
   doc.setFontSize(11);
   doc.setFont(undefined, "bold");
   const finalSaleDharo = data.totalMunSold > 0 ? (totalRevenue / data.totalMunSold).toFixed(2) : "—";
-  const lines = [
-    `Sale Bags: ${data.totalBagsSold || 0}`,
-    `Sale Mun: ${(data.totalMunSold || 0).toFixed(3)}`,
-    `Purchase Bags: ${data.totalBagsPurchased || 0}`,
-    `Purchase Mun: ${(data.totalMunPurchased || 0).toFixed(3)}`,
-    `Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`
-  ];
-  doc.text(lines, pageWidth - MARGIN, finalY, { align: "right" });
+  doc.text(`Net Movement (Profit): ${formatMoney(profit)}  |  Sale Dharo: ${finalSaleDharo}`, pageWidth - MARGIN, finalY, { align: "right" });
 
   addPageNumbers(doc);
   doc.save(`${(data.name || "item").replace(/\s+/g, "-")}-khata.pdf`);

@@ -152,12 +152,12 @@ export default function ItemKhata() {
                         <th className="py-3 px-4 text-left border-r border-slate-700 w-[100px]">Date</th>
                         <th className="py-3 px-4 text-left border-r border-slate-700 w-[80px]">Day</th>
                         <th className="py-3 px-4 text-left border-r border-slate-700">Customer/Supplier</th>
-                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Bag</th>
-                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Mun</th>
                         <th className="py-3 px-2 text-center border-r border-slate-700 bg-rose-900/30">Pur Bag</th>
+                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Bag</th>
                         <th className="py-3 px-2 text-center border-r border-slate-700 bg-rose-900/30">Pur Mun</th>
-                        <th className="py-3 px-4 text-right border-r border-slate-700 text-emerald-300">Sale (Cr)</th>
-                        <th className="py-3 px-4 text-right text-rose-300">Purchase (Dr)</th>
+                        <th className="py-3 px-2 text-center border-r border-slate-700 bg-emerald-900/30">Sale Mun</th>
+                        <th className="py-3 px-4 text-right border-r border-slate-700 text-rose-300">Purchase Amount (Cr)</th>
+                        <th className="py-3 px-4 text-right text-emerald-300">Sale Amount (Dr)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -182,12 +182,12 @@ export default function ItemKhata() {
                                 {row.note && <span className="text-[10px] text-slate-500 font-normal italic truncate max-w-[200px]">{row.note}</span>}
                               </div>
                             </td>
-                            <td className="py-3 px-2 text-center font-bold text-emerald-700 border-r border-slate-100 bg-emerald-50/20">{isSale && bags > 0 ? bags : "—"}</td>
-                            <td className="py-3 px-2 text-center font-bold text-emerald-700 border-r border-slate-100 bg-emerald-50/20">{isSale && mun > 0 ? mun : "—"}</td>
                             <td className="py-3 px-2 text-center font-bold text-rose-700 border-r border-slate-100 bg-rose-50/20">{!isSale && bags > 0 ? bags : "—"}</td>
+                            <td className="py-3 px-2 text-center font-bold text-emerald-700 border-r border-slate-100 bg-emerald-50/20">{isSale && bags > 0 ? bags : "—"}</td>
                             <td className="py-3 px-2 text-center font-bold text-rose-700 border-r border-slate-100 bg-rose-50/20">{!isSale && mun > 0 ? mun : "—"}</td>
-                            <td className="py-3 px-4 text-right font-black text-emerald-600 border-r border-slate-100 bg-emerald-50/10">{isSale ? formatMoney(amount) : "—"}</td>
-                            <td className="py-3 px-4 text-right font-black text-rose-700 bg-rose-50/10">{!isSale ? formatMoney(amount) : "—"}</td>
+                            <td className="py-3 px-2 text-center font-bold text-emerald-700 border-r border-slate-100 bg-emerald-50/20">{isSale && mun > 0 ? mun : "—"}</td>
+                            <td className="py-3 px-4 text-right font-black text-rose-700 border-r border-slate-100 bg-rose-50/10">{!isSale ? formatMoney(amount) : "—"}</td>
+                            <td className="py-3 px-4 text-right font-black text-emerald-600 bg-emerald-50/10">{isSale ? formatMoney(amount) : "—"}</td>
                           </tr>
                         );
                       })}
@@ -195,12 +195,12 @@ export default function ItemKhata() {
                     <tfoot className="text-xs border-t-2 border-slate-300 uppercase tracking-tight font-black">
                       <tr className="bg-slate-800 text-white text-sm">
                         <td colSpan="3" className="px-4 py-3 text-right border-r border-slate-700">Grand Totals:</td>
-                        <td className="px-2 py-3 text-center border-r border-slate-700 text-emerald-300">{data.totalBagsSold || "—"}</td>
-                        <td className="px-2 py-3 text-center border-r border-slate-700 text-emerald-300">{(data.totalMunSold || 0).toFixed(3)}</td>
                         <td className="px-2 py-3 text-center border-r border-slate-700 text-rose-300">{data.totalBagsPurchased || "—"}</td>
+                        <td className="px-2 py-3 text-center border-r border-slate-700 text-emerald-300">{data.totalBagsSold || "—"}</td>
                         <td className="px-2 py-3 text-center border-r border-slate-700 text-rose-300">{(data.totalMunPurchased || 0).toFixed(3)}</td>
-                        <td className="px-4 py-3 text-right border-r border-slate-700 text-emerald-300">{formatMoney(totalRevenue)}</td>
-                        <td className="px-4 py-3 text-right text-rose-300">{formatMoney(totalCost)}</td>
+                        <td className="px-2 py-3 text-center border-r border-slate-700 text-emerald-300">{(data.totalMunSold || 0).toFixed(3)}</td>
+                        <td className="px-4 py-3 text-right border-r border-slate-700 text-rose-300">{formatMoney(totalCost)}</td>
+                        <td className="px-4 py-3 text-right text-emerald-300">{formatMoney(totalRevenue)}</td>
                       </tr>
                     </tfoot>
                   </table>
