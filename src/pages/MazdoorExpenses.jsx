@@ -9,8 +9,11 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
-  FaFilePdf
+  FaFilePdf,
+  FaEdit,
+  FaTrash
 } from "react-icons/fa";
+import { apiPut } from "../config/api.js";
 import TablePagination from "../components/TablePagination.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
 
@@ -40,6 +43,7 @@ export default function MazdoorExpenses() {
     mazdoorItemId: "",
     bags: "",
   });
+  const [editingId, setEditingId] = useState(null);
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
@@ -123,12 +127,22 @@ export default function MazdoorExpenses() {
     setError("");
     setSubmitting(true);
     try {
-      await apiPost("/mazdoor-expenses", {
-        date: form.date,
-        mazdoorId: form.mazdoorId,
-        mazdoorItemId: form.mazdoorItemId,
-        bags,
-      });
+      if (editingId) {
+        await apiPut(`/mazdoor-expenses/${editingId}`, {
+          date: form.date,
+          mazdoorId: form.mazdoorId,
+          mazdoorItemId: form.mazdoorItemId,
+          bags,
+        });
+        setEditingId(null);
+      } else {
+        await apiPost("/mazdoor-expenses", {
+          date: form.date,
+          mazdoorId: form.mazdoorId,
+          mazdoorItemId: form.mazdoorItemId,
+          bags,
+        });
+      }
       setForm({ date: today, mazdoorId: form.mazdoorId, mazdoorItemId: "", bags: "" });
       fetchList();
     } catch (e) {
@@ -138,6 +152,27 @@ export default function MazdoorExpenses() {
     }
   };
 
+
+  const handleEdit = (row) => {
+    setEditingId(row._id);
+    setForm({
+      date: row.date ? row.date.substring(0, 10) : today,
+      mazdoorId: row.mazdoorId?._id || "",
+      mazdoorItemId: row.mazdoorItemId?._id || "",
+      bags: row.bags || "",
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Kiya aap wakai is expense ko delete karna chahte hain?")) return;
+    try {
+      await apiDelete(`/mazdoor-expenses/${id}`);
+      fetchList();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -255,19 +290,31 @@ export default function MazdoorExpenses() {
               {formatMoney(totalPrice)}
             </div>
           </div>
-          <div className="sm:col-span-2 lg:col-span-6">
+          <div className="sm:col-span-2 lg:col-span-6 flex gap-3">
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Adding...
+                  {editingId ? "Updating..." : "Adding..."}
                 </span>
               ) : (
                 <>
-                  <FaPlus className="w-4 h-4" /> Add expense
+                  <FaPlus className="w-4 h-4" /> {editingId ? "Update expense" : "Add expense"}
                 </>
               )}
             </button>
+            {editingId && (
+              <button 
+                type="button" 
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({ date: today, mazdoorId: form.mazdoorId, mazdoorItemId: "", bags: "" });
+                }} 
+                className="btn-secondary"
+              >
+                Cancel Edit
+              </button>
+            )}
           </div>
         </form>
       </section>
@@ -341,6 +388,7 @@ export default function MazdoorExpenses() {
                         Total <SortIcon columnKey="total" />
                       </button>
                     </th>
+                    <th className="table-header px-5 py-3.5 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -352,6 +400,26 @@ export default function MazdoorExpenses() {
                       <td className="table-cell">{row.bags != null ? row.bags : "—"}</td>
                       <td className="table-cell">{formatMoney(row.mazdoorItemId?.rate)}</td>
                       <td className="table-cell font-semibold text-slate-800">{formatMoney(row.totalAmount)}</td>
+                      <td className="table-cell text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(row)}
+                            className="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                            title="Edit Expense"
+                          >
+                            <FaEdit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(row._id)}
+                            className="p-1.5 text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                            title="Delete Expense"
+                          >
+                            <FaTrash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
