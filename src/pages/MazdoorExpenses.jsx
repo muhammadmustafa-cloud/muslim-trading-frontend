@@ -39,7 +39,6 @@ export default function MazdoorExpenses() {
     mazdoorId: "",
     mazdoorItemId: "",
     bags: "",
-    accountId: "",
   });
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
@@ -117,10 +116,6 @@ export default function MazdoorExpenses() {
       setError("Valid bags enter karein.");
       return;
     }
-    if (!form.accountId) {
-      setError("Account select karein (jahan se paisa deduct hoga).");
-      return;
-    }
     if (totalPrice <= 0) {
       setError("Total 0 se zyada hona chahiye — item ka rate check karein.");
       return;
@@ -133,9 +128,8 @@ export default function MazdoorExpenses() {
         mazdoorId: form.mazdoorId,
         mazdoorItemId: form.mazdoorItemId,
         bags,
-        accountId: form.accountId,
       });
-      setForm({ date: today, mazdoorId: form.mazdoorId, mazdoorItemId: "", bags: "", accountId: "" });
+      setForm({ date: today, mazdoorId: form.mazdoorId, mazdoorItemId: "", bags: "" });
       fetchList();
     } catch (e) {
       setError(e.message);
@@ -202,7 +196,7 @@ export default function MazdoorExpenses() {
               <FaMoneyBillWave className="w-7 h-7 text-amber-500" />
               Mazdoor Expenses
             </h1>
-            <p className="page-subtitle">Mazdoor select karein, item aur bags daalein — total auto calculate. Paisa account se deduct hoga.</p>
+            <p className="page-subtitle">Mazdoor select karein, item aur bags daalein — total auto calculate. Ye mazdoor ke khate mein jama hoga (Accrual).</p>
           </div>
         </div>
       </header>
@@ -260,15 +254,6 @@ export default function MazdoorExpenses() {
             <div className="input-field bg-slate-50 font-semibold text-slate-800">
               {formatMoney(totalPrice)}
             </div>
-          </div>
-          <div>
-            <label className="input-label">Account (jahan se deduct) *</label>
-            <SearchableSelect
-              options={accounts}
-              value={form.accountId}
-              onChange={(val) => setForm((f) => ({ ...f, accountId: val }))}
-              placeholder="Select account"
-            />
           </div>
           <div className="sm:col-span-2 lg:col-span-6">
             <button type="submit" className="btn-primary" disabled={submitting}>
@@ -356,7 +341,6 @@ export default function MazdoorExpenses() {
                         Total <SortIcon columnKey="total" />
                       </button>
                     </th>
-                    <th className="table-header px-5 py-3.5">Account</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,7 +352,6 @@ export default function MazdoorExpenses() {
                       <td className="table-cell">{row.bags != null ? row.bags : "—"}</td>
                       <td className="table-cell">{formatMoney(row.mazdoorItemId?.rate)}</td>
                       <td className="table-cell font-semibold text-slate-800">{formatMoney(row.totalAmount)}</td>
-                      <td className="table-cell">{row.accountId?.name ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
