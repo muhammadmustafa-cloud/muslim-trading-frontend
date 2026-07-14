@@ -1541,29 +1541,31 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
  * Prints ALL active ledgers in one grouped document with Professional History UI Match.
  */
 export function downloadConsolidatedLedgersPdf(data, filters = {}) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) {
     subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
   }
   subtitleLines.push(`Generated: ${new Date().toLocaleDateString("en-PK", { dateStyle: "medium" })} ${new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}`);
 
-  let startY = addReportHeader(doc, "DAILY LEDGER BOOK (DAILY DIARY)", subtitleLines);
+  let startY = addReportHeader(doc, "CONSOLIDATED LEDGER BOOK (FULL DIARY)", subtitleLines);
 
   const categories = [
-    { key: 'accounts', label: 'BANK & CASH ACCOUNTS' },
-    { key: 'items', label: 'STOCK ITEM TRADING' },
     { key: 'customers', label: 'CUSTOMER LEDGERS' },
     { key: 'suppliers', label: 'SUPPLIER LEDGERS' },
     { key: 'mazdoors', label: 'MAZDOOR WAGES' },
-    { key: 'rawMaterials', label: 'RAW MATERIAL UNITS' },
-    { key: 'expenses', label: 'GENERAL EXPENSES' },
-    { key: 'taxes', label: 'TAX PAYMENTS' },
+    { key: 'expenses', label: 'EXPENSES MANAGEMENT' },
+    { key: 'taxes', label: 'TAX MANAGEMENT' },
+    { key: 'rawMaterials', label: 'RAW MATERIALS' },
     { key: 'machinery', label: 'MACHINERY & ASSETS' },
-    { key: 'millExpenses', label: 'MILL OVERHEAD' }
+    { key: 'millExpenses', label: 'MILL GENERAL ACTIVITY' },
+    { key: 'accounts', label: 'BANK & CASH ACCOUNTS' },
+    { key: 'items', label: 'STOCK ITEM TRADING' },
   ];
 
   let firstEntity = true;
+  const fmtD = (d) => d ? new Date(d).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  const fmtDay = (d) => { try { return new Date(d).toLocaleDateString("en-PK", { weekday: "short" }).toUpperCase(); } catch { return "—"; } };
 
   categories.forEach(cat => {
     const list = data[cat.key] || [];
@@ -1572,230 +1574,204 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
     list.forEach(entity => {
       if (!firstEntity) {
         doc.addPage();
-        startY = addReportHeader(doc, "DAILY LEDGER BOOK (DAILY DIARY)", subtitleLines);
+        startY = addReportHeader(doc, "CONSOLIDATED LEDGER BOOK (FULL DIARY)", subtitleLines);
       }
       firstEntity = false;
 
-      // Professional Section Header
-      doc.setFontSize(14);
+      // Section Header
+      doc.setFontSize(13);
       doc.setFont(undefined, "bold");
-      doc.setTextColor(30, 41, 59); // Dark blue-slate
-      doc.text(`${cat.label}: ${entity.name.toUpperCase()}`, MARGIN, startY);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${cat.label}: ${(entity.name || "").toUpperCase()}`, MARGIN, startY);
       doc.setTextColor(0, 0, 0);
-      startY += 7;
+      startY += 6;
 
-      doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
-      doc.text(`Opening Balance: Rs. ${formatMoney(Math.abs(entity.openingBalance))} ${entity.openingBalance >= 0 ? 'Dr' : 'Cr'}`, MARGIN, startY);
-      startY += 2;
-
+      const summary = entity.summary || {};
       let tableConfig = {};
-      let runningBalance = 0;
-      let totalDr = 0;
-      let totalCr = 0;
 
-      // CUSTOMIZE BY CATEGORY (Match historyPdf.js UI)
-      if (cat.key === 'customers' || cat.key === 'suppliers') {
-        const body = entity.ledger.map(row => {
+      // ── PARTY LEDGER & GENERAL EXPENSE CATEGORIES ──
+      if (["customers", "suppliers", "expenses", "taxes", "rawMaterials", "machinery", "millExpenses"].includes(cat.key)) {
+        const ledger = entity.ledger || [];
+        const openingBalance = entity.openingBalance || 0;
+        let runBal = openingBalance;
+        let totalDr = 0, totalCr = 0;
+
+        doc.setFontSize(9);
+        doc.setFont(undefined, "bold");
+        doc.text(`Opening Balance: Rs. ${formatMoney(Math.abs(openingBalance))} ${openingBalance >= 0 ? "Dr" : "Cr"}`, MARGIN, startY);
+        startY += 4;
+
+        const body = [];
+        if (openingBalance !== 0) {
+          body.push(["—", "—", "Opening Balance", "—", "—", "—",
+            openingBalance > 0 ? formatMoney(openingBalance) : "—",
+            openingBalance < 0 ? formatMoney(Math.abs(openingBalance)) : "—",
+            formatMoney(Math.abs(openingBalance)) + (openingBalance >= 0 ? " Dr" : " Cr")
+          ]);
+        }
+        ledger.forEach(row => {
           const d = Number(row.debit) || 0;
           const c = Number(row.credit) || 0;
           totalDr += d;
           totalCr += c;
-          runningBalance += (d - c);
-          return [
-            formatDate(row.date),
-            row.description || "—",
+          runBal += (d - c);
+          body.push([
+            fmtD(row.date),
+            fmtDay(row.date),
+            (row.description || "—").slice(0, 50),
             row.bags > 0 ? row.bags : "—",
-            c > 0 ? formatMoney(c) : "—",
+            row.mun > 0 ? Number(row.mun).toFixed(3) : "—",
+            row.avgRate > 0 ? formatMoney(row.avgRate) : "—",
             d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")
-          ];
+            c > 0 ? formatMoney(c) : "—",
+            formatMoney(Math.abs(runBal)) + (runBal >= 0 ? " Dr" : " Cr")
+          ]);
         });
 
         tableConfig = {
-          head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
+          head: [["Date", "Day", "Description", "Bags", "Mun", "Rate", "Debit (Dr)", "Credit (Cr)", "Balance"]],
           body,
-          foot: [["", "GRAND TOTALS", "", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")]],
+          foot: [["", "", "GRAND TOTALS",
+            summary.totalSaleBags || "—",
+            (summary.totalSaleMun || 0).toFixed(3),
+            "",
+            formatMoney(totalDr),
+            formatMoney(totalCr),
+            formatMoney(Math.abs(runBal)) + (runBal >= 0 ? " Dr" : " Cr")
+          ]],
           columnStyles: {
-            0: { cellWidth: 22 },
-            1: { cellWidth: "auto" },
-            2: { halign: "center", cellWidth: 15 },
-            3: { halign: "right", cellWidth: 28, fontStyle: "bold" },
-            4: { halign: "right", cellWidth: 28, fontStyle: "bold" },
-            5: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+            0: { cellWidth: 22 }, 1: { cellWidth: 12 }, 2: { cellWidth: "auto" },
+            3: { cellWidth: 14, halign: "center" }, 4: { cellWidth: 16, halign: "center" },
+            5: { cellWidth: 18, halign: "right" }, 6: { cellWidth: 24, halign: "right", fontStyle: "bold" },
+            7: { cellWidth: 24, halign: "right", fontStyle: "bold" }, 8: { cellWidth: 24, halign: "right", fontStyle: "bold" },
           }
         };
-      } else if (cat.key === 'mazdoors') {
-        const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (c - d);
+
+      // ── MAZDOOR LEDGER ──
+      } else if (cat.key === "mazdoors") {
+        const ledger = entity.ledger || [];
+        let totalEarned = 0, totalPaid = 0;
+        const body = ledger.map(t => {
+          const isEarned = t.category === "salary_accrual" || t.category === "mazdoor_expense";
+          const isPaid = (t.type === "withdraw" || t.type === "salary" || t.type === "transfer") && !isEarned;
+          if (isEarned) totalEarned += Number(t.amount) || 0;
+          if (isPaid) totalPaid += Number(t.amount) || 0;
           return [
-            formatDate(row.date),
-            row.description || (c > 0 ? "Work Earned" : "Payment Made"),
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")
+            fmtD(t.date),
+            fmtDay(t.date),
+            (t.type || "").replace("_", " ").toUpperCase(),
+            t.note || t.category || "—",
+            isPaid ? formatMoney(t.amount) : "—",
+            isEarned ? formatMoney(t.amount) : "—",
           ];
         });
         tableConfig = {
-          head: [["Date", "Work Detail / Payment", "Credit (Earned)", "Debit (Paid)", "Balance"]],
+          head: [["Date", "Day", "Type", "Note", "Paid (Dr)", "Earned (Cr)"]],
           body,
-          foot: [["", "TOTAL MOVEMENT", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")]],
+          foot: [["", "", "", "TOTALS", formatMoney(totalPaid), formatMoney(totalEarned)]],
           columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: "auto" },
-            2: { halign: "right", cellWidth: 30 },
-            3: { halign: "right", cellWidth: 30 },
-            4: { halign: "right", cellWidth: 30 },
+            0: { cellWidth: 25 }, 1: { cellWidth: 14 }, 2: { cellWidth: 28 },
+            3: { cellWidth: "auto" }, 4: { cellWidth: 28, halign: "right" }, 5: { cellWidth: 28, halign: "right" },
           }
         };
-      } else if (cat.key === 'items') {
-        let totalBagsIn = 0;
-        let totalBagsOut = 0;
-        // Start with opening balance
-        let itemBalance = entity.openingBalance || 0;
-        // Filter out opening balance row - only show actual transactions
-        const body = entity.ledger
-          .filter(row => !(row.isOpeningBalance || row.status === 'opening'))
-          .map(row => {
-            const isSale = row.status === 'sold';
-            const isPurchase = row.status === 'purchased';
-            const amt = row.debit || row.credit || 0;
-            const bags = row.bags || 0;
-            const weight = row.weight || 0;
-            const mun = weight > 0 ? (weight / 40).toFixed(3) : "—";
 
-            if (isSale) totalBagsOut += bags;
-            if (isPurchase) totalBagsIn += bags;
-            if (isSale) totalDr += amt;
-            if (isPurchase) totalCr += amt;
-            
-            // Update running balance
-            // Sale (Debit) = Asset/Receivable increases
-            // Purchase (Credit) = Asset/Receivable decreases
-            itemBalance += row.debit || 0;
-            itemBalance -= row.credit || 0;
+      // ── ACCOUNT (Universal Ledger) ──
+      } else if (cat.key === "accounts") {
+        const ledger = entity.ledger || [];
+        let totalIn = 0, totalOut = 0;
+        const body = ledger.map(row => {
+          const isIn = row.amountType === "in";
+          const amt = Number(row.amount) || 0;
+          if (isIn) totalIn += amt; else totalOut += amt;
+          return [
+            fmtD(row.date),
+            fmtDay(row.date),
+            row.name || "—",
+            (row.description || "—").slice(0, 50),
+            isIn ? formatMoney(amt) : "—",
+            !isIn ? formatMoney(amt) : "—",
+          ];
+        });
 
-            return [
-              formatDate(row.date),
-              row.description,
-              bags || "—",
-              mun,
-              isSale ? formatMoney(amt) : "—",
-              isPurchase ? formatMoney(amt) : "—",
-              formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Dr" : " Cr")
-            ];
-          });
+        doc.setFontSize(9);
+        doc.setFont(undefined, "bold");
+        doc.text(`Opening Balance: Rs. ${formatMoney(Math.abs(summary.openingBalance || 0))}`, MARGIN, startY);
+        doc.text(`Closing Balance: Rs. ${formatMoney(Math.abs(summary.closingBalance || 0))}`, MARGIN + 70, startY);
+        startY += 4;
+
         tableConfig = {
-          head: [["Date", "Audit Detail", "Bags", "Mun", "Sale (Cr)", "Purchase (Dr)", "Balance"]],
+          head: [["Date", "Day", "Party", "Description", "In (Cr)", "Out (Dr)"]],
+          body,
+          foot: [["", "", "", "TOTALS", formatMoney(totalIn), formatMoney(totalOut)]],
+          columnStyles: {
+            0: { cellWidth: 25 }, 1: { cellWidth: 14 }, 2: { cellWidth: 35 },
+            3: { cellWidth: "auto" }, 4: { cellWidth: 30, halign: "right" }, 5: { cellWidth: 30, halign: "right" },
+          }
+        };
+
+      // ── ITEM KHATA ──
+      } else if (cat.key === "items") {
+        const ledger = entity.ledger || [];
+        let totalPurBags = 0, totalSaleBags = 0;
+        let totalPurMun = 0, totalSaleMun = 0;
+        let totalCost = 0, totalRevenue = 0;
+        const body = ledger.map(row => {
+          const isPur = row.ledgerType === "purchase";
+          const bags = Number(row.kattay) || 0;
+          const weight = Number(isPur ? row.receivedWeight : row.quantity) || 0;
+          const mun = weight > 0 ? (weight / 40) : 0;
+          const amount = isPur ? (Number(row.amount) || 0) : (Number(row.totalAmount) || 0);
+          const participant = isPur ? (row.supplierId?.name || "Supplier") : (row.customerId?.name || "Customer");
+          if (isPur) { totalPurBags += bags; totalPurMun += mun; totalCost += amount; }
+          else { totalSaleBags += bags; totalSaleMun += mun; totalRevenue += amount; }
+          return [
+            fmtD(row.date),
+            fmtDay(row.date),
+            (participant || "").toUpperCase().slice(0, 20),
+            isPur ? bags || "—" : "—",
+            !isPur ? bags || "—" : "—",
+            isPur ? mun.toFixed(3) : "—",
+            !isPur ? mun.toFixed(3) : "—",
+            isPur ? formatMoney(amount) : "—",
+            !isPur ? formatMoney(amount) : "—",
+          ];
+        });
+        const profit = totalRevenue - totalCost;
+        tableConfig = {
+          head: [["Date", "Day", "Party", "Pur Bag", "Sale Bag", "Pur Mun", "Sale Mun", "Purchase (Dr)", "Sale (Cr)"]],
           body,
           foot: [
-            [{ content: "SOLD (OUT)", colSpan: 2, styles: { halign: "right", fillColor: [127, 29, 29] } }, { content: String(totalBagsOut), styles: { halign: "center", fillColor: [127, 29, 29] } }, "", { content: formatMoney(totalDr), styles: { halign: "right", fillColor: [127, 29, 29] } }, "", ""],
-            [{ content: "PURCHASED (IN)", colSpan: 2, styles: { halign: "right", fillColor: [6, 78, 59] } }, { content: String(totalBagsIn), styles: { halign: "center", fillColor: [6, 78, 59] } }, "", "", { content: formatMoney(totalCr), styles: { halign: "right", fillColor: [6, 78, 59] } }, ""],
-            [{ content: "REMAINING BALANCE (NET)", colSpan: 2, styles: { halign: "right", fillColor: [30, 41, 59], fontStyle: "bold" } }, { content: String(totalBagsIn - totalBagsOut), styles: { halign: "center", fillColor: [30, 41, 59], fontStyle: "bold" } }, "", "", "", { content: formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Cr" : " Dr"), styles: { halign: "right", fillColor: [30, 41, 59], fontStyle: "bold" } }]
+            ["", "", "TOTALS", totalPurBags, totalSaleBags, totalPurMun.toFixed(3), totalSaleMun.toFixed(3), formatMoney(totalCost), formatMoney(totalRevenue)],
+            [{ content: `Remaining Bags: ${totalPurBags - totalSaleBags} | Remaining Mun: ${(totalPurMun - totalSaleMun).toFixed(3)} | Profit: Rs. ${formatMoney(Math.abs(profit))} ${profit >= 0 ? "(Profit)" : "(Loss)"}`, colSpan: 9, styles: { halign: "right", fillColor: profit >= 0 ? [6, 78, 59] : [127, 29, 29] } }]
           ],
           columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: "auto" },
-            2: { cellWidth: 12, halign: "center" },
-            3: { cellWidth: 12, halign: "center" },
-            4: { cellWidth: 24, halign: "right" },
-            5: { cellWidth: 24, halign: "right" },
-            6: { cellWidth: 24, halign: "right", fontStyle: "bold" },
-          }
-        };
-      } else if (cat.key === 'accounts') {
-        const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (d - c); // Asset account: Debit increases, Credit decreases
-          return [
-            formatDate(row.date),
-            row.description || (d > 0 ? "Deposit / Inflow" : "Withdraw / Outflow"),
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")
-          ];
-        });
-        tableConfig = {
-          head: [["Date", "Description", "Credit (Outflow/Payment)", "Debit (Inflow/Receipt)", "Balance"]],
-          body,
-          foot: [["", "NET TOTALS", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")]],
-          columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: "auto" },
-            2: { halign: "right", cellWidth: 32 },
-            3: { halign: "right", cellWidth: 32 },
-            4: { halign: "right", cellWidth: 30, fontStyle: "bold" },
-          }
-        };
-      } else {
-        // Default 5-column ledger (Accounts, Raws, Expenses, Taxes)
-        const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (c - d);
-          return [
-            formatDate(row.date),
-            row.description || "—",
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")
-          ];
-        });
-        tableConfig = {
-          head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
-          body,
-          foot: [["", "NET TOTALS", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")]],
-          columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: "auto" },
-            2: { halign: "right", cellWidth: 28 },
-            3: { halign: "right", cellWidth: 28 },
-            4: { halign: "right", cellWidth: 30 },
+            0: { cellWidth: 22 }, 1: { cellWidth: 12 }, 2: { cellWidth: "auto" },
+            3: { cellWidth: 16, halign: "center" }, 4: { cellWidth: 16, halign: "center" },
+            5: { cellWidth: 18, halign: "center" }, 6: { cellWidth: 18, halign: "center" },
+            7: { cellWidth: 26, halign: "right", fontStyle: "bold" }, 8: { cellWidth: 26, halign: "right", fontStyle: "bold" },
           }
         };
       }
 
-      autoTable(doc, {
-        startY,
-        ...tableConfig,
-        ...tableTheme,
-        theme: "grid",
-        styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1, textColor: [0,0,0] },
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
-        footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
-        didDrawPage: (d) => { startY = d.cursor.y; }
-      });
-
-      startY = doc.lastAutoTable.finalY + 10;
+      if (tableConfig.head) {
+        autoTable(doc, {
+          startY,
+          ...tableConfig,
+          theme: "grid",
+          styles: { fontSize: 7.5, cellPadding: 2.5, lineWidth: 0.1, textColor: [0, 0, 0] },
+          headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+          footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          margin: { left: MARGIN, right: MARGIN },
+          didDrawPage: (d) => { startY = d.cursor.y; }
+        });
+        startY = doc.lastAutoTable.finalY + 10;
+      }
     });
   });
 
-  // APPEND INVOICES AT THE END
-  if (data.salesInvoices && data.salesInvoices.length > 0) {
-    data.salesInvoices.forEach(sale => {
-      doc.addPage();
-      drawSaleInvoice(doc, sale);
-    });
-  }
-
-  if (data.purchaseInvoices && data.purchaseInvoices.length > 0) {
-    data.purchaseInvoices.forEach(purchase => {
-      doc.addPage();
-      drawPurchaseInvoice(doc, purchase);
-    });
-  }
-
   addPageNumbers(doc);
-  doc.save(`Daily_Ledger_Book_${filters.dateFrom || 'report'}.pdf`);
+  doc.save(`Consolidated_Ledger_Book_${filters.dateFrom || "report"}_to_${filters.dateTo || "today"}.pdf`);
 }
 
 /**
