@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash, FaWarehouse } from "react-icons/fa";
+import { FaBox, FaSearch, FaEdit, FaPlus, FaBook, FaSort, FaSortUp, FaSortDown, FaSitemap, FaTrash, FaWarehouse, FaLink } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
@@ -42,6 +42,7 @@ export default function Items() {
         search: search || undefined,
         categoryId: categoryFilter || undefined,
         parentId: "none",
+        populate: "linkedWarehouseCustomerId",
       });
       setList(data.data || []);
     } catch (e) {
@@ -238,7 +239,16 @@ export default function Items() {
                 <tbody className="divide-y divide-slate-100">
                   {paginatedList.map((row) => (
                     <tr key={row._id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-5 py-4 font-bold text-slate-800">{row.name}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800">{row.name}</span>
+                          {row.linkedWarehouseCustomerId && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full" title="Linked to Warehouse — financial data is masked in Khata">
+                              <FaLink className="w-2.5 h-2.5" /> Warehouse Linked
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-5 py-4 text-slate-600">{getCategoryName(row)}</td>
                       <td className="px-5 py-4 text-slate-500">{row.quality || "—"}</td>
                       <td className="px-5 py-4">

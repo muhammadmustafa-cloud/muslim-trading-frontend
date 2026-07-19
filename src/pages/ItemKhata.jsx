@@ -124,8 +124,13 @@ export default function ItemKhata() {
             </div>
             <div className="card p-5 border-l-4 border-l-blue-500">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Stock Balance (Bags)</p>
-              <p className="text-xl font-black text-blue-800 mt-1">{Math.abs((data.totalBagsPurchased || 0) - (data.totalBagsSold || 0))}</p>
-              <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase italic">Remaining in mill</p>
+              {/* Use backend-computed stockBalanceBags — it correctly handles negative (oversell) as 0 */}
+              <p className={`text-xl font-black mt-1 ${(data.stockBalanceBags || 0) < 0 ? "text-red-600" : "text-blue-800"}`}>
+                {data.stockBalanceBags ?? Math.max(0, (data.totalBagsPurchased || 0) - (data.totalBagsSold || 0))}
+              </p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase italic">
+                {(data.stockBalanceBags || 0) < 0 ? "⚠️ Oversold!" : "Remaining in mill"}
+              </p>
             </div>
             <div className="card p-5 border-l-4 border-l-indigo-500">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Net Movement (Profit)</p>
