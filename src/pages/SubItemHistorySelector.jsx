@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../config/api.js";
-import { FaSitemap, FaSearch, FaBook, FaSort, FaSortUp, FaSortDown, FaBox, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaSitemap, FaSearch, FaBook, FaSort, FaSortUp, FaSortDown, FaBox, FaPlus, FaEdit, FaTrash, FaDatabase } from "react-icons/fa";
 import Modal from "../components/Modal.jsx";
 import TablePagination from "../components/TablePagination.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -24,6 +24,10 @@ export default function SubItems() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id }
+  
+  // Old Stock Modal State
+  const [oldStockModalOpen, setOldStockModalOpen] = useState(false);
+  const [oldStockForm, setOldStockForm] = useState({ id: "", name: "", openingBags: 0, openingWeight: 0 });
 
   const fetchData = async () => {
     setLoading(true);
@@ -94,6 +98,34 @@ export default function SubItems() {
     });
     setEditingId(row._id);
     setModalOpen(true);
+  };
+
+  const handleOpenOldStock = (row) => {
+    setOldStockForm({
+      id: row._id,
+      name: row.name,
+      openingBags: row.openingBags || 0,
+      openingWeight: row.openingWeight || 0,
+    });
+    setOldStockModalOpen(true);
+  };
+
+  const handleOldStockSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      await apiPut(`/items/${oldStockForm.id}`, {
+        openingBags: Number(oldStockForm.openingBags) || 0,
+        openingWeight: Number(oldStockForm.openingWeight) || 0,
+      });
+      setOldStockModalOpen(false);
+      fetchData();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = (id) => {
@@ -183,6 +215,32 @@ export default function SubItems() {
         </form>
       </Modal>
 
+      <Modal open={oldStockModalOpen} onClose={() => setOldStockModalOpen(false)} title={`Set Old Stock for ${oldStockForm.name}`}>
+        <form onSubmit={handleOldStockSubmit} className="space-y-4">
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 text-amber-800 text-sm mb-4 flex items-start gap-2">
+            <FaDatabase className="w-5 h-5 mt-0.5 opacity-70" />
+            <p><strong>Old Stock (Opening Balance)</strong><br/>Ye wo stock hai jo system start hone se pehle is warehouse mein para tha. Ye amount Ledger aur Summary mein auto-calculate ho jayegi.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="input-label">Old Stock (Bags/Kattay)</label>
+              <input type="number" step="0.01" value={oldStockForm.openingBags} onChange={(e) => setOldStockForm((f) => ({ ...f, openingBags: e.target.value }))} className="input-field font-black text-lg text-slate-800 bg-slate-50" />
+            </div>
+            <div>
+              <label className="input-label">Old Stock (Weight in Kg)</label>
+              <input type="number" step="0.01" value={oldStockForm.openingWeight} onChange={(e) => setOldStockForm((f) => ({ ...f, openingWeight: e.target.value }))} className="input-field font-black text-lg text-indigo-800 bg-indigo-50" />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2 mt-6">
+            <button type="submit" className="btn-primary flex-1" disabled={submitting}>
+              {submitting ? "Saving..." : "Save Old Stock"}
+            </button>
+            <button type="button" onClick={() => setOldStockModalOpen(false)} className="btn-secondary" disabled={submitting}>Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
       <section className="card">
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[200px]">
@@ -216,6 +274,7 @@ export default function SubItems() {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-center gap-1">
                           <button type="button" onClick={() => navigate(`/items/${row._id}/sub-khata`)} className="btn-ghost-primary px-3 py-1.5 text-xs flex items-center gap-1.5"><FaBook /> Ledger</button>
+                          <button type="button" onClick={() => handleOpenOldStock(row)} className="btn-ghost-primary px-3 py-1.5 text-xs flex items-center gap-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50" title="Set Old Stock (Opening Balance)"><FaDatabase /> Old Stock</button>
                           <button type="button" onClick={() => handleEdit(row)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><FaEdit className="w-4 h-4" /></button>
                           {isAdmin && (
                             <button type="button" onClick={() => handleDelete(row._id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><FaTrash className="w-4 h-4" /></button>

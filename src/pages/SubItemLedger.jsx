@@ -93,7 +93,12 @@ export default function SubItemLedger() {
         <div className="card p-12 flex justify-center"><div className="loading-spinner" /></div>
       ) : (
         <>
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="card p-6 bg-white border-b-4 border-b-emerald-500 shadow-sm">
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Old Stock (Opening)</p>
+              <p className="text-3xl font-black text-emerald-700 mt-2">{(data.openingMun || 0).toFixed(3)}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1">{(data.openingBags || 0)} Bags | {(data.openingWeight || 0)} Kg</p>
+            </div>
             <div className="card p-6 bg-white border-b-4 border-b-amber-500 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Sales Revenue</p>
               <p className="text-3xl font-black text-slate-900 mt-2">Rs. {formatMoney(data.totalRevenue)}</p>
@@ -128,7 +133,29 @@ export default function SubItemLedger() {
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
-                      {data.sales.length === 0 ? (
+                      {(data.openingBags > 0 || data.openingWeight > 0) && (
+                         <tr className="bg-emerald-50/50 border-b-2 border-emerald-100">
+                            <td className="py-4 px-5 font-bold text-slate-500 text-xs border-r border-emerald-100 italic">
+                               —
+                            </td>
+                            <td className="py-4 px-5 border-r border-emerald-100">
+                               <div className="flex flex-col">
+                                  <span className="font-black text-emerald-800 text-sm tracking-tight uppercase">Old Stock</span>
+                                  <span className="text-[10px] text-emerald-600 font-medium">Opening Balance (Before System Start)</span>
+                               </div>
+                            </td>
+                            <td className="py-4 px-5 text-center font-black text-emerald-700 bg-emerald-100/30 border-r border-emerald-100">
+                               {data.openingBags || "—"}
+                            </td>
+                            <td className="py-4 px-5 text-center font-black text-emerald-700 bg-emerald-100/50 border-r border-emerald-100">
+                               {(data.openingMun || 0).toFixed(3)}
+                            </td>
+                            <td className="py-4 px-5 text-right font-black text-emerald-700 bg-emerald-50/10 text-lg">
+                               —
+                            </td>
+                         </tr>
+                      )}
+                      {data.sales.length === 0 && !(data.openingBags > 0 || data.openingWeight > 0) ? (
                          <tr>
                             <td colSpan="5" className="py-20 text-center text-slate-400 font-medium">
                                Koi sale record nahi mila is sub-item ke liye.
