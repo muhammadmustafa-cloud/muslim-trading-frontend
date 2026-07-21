@@ -149,9 +149,9 @@ export default function SubItemSummaryReport() {
              <div className="overflow-x-auto">
                 <table className="w-full">
                    <thead>
-                      <tr className="bg-slate-200 text-slate-700 font-black text-[9px] uppercase tracking-widest border-b border-slate-300">
+                       <tr className="bg-slate-200 text-slate-700 font-black text-[9px] uppercase tracking-widest border-b border-slate-300">
                          <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300">Warehouse / Batch / Quality</th>
-                         <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-amber-100/50 text-amber-900">Stock IN (Aaya)</th>
+                         <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-amber-100/50 text-amber-900">Stock IN (Aaya + Old Stock)</th>
                          <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-indigo-100/50 text-indigo-900">Stock OUT (Gya)</th>
                          <th colSpan="3" className="py-2 px-3 text-center border-r border-slate-300 bg-emerald-100/50 text-emerald-900">Balance (Baqi)</th>
                          <th rowSpan="2" className="py-4 px-3 text-right font-bold text-slate-900">Revenue (Rs.)</th>
@@ -185,7 +185,7 @@ export default function SubItemSummaryReport() {
                                   <div className="text-[10px] text-slate-400 font-medium">{row.quality || "—"}</div>
                                </td>
                                
-                               {/* Stock IN */}
+                               {/* Stock IN (Including Old Stock) */}
                                <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/10 font-bold">{row.inBags || 0}</td>
                                <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/10">{row.inWeight.toLocaleString()}</td>
                                <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/30 font-black text-amber-800">{row.inMun.toFixed(3)}</td>
