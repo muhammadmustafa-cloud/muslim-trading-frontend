@@ -831,7 +831,7 @@ export function downloadSubItemsSummaryPdf(mainItemName, data, filters = {}) {
  * Warehouse Item Ledger PDF: Detailed IN/OUT rows for warehouse.
  */
 export function downloadWarehouseLedgerPdf(data, filters = {}) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   let y = 15;
 
   doc.setFontSize(16);
@@ -855,14 +855,14 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
 
   doc.setFontSize(9);
   doc.text(
-    `Total IN: ${totals.totalInBags || 0} Bags | ${(totals.totalInWeight / 40 || 0).toFixed(3)} MUN   -   Total OUT: ${totals.totalOutBags || 0} Bags | ${(totals.totalOutWeight / 40 || 0).toFixed(3)} MUN`,
+    `Total IN: ${totals.totalInBags || 0} Bags | ${(totals.totalInWeight / 40 || 0).toFixed(3)} MUN | Master: ${(totals.totalInMasterWeight || 0).toLocaleString()} kg | FSD: ${(totals.totalInFsdWeight || 0).toLocaleString()} kg   -   Total OUT: ${totals.totalOutBags || 0} Bags | ${(totals.totalOutWeight / 40 || 0).toFixed(3)} MUN | Master: ${(totals.totalOutMasterWeight || 0).toLocaleString()} kg | FSD: ${(totals.totalOutFsdWeight || 0).toLocaleString()} kg`,
     MARGIN,
     y
   );
   y += 6;
   doc.setFont(undefined, "bold");
   doc.text(
-    `Current Balance: ${totals.balanceBags || 0} Bags | ${(totals.balanceWeight / 40 || 0).toFixed(3)} MUN`,
+    `Current Balance: ${totals.balanceBags || 0} Bags | ${(totals.balanceWeight / 40 || 0).toFixed(3)} MUN | Master: ${(totals.balanceMasterWeight || 0).toLocaleString()} kg | FSD: ${(totals.balanceFsdWeight || 0).toLocaleString()} kg`,
     MARGIN,
     y
   );
@@ -872,12 +872,21 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
     formatDate(row.date),
     `${row.partyName}${row.truckNumber ? ` (Truck: ${row.truckNumber})` : ""}\n[${row.source}]${row.note ? ` - ${row.note}` : ""}`,
     row.itemName || "—",
+    // Credit
     row.type === 'IN' && row.bagsIn > 0 ? row.bagsIn : "—",
     row.type === 'IN' && row.weightIn > 0 ? (row.weightIn / 40).toFixed(3) : "—",
+    row.type === 'IN' && row.masterWeightIn > 0 ? `${row.masterWeightIn.toLocaleString()} kg` : "—",
+    row.type === 'IN' && row.fsdWeightIn > 0 ? `${row.fsdWeightIn.toLocaleString()} kg` : "—",
+    // Debit
     row.type === 'OUT' && row.bagsOut > 0 ? row.bagsOut : "—",
     row.type === 'OUT' && row.weightOut > 0 ? (row.weightOut / 40).toFixed(3) : "—",
+    row.type === 'OUT' && row.masterWeightOut > 0 ? `${row.masterWeightOut.toLocaleString()} kg` : "—",
+    row.type === 'OUT' && row.fsdWeightOut > 0 ? `${row.fsdWeightOut.toLocaleString()} kg` : "—",
+    // Balance
     row.balanceBags !== undefined ? row.balanceBags : "—",
     row.balanceWeight !== undefined ? (row.balanceWeight / 40).toFixed(3) : "—",
+    row.balanceMasterWeight !== undefined ? `${row.balanceMasterWeight.toLocaleString()} kg` : "—",
+    row.balanceFsdWeight !== undefined ? `${row.balanceFsdWeight.toLocaleString()} kg` : "—",
   ]);
 
   autoTable(doc, {
@@ -887,45 +896,68 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
         { content: "Date", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
         { content: "Particulars", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
         { content: "Item", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
-        { content: "Credit (IN)", colSpan: 2, styles: { halign: "center", fillColor: [4, 120, 87] } },
-        { content: "Debit (OUT)", colSpan: 2, styles: { halign: "center", fillColor: [67, 56, 202] } },
-        { content: "Balance", colSpan: 2, styles: { halign: "center", fillColor: [180, 83, 9] } },
+        { content: "Credit (Stock In)", colSpan: 4, styles: { halign: "center", fillColor: [4, 120, 87] } },
+        { content: "Debit (Stock Out)", colSpan: 4, styles: { halign: "center", fillColor: [67, 56, 202] } },
+        { content: "Balance", colSpan: 4, styles: { halign: "center", fillColor: [180, 83, 9] } },
       ],
       [
         { content: "Bags", styles: { halign: "center", fillColor: [16, 185, 129] } },
         { content: "MUN", styles: { halign: "center", fillColor: [16, 185, 129] } },
+        { content: "JCD", styles: { halign: "center", fillColor: [5, 150, 105] } },
+        { content: "FSD", styles: { halign: "center", fillColor: [4, 120, 87] } },
+
         { content: "Bags", styles: { halign: "center", fillColor: [99, 102, 241] } },
         { content: "MUN", styles: { halign: "center", fillColor: [99, 102, 241] } },
+        { content: "JCD", styles: { halign: "center", fillColor: [79, 70, 229] } },
+        { content: "FSD", styles: { halign: "center", fillColor: [67, 56, 202] } },
+
         { content: "Bags", styles: { halign: "center", fillColor: [217, 119, 6] } },
         { content: "MUN", styles: { halign: "center", fillColor: [217, 119, 6] } },
+        { content: "JCD", styles: { halign: "center", fillColor: [180, 83, 9] } },
+        { content: "FSD", styles: { halign: "center", fillColor: [146, 64, 14] } },
       ],
     ],
     body,
     foot: [[
       { content: "TOTALS", colSpan: 3, styles: { halign: "right", fontStyle: "bold" } },
+      // Credit
       { content: String(totals.totalInBags || 0), styles: { halign: "center" } },
       { content: (totals.totalInWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: `${(totals.totalInMasterWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
+      { content: `${(totals.totalInFsdWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
+      // Debit
       { content: String(totals.totalOutBags || 0), styles: { halign: "center" } },
       { content: (totals.totalOutWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: `${(totals.totalOutMasterWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
+      { content: `${(totals.totalOutFsdWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
+      // Balance
       { content: String(totals.balanceBags || 0), styles: { halign: "center" } },
       { content: (totals.balanceWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
+      { content: `${(totals.balanceMasterWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
+      { content: `${(totals.balanceFsdWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
     ]],
     theme: "grid",
     margin: { left: MARGIN, right: MARGIN },
-    styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.1, textColor: [30, 41, 59] },
-    headStyles: { textColor: 255, fontStyle: "bold", fontSize: 7.5 },
-    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    styles: { fontSize: 6.5, cellPadding: 1.5, lineWidth: 0.1, textColor: [30, 41, 59] },
+    headStyles: { textColor: 255, fontStyle: "bold", fontSize: 7 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 7 },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
-      0: { cellWidth: 20 },
+      0: { cellWidth: 18 },
       1: { cellWidth: "auto" },
-      2: { cellWidth: 25 },
-      3: { halign: "center", cellWidth: 12 },
-      4: { halign: "center", cellWidth: 18, fontStyle: "bold" },
-      5: { halign: "center", cellWidth: 12 },
-      6: { halign: "center", cellWidth: 18, fontStyle: "bold" },
-      7: { halign: "center", cellWidth: 12 },
-      8: { halign: "center", cellWidth: 18, fontStyle: "bold" },
+      2: { cellWidth: 22 },
+      3: { halign: "center", cellWidth: 10 },
+      4: { halign: "center", cellWidth: 15, fontStyle: "bold" },
+      5: { halign: "center", cellWidth: 18 },
+      6: { halign: "center", cellWidth: 18 },
+      7: { halign: "center", cellWidth: 10 },
+      8: { halign: "center", cellWidth: 15, fontStyle: "bold" },
+      9: { halign: "center", cellWidth: 18 },
+      10: { halign: "center", cellWidth: 18 },
+      11: { halign: "center", cellWidth: 10 },
+      12: { halign: "center", cellWidth: 15, fontStyle: "bold" },
+      13: { halign: "center", cellWidth: 18 },
+      14: { halign: "center", cellWidth: 18 },
     },
   });
 

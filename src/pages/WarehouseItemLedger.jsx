@@ -153,16 +153,28 @@ export default function WarehouseItemLedger() {
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Total In (Purchases &amp; Returns)</p>
               <p className="text-3xl font-black text-emerald-700 mt-2 text-center">{(totals.totalInWeight / 40 || 0).toFixed(3)} <span className="text-sm font-bold text-slate-400">MUN</span></p>
               <p className="text-[10px] text-emerald-600 font-bold mt-1 text-center">{totals.totalInBags || 0} Bags | {(totals.totalInWeight || 0).toLocaleString()} Kg</p>
+              <div className="mt-2 pt-2 border-t border-slate-100 flex justify-around text-[11px] font-bold text-slate-600">
+                <span>JCD: <strong className="text-emerald-800">{(totals.totalInMasterWeight || 0).toLocaleString()} kg</strong></span>
+                <span>FSD: <strong className="text-emerald-800">{(totals.totalInFsdWeight || 0).toLocaleString()} kg</strong></span>
+              </div>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-indigo-500 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Total Out (Sales)</p>
               <p className="text-3xl font-black text-indigo-700 mt-2 text-center">{(totals.totalOutWeight / 40 || 0).toFixed(3)} <span className="text-sm font-bold text-slate-400">MUN</span></p>
               <p className="text-[10px] text-indigo-600 font-bold mt-1 text-center">{totals.totalOutBags || 0} Bags | {(totals.totalOutWeight || 0).toLocaleString()} Kg</p>
+              <div className="mt-2 pt-2 border-t border-slate-100 flex justify-around text-[11px] font-bold text-slate-600">
+                <span>JCD: <strong className="text-indigo-800">{(totals.totalOutMasterWeight || 0).toLocaleString()} kg</strong></span>
+                <span>FSD: <strong className="text-indigo-800">{(totals.totalOutFsdWeight || 0).toLocaleString()} kg</strong></span>
+              </div>
             </div>
             <div className="card p-6 bg-white border-b-4 border-b-amber-500 shadow-sm">
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest text-center">Current Balance</p>
               <p className="text-3xl font-black text-amber-700 mt-2 text-center">{(totals.balanceWeight / 40 || 0).toFixed(3)} <span className="text-sm font-bold text-slate-400">MUN</span></p>
               <p className="text-[10px] text-amber-600 font-bold mt-1 text-center tracking-tighter italic">{totals.balanceBags || 0} Bags | {(totals.balanceWeight || 0).toLocaleString()} Kg</p>
+              <div className="mt-2 pt-2 border-t border-slate-100 flex justify-around text-[11px] font-bold text-slate-600">
+                <span>JCD: <strong className="text-amber-800">{(totals.balanceMasterWeight || 0).toLocaleString()} kg</strong></span>
+                <span>FSD: <strong className="text-amber-800">{(totals.balanceFsdWeight || 0).toLocaleString()} kg</strong></span>
+              </div>
             </div>
           </section>
 
@@ -178,23 +190,34 @@ export default function WarehouseItemLedger() {
                     <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300 w-24">Date</th>
                     <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300 w-48">Particulars (Party / Note)</th>
                     <th rowSpan="2" className="py-4 px-3 text-left border-r border-slate-300 w-32">Item</th>
-                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-emerald-100/50 text-emerald-900">Credit (Stock In)</th>
-                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-indigo-100/50 text-indigo-900">Debit (Stock Out)</th>
-                    <th colSpan="2" className="py-2 px-3 text-center border-r border-slate-300 bg-amber-100/50 text-amber-900">Balance</th>
+                    <th colSpan="4" className="py-2 px-3 text-center border-r border-slate-300 bg-emerald-100/50 text-emerald-900">Credit (Stock In)</th>
+                    <th colSpan="4" className="py-2 px-3 text-center border-r border-slate-300 bg-indigo-100/50 text-indigo-900">Debit (Stock Out)</th>
+                    <th colSpan="4" className="py-2 px-3 text-center border-r border-slate-300 bg-amber-100/50 text-amber-900">Balance</th>
                   </tr>
                   <tr className="bg-slate-100 text-slate-600 font-black text-[8px] uppercase tracking-widest border-b border-slate-200">
+                    {/* Credit sub-columns */}
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50">Bags</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-50">MUN</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-100/60 font-bold text-emerald-900">JCD (Kg)</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-emerald-100/80 font-bold text-emerald-900">FSD (Kg)</th>
+
+                    {/* Debit sub-columns */}
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">Bags</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-50">MUN</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-100/60 font-bold text-indigo-900">JCD (Kg)</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-indigo-100/80 font-bold text-indigo-900">FSD (Kg)</th>
+
+                    {/* Balance sub-columns */}
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">Bags</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-50">MUN</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-100/60 font-bold text-amber-900">JCD (Kg)</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200 bg-amber-100/80 font-bold text-amber-900">FSD (Kg)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {data.ledger.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="py-20 text-center text-slate-400 font-medium">
+                      <td colSpan="15" className="py-20 text-center text-slate-400 font-medium">
                         Koi In/Out record nahi mila.
                       </td>
                     </tr>
@@ -220,20 +243,32 @@ export default function WarehouseItemLedger() {
                           </div>
                         </td>
 
-                        {/* Stock IN */}
+                        {/* Credit (Stock IN) */}
                         <td className="py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/10 font-bold text-emerald-800">
                           {row.type === 'IN' && row.bagsIn > 0 ? row.bagsIn : '—'}
                         </td>
                         <td className="py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/30 font-black text-emerald-900">
                           {row.type === 'IN' && row.weightIn > 0 ? (row.weightIn / 40).toFixed(3) : '—'}
                         </td>
+                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/20 font-bold text-emerald-800">
+                          {row.type === 'IN' && row.masterWeightIn > 0 ? `${row.masterWeightIn.toLocaleString()} kg` : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-emerald-50/40 font-bold text-emerald-900">
+                          {row.type === 'IN' && row.fsdWeightIn > 0 ? `${row.fsdWeightIn.toLocaleString()} kg` : '—'}
+                        </td>
 
-                        {/* Stock OUT */}
+                        {/* Debit (Stock OUT) */}
                         <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/10 font-bold text-indigo-800">
                           {row.type === 'OUT' && row.bagsOut > 0 ? row.bagsOut : '—'}
                         </td>
                         <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/30 font-black text-indigo-900">
                           {row.type === 'OUT' && row.weightOut > 0 ? (row.weightOut / 40).toFixed(3) : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/20 font-bold text-indigo-800">
+                          {row.type === 'OUT' && row.masterWeightOut > 0 ? `${row.masterWeightOut.toLocaleString()} kg` : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-indigo-50/40 font-bold text-indigo-900">
+                          {row.type === 'OUT' && row.fsdWeightOut > 0 ? `${row.fsdWeightOut.toLocaleString()} kg` : '—'}
                         </td>
                         
                         {/* Balance */}
@@ -243,6 +278,12 @@ export default function WarehouseItemLedger() {
                         <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/30 font-black text-amber-900">
                           {row.balanceWeight !== undefined ? (row.balanceWeight / 40).toFixed(3) : '—'}
                         </td>
+                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/20 font-bold text-amber-800">
+                          {row.balanceMasterWeight !== undefined ? `${row.balanceMasterWeight.toLocaleString()} kg` : '—'}
+                        </td>
+                        <td className="py-3 px-2 text-center border-r border-slate-100 bg-amber-50/40 font-bold text-amber-900">
+                          {row.balanceFsdWeight !== undefined ? `${row.balanceFsdWeight.toLocaleString()} kg` : '—'}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -250,12 +291,23 @@ export default function WarehouseItemLedger() {
                 <tfoot className="bg-slate-900 text-white font-black text-[10px] uppercase">
                   <tr>
                     <td colSpan="3" className="py-4 px-3 text-right border-r border-slate-800 italic">Total Summary:</td>
+                    {/* Credit Totals */}
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-400">{totals.totalInBags || 0}</td>
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-300 text-xs">{(totals.totalInWeight / 40 || 0).toFixed(3)}</td>
+                    <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-400">{(totals.totalInMasterWeight || 0).toLocaleString()} kg</td>
+                    <td className="py-4 px-2 text-center border-r border-slate-800 text-emerald-400">{(totals.totalInFsdWeight || 0).toLocaleString()} kg</td>
+
+                    {/* Debit Totals */}
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-400">{totals.totalOutBags || 0}</td>
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-300 text-xs">{(totals.totalOutWeight / 40 || 0).toFixed(3)}</td>
+                    <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-400">{(totals.totalOutMasterWeight || 0).toLocaleString()} kg</td>
+                    <td className="py-4 px-2 text-center border-r border-slate-800 text-indigo-400">{(totals.totalOutFsdWeight || 0).toLocaleString()} kg</td>
+
+                    {/* Balance Totals */}
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-400">{totals.balanceBags || 0}</td>
                     <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-300 text-xs">{(totals.balanceWeight / 40 || 0).toFixed(3)}</td>
+                    <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-400">{(totals.balanceMasterWeight || 0).toLocaleString()} kg</td>
+                    <td className="py-4 px-2 text-center border-r border-slate-800 text-amber-400">{(totals.balanceFsdWeight || 0).toLocaleString()} kg</td>
                   </tr>
                 </tfoot>
               </table>

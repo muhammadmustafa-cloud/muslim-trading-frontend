@@ -35,6 +35,7 @@ export default function Sales() {
     totalGrossWeight: "",
     totalSHCut: "",
     netWeight: "",
+    fsdWeight: "",
     items: [{
       itemId: "",
       subItemId: "",
@@ -139,6 +140,7 @@ export default function Sales() {
       totalGrossWeight: "",
       totalSHCut: "",
       netWeight: "",
+      fsdWeight: "",
       items: [{
         itemId: "",
         subItemId: "",
@@ -214,6 +216,9 @@ export default function Sales() {
       const totalMun = totalNet / 40;
       
       next.netWeight = String(totalNet);
+      if (!updates.fsdWeight && next.fsdWeight === undefined) {
+        next.fsdWeight = "";
+      }
 
       const nextItems = next.items.map((item, idx) => {
         const lineGross = lineGrosses[idx];
@@ -290,6 +295,7 @@ export default function Sales() {
       totalGrossWeight: String(row.totalGrossWeight || ""),
       totalSHCut: String(row.totalSHCut || ""),
       netWeight: String(row.netWeight || ""),
+      fsdWeight: String(row.fsdWeight || ""),
       items: (row.items && row.items.length > 0) ? row.items.map(item => ({
         itemId: item.itemId?._id || item.itemId || "",
         subItemId: item.subItemId?._id || item.subItemId || "",
@@ -365,6 +371,7 @@ export default function Sales() {
         customerId: form.customerId,
         totalGrossWeight: Number(form.totalGrossWeight) || 0,
         totalSHCut: Number(form.totalSHCut) || 0,
+        fsdWeight: Number(form.fsdWeight) || 0,
         items: form.items.map(item => ({
           itemId: item.itemId,
           subItemId: item.subItemId || undefined,
@@ -504,7 +511,7 @@ export default function Sales() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6 p-5 bg-gradient-to-br from-amber-50 to-orange-50/80 rounded-2xl border border-amber-200 shadow-sm backdrop-blur-sm">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-6 p-5 bg-gradient-to-br from-amber-50 to-orange-50/80 rounded-2xl border border-amber-200 shadow-sm backdrop-blur-sm">
               <div>
                 <label className="input-label font-bold text-amber-800 tracking-tight">Master Gross (Kg)</label>
                 <input type="number" value={form.totalGrossWeight} onChange={(e) => updateFormWithAutoCalc({ totalGrossWeight: e.target.value })} className="input-field border-amber-300 shadow-sm font-bold" placeholder="0" />
@@ -516,6 +523,10 @@ export default function Sales() {
               <div>
                 <label className="input-label font-black text-amber-900 tracking-tight">Master Net (Kg)</label>
                 <div className="bg-amber-100 border border-amber-300 rounded-lg h-[42px] flex items-center px-3 font-black text-amber-900 text-lg shadow-inner">{form.netWeight} Kg</div>
+              </div>
+              <div>
+                <label className="input-label font-bold text-amber-900 tracking-tight">FSD Weight (Kg)</label>
+                <input type="number" value={form.fsdWeight} onChange={(e) => updateFormWithAutoCalc({ fsdWeight: e.target.value })} className="input-field border-amber-300 shadow-sm font-bold" placeholder="Optional" />
               </div>
               <div>
                  {(() => {

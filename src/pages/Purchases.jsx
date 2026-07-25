@@ -32,6 +32,7 @@ export default function Purchases() {
     totalGrossWeight: "",
     totalSHCut: "",
     netWeight: "",
+    fsdWeight: "",
     items: [{
       itemId: "",
       subItemId: "",
@@ -119,6 +120,7 @@ export default function Purchases() {
       totalGrossWeight: "",
       totalSHCut: "",
       netWeight: "",
+      fsdWeight: "",
       items: [{
         itemId: "",
         subItemId: "",
@@ -157,6 +159,7 @@ export default function Purchases() {
       totalGrossWeight: String(row.totalGrossWeight || ""),
       totalSHCut: String(row.totalSHCut || ""),
       netWeight: String(row.netWeight || ""),
+      fsdWeight: String(row.fsdWeight || ""),
       items: row.items?.map(it => ({
         itemId: it.itemId?._id || it.itemId || "",
         subItemId: it.subItemId?._id || it.subItemId || "",
@@ -507,7 +510,7 @@ export default function Purchases() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
               <div>
                 <label className="input-label font-bold text-indigo-800">Total Gross Weight (Kg)</label>
                 <input type="number" value={form.totalGrossWeight} onChange={(e) => updateFormWithAutoCalc({ totalGrossWeight: e.target.value })} className="input-field border-indigo-300 shadow-sm" placeholder="0" />
@@ -522,6 +525,10 @@ export default function Purchases() {
                 <div className="bg-indigo-100 border border-indigo-300 rounded-lg py-2.5 px-3 font-black text-indigo-900 text-lg shadow-inner">
                   {form.netWeight} Kg
                 </div>
+              </div>
+              <div>
+                <label className="input-label font-bold text-indigo-800">FSD Weight (Kg)</label>
+                <input type="number" value={form.fsdWeight} onChange={(e) => updateFormWithAutoCalc({ fsdWeight: e.target.value })} className="input-field border-indigo-300 shadow-sm" placeholder="Optional" />
               </div>
               <div>
                 <label className="input-label">GP# / Remark / Goods</label>
