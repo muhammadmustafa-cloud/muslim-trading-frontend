@@ -1536,12 +1536,14 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
 }
 
 
+
 /**
  * Consolidated Ledger Book PDF (The "Daily Book")
- * Prints ALL active ledgers in one grouped document with Professional History UI Match.
+ * Prints ALL active ledgers — each entity type uses its own column layout
+ * matching the individual ledger pages (Customer, Supplier, Account, Item, etc.)
  */
 export function downloadConsolidatedLedgersPdf(data, filters = {}) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) {
     subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
@@ -1551,19 +1553,52 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
   let startY = addReportHeader(doc, "DAILY LEDGER BOOK (DAILY DIARY)", subtitleLines);
 
   const categories = [
-    { key: 'accounts', label: 'BANK & CASH ACCOUNTS' },
-    { key: 'items', label: 'STOCK ITEM TRADING' },
-    { key: 'customers', label: 'CUSTOMER LEDGERS' },
-    { key: 'suppliers', label: 'SUPPLIER LEDGERS' },
-    { key: 'mazdoors', label: 'MAZDOOR WAGES' },
-    { key: 'rawMaterials', label: 'RAW MATERIAL UNITS' },
-    { key: 'expenses', label: 'GENERAL EXPENSES' },
-    { key: 'taxes', label: 'TAX PAYMENTS' },
-    { key: 'machinery', label: 'MACHINERY & ASSETS' },
-    { key: 'millExpenses', label: 'MILL OVERHEAD' }
+    { key: 'accounts',     label: 'BANK & CASH ACCOUNTS'  },
+    { key: 'items',        label: 'STOCK ITEM TRADING'     },
+    { key: 'customers',    label: 'CUSTOMER LEDGERS'       },
+    { key: 'suppliers',    label: 'SUPPLIER LEDGERS'       },
+    { key: 'mazdoors',     label: 'MAZDOOR WAGES'          },
+    { key: 'rawMaterials', label: 'RAW MATERIAL UNITS'     },
+    { key: 'expenses',     label: 'GENERAL EXPENSES'       },
+    { key: 'taxes',        label: 'TAX PAYMENTS'           },
+    { key: 'machinery',    label: 'MACHINERY & ASSETS'     },
+    { key: 'millExpenses', label: 'MILL OVERHEAD'          }
   ];
 
   let firstEntity = true;
+
+  const drawEntityHeader = (entity, catLabel, openBal) => {
+    doc.setFontSize(13);
+    doc.setFont(undefined, "bold");
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${catLabel}:  ${entity.name.toUpperCase()}`, MARGIN, startY);
+    doc.setTextColor(0, 0, 0);
+    startY += 6;
+    doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
+    const opSign = openBal >= 0 ? "Dr" : "Cr";
+    doc.text(
+      `Opening Balance: Rs. ${formatMoney(Math.abs(openBal))} ${opSign}   |   Entries: ${entity.ledger.length}`,
+      MARGIN, startY
+    );
+    startY += 3;
+  };
+
+  const baseTheme = {
+    ...tableTheme,
+    theme: "grid",
+    styles: { ...tableTheme.styles, fontSize: 7.5, lineWidth: 0.1, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+    footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8 },
+    didDrawPage: (d) => { startY = d.cursor.y; },
+    margin: { left: MARGIN, right: MARGIN, top: 25 }
+  };
+
+  const GREEN  = [21, 128, 61];
+  const RED    = [157, 23, 77];
+  const INDIGO = [67, 56, 202];
+  const TEAL   = [13, 148, 136];
+  const AMBER  = [146, 64, 14];
 
   categories.forEach(cat => {
     const list = data[cat.key] || [];
@@ -1576,227 +1611,276 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
       }
       firstEntity = false;
 
-      // Professional Section Header
-      doc.setFontSize(14);
-      doc.setFont(undefined, "bold");
-      doc.setTextColor(30, 41, 59); // Dark blue-slate
-      doc.text(`${cat.label}: ${entity.name.toUpperCase()}`, MARGIN, startY);
-      doc.setTextColor(0, 0, 0);
-      startY += 7;
-
-      doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
-      doc.text(`Opening Balance: Rs. ${formatMoney(Math.abs(entity.openingBalance))} ${entity.openingBalance >= 0 ? 'Dr' : 'Cr'}`, MARGIN, startY);
-      startY += 2;
+      const openBal = Number(entity.openingBalance) || 0;
+      drawEntityHeader(entity, cat.label, openBal);
 
       let tableConfig = {};
-      let runningBalance = 0;
-      let totalDr = 0;
-      let totalCr = 0;
+      let runningBalance = openBal;
+      let totalDr = 0, totalCr = 0;
 
-      // CUSTOMIZE BY CATEGORY (Match historyPdf.js UI)
       if (cat.key === 'customers' || cat.key === 'suppliers') {
-        const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (d - c);
+        const isCustomer = cat.key === 'customers';
+        const crLabel = isCustomer ? "Credit / Jama" : "Credit / Purchase";
+        const drLabel = isCustomer ? "Debit / Naam"  : "Debit / Paid";
+
+        const openRow = [
+          { content: "—", styles: { textColor: [100,100,100] } },
+          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
+          { content: "—", styles: { halign: "center" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Dr" : "Cr"}`,
+            styles: { fontStyle: "bold", textColor: openBal >= 0 ? RED : GREEN, halign: "right" } }
+        ];
+
+        const body = [openRow, ...entity.ledger.map(row => {
+          const d  = Number(row.debit)  || 0;
+          const cr = Number(row.credit) || 0;
+          totalDr += d; totalCr += cr;
+          runningBalance += (d - cr);
           return [
             formatDate(row.date),
             row.description || "—",
-            row.bags > 0 ? row.bags : "—",
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")
+            { content: row.bags > 0 ? String(row.bags) : "—", styles: { halign: "center" } },
+            cr > 0 ? { content: `Rs. ${formatMoney(cr)}`, styles: { textColor: GREEN, fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            d > 0  ? { content: `Rs. ${formatMoney(d)}`,  styles: { textColor: RED,   fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            { content: `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Dr" : "Cr"}`,
+              styles: { fontStyle: "bold", halign: "right", textColor: runningBalance >= 0 ? RED : GREEN } }
           ];
-        });
+        })];
 
         tableConfig = {
-          head: [["Date", "Description", "Bags", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
+          head: [["Date", "Description / Particulars", "Bags", crLabel, drLabel, "Running Balance"]],
           body,
-          foot: [["", "GRAND TOTALS", "", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")]],
+          foot: [["", "Grand Totals", "", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
+            `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Dr" : "Cr"}`]],
           columnStyles: {
-            0: { cellWidth: 22 },
-            1: { cellWidth: "auto" },
-            2: { halign: "center", cellWidth: 15 },
-            3: { halign: "right", cellWidth: 28, fontStyle: "bold" },
-            4: { halign: "right", cellWidth: 28, fontStyle: "bold" },
-            5: { halign: "right", cellWidth: 28, fontStyle: "bold" },
+            0: { cellWidth: 24 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 14, halign: "center" },
+            3: { cellWidth: 34, halign: "right" }, 4: { cellWidth: 34, halign: "right" },
+            5: { cellWidth: 38, halign: "right", fontStyle: "bold" }
           }
         };
-      } else if (cat.key === 'mazdoors') {
-        const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (c - d);
-          return [
-            formatDate(row.date),
-            row.description || (c > 0 ? "Work Earned" : "Payment Made"),
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")
-          ];
-        });
-        tableConfig = {
-          head: [["Date", "Work Detail / Payment", "Credit (Earned)", "Debit (Paid)", "Balance"]],
-          body,
-          foot: [["", "TOTAL MOVEMENT", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")]],
-          columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: "auto" },
-            2: { halign: "right", cellWidth: 30 },
-            3: { halign: "right", cellWidth: 30 },
-            4: { halign: "right", cellWidth: 30 },
-          }
-        };
+
       } else if (cat.key === 'items') {
-        let totalBagsIn = 0;
-        let totalBagsOut = 0;
-        // Start with opening balance
-        let itemBalance = entity.openingBalance || 0;
-        // Filter out opening balance row - only show actual transactions
-        const body = entity.ledger
-          .filter(row => !(row.isOpeningBalance || row.status === 'opening'))
-          .map(row => {
-            const isSale = row.status === 'sold';
-            const isPurchase = row.status === 'purchased';
-            const amt = row.debit || row.credit || 0;
-            const bags = row.bags || 0;
-            const weight = row.weight || 0;
-            const mun = weight > 0 ? (weight / 40).toFixed(3) : "—";
+        let totalBagsIn = 0, totalBagsOut = 0, totalAmtIn = 0, totalAmtOut = 0;
 
-            if (isSale) totalBagsOut += bags;
-            if (isPurchase) totalBagsIn += bags;
-            if (isSale) totalDr += amt;
-            if (isPurchase) totalCr += amt;
-            
-            // Update running balance
-            // Sale (Debit) = Asset/Receivable increases
-            // Purchase (Credit) = Asset/Receivable decreases
-            itemBalance += row.debit || 0;
-            itemBalance -= row.credit || 0;
-
-            return [
-              formatDate(row.date),
-              row.description,
-              bags || "—",
-              mun,
-              isSale ? formatMoney(amt) : "—",
-              isPurchase ? formatMoney(amt) : "—",
-              formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Dr" : " Cr")
-            ];
-          });
-        tableConfig = {
-          head: [["Date", "Audit Detail", "Bags", "Mun", "Sale (Cr)", "Purchase (Dr)", "Balance"]],
-          body,
-          foot: [
-            [{ content: "SOLD (OUT)", colSpan: 2, styles: { halign: "right", fillColor: [127, 29, 29] } }, { content: String(totalBagsOut), styles: { halign: "center", fillColor: [127, 29, 29] } }, "", { content: formatMoney(totalDr), styles: { halign: "right", fillColor: [127, 29, 29] } }, "", ""],
-            [{ content: "PURCHASED (IN)", colSpan: 2, styles: { halign: "right", fillColor: [6, 78, 59] } }, { content: String(totalBagsIn), styles: { halign: "center", fillColor: [6, 78, 59] } }, "", "", { content: formatMoney(totalCr), styles: { halign: "right", fillColor: [6, 78, 59] } }, ""],
-            [{ content: "REMAINING BALANCE (NET)", colSpan: 2, styles: { halign: "right", fillColor: [30, 41, 59], fontStyle: "bold" } }, { content: String(totalBagsIn - totalBagsOut), styles: { halign: "center", fillColor: [30, 41, 59], fontStyle: "bold" } }, "", "", "", { content: formatMoney(Math.abs(itemBalance)) + (itemBalance >= 0 ? " Cr" : " Dr"), styles: { halign: "right", fillColor: [30, 41, 59], fontStyle: "bold" } }]
-          ],
-          columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: "auto" },
-            2: { cellWidth: 12, halign: "center" },
-            3: { cellWidth: 12, halign: "center" },
-            4: { cellWidth: 24, halign: "right" },
-            5: { cellWidth: 24, halign: "right" },
-            6: { cellWidth: 24, halign: "right", fontStyle: "bold" },
-          }
-        };
-      } else if (cat.key === 'accounts') {
         const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (d - c); // Asset account: Debit increases, Credit decreases
-          return [
-            formatDate(row.date),
-            row.description || (d > 0 ? "Deposit / Inflow" : "Withdraw / Outflow"),
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")
-          ];
-        });
-        tableConfig = {
-          head: [["Date", "Description", "Credit (Outflow/Payment)", "Debit (Inflow/Receipt)", "Balance"]],
-          body,
-          foot: [["", "NET TOTALS", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Dr" : " Cr")]],
-          columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: "auto" },
-            2: { halign: "right", cellWidth: 32 },
-            3: { halign: "right", cellWidth: 32 },
-            4: { halign: "right", cellWidth: 30, fontStyle: "bold" },
-          }
-        };
-      } else {
-        // Default 5-column ledger (Accounts, Raws, Expenses, Taxes)
-        const body = entity.ledger.map(row => {
-          const d = Number(row.debit) || 0;
-          const c = Number(row.credit) || 0;
-          totalDr += d;
-          totalCr += c;
-          runningBalance += (c - d);
+          const isSale     = row.status === "sold";
+          const isPurchase = row.status === "purchased";
+          const bags   = row.bags   || 0;
+          const weight = row.weight || 0;
+          const rate   = row.rate   || 0;
+          if (isSale)     { totalBagsOut += bags; totalAmtOut += Number(row.debit)  || 0; }
+          if (isPurchase) { totalBagsIn  += bags; totalAmtIn  += Number(row.credit) || 0; }
           return [
             formatDate(row.date),
             row.description || "—",
-            c > 0 ? formatMoney(c) : "—",
-            d > 0 ? formatMoney(d) : "—",
-            formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")
+            { content: isSale ? "SALE" : "PURCHASE", styles: { textColor: isSale ? RED : GREEN, fontStyle: "bold", halign: "center" } },
+            { content: bags > 0 ? String(bags) : "—", styles: { halign: "center" } },
+            weight > 0 ? formatMoney(weight) : "—",
+            rate > 0   ? `Rs. ${formatMoney(rate)}` : "—",
+            isSale     ? { content: `Rs. ${formatMoney(row.debit)}`,  styles: { textColor: RED,   fontStyle: "bold", halign: "right" } }
+                       : { content: "—", styles: { halign: "right" } },
+            isPurchase ? { content: `Rs. ${formatMoney(row.credit)}`, styles: { textColor: GREEN, fontStyle: "bold", halign: "right" } }
+                       : { content: "—", styles: { halign: "right" } }
           ];
         });
+
         tableConfig = {
-          head: [["Date", "Description", "Credit (Aamad)", "Debit (Kharch)", "Balance"]],
+          head: [["Date", "Party / Description", "Type", "Bags", "Weight (Kg)", "Rate", "Sale (Dr)", "Purchase (Cr)"]],
           body,
-          foot: [["", "NET TOTALS", formatMoney(totalCr), formatMoney(totalDr), formatMoney(Math.abs(runningBalance)) + (runningBalance >= 0 ? " Cr" : " Dr")]],
+          foot: [[
+            { content: "Period Totals", colSpan: 3, styles: { halign: "right" } },
+            { content: `${totalBagsOut} / ${totalBagsIn}`, styles: { halign: "center" } },
+            "", "",
+            `Rs. ${formatMoney(totalAmtOut)}`,
+            `Rs. ${formatMoney(totalAmtIn)}`
+          ]],
           columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: "auto" },
-            2: { halign: "right", cellWidth: 28 },
-            3: { halign: "right", cellWidth: 28 },
-            4: { halign: "right", cellWidth: 30 },
+            0: { cellWidth: 23 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 18, halign: "center" }, 3: { cellWidth: 14, halign: "center" },
+            4: { cellWidth: 22, halign: "right" }, 5: { cellWidth: 24, halign: "right" },
+            6: { cellWidth: 30, halign: "right" }, 7: { cellWidth: 30, halign: "right" }
+          }
+        };
+
+      } else if (cat.key === 'accounts') {
+        const openRow = [
+          { content: "—", styles: { textColor: [100,100,100] } },
+          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
+          { content: "—", styles: { halign: "center" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Dr" : "Cr"}`,
+            styles: { fontStyle: "bold", textColor: INDIGO, halign: "right" } }
+        ];
+
+        const body = [openRow, ...entity.ledger.map(row => {
+          const d  = Number(row.debit)  || 0;
+          const cr = Number(row.credit) || 0;
+          totalDr += d; totalCr += cr;
+          runningBalance += (d - cr);
+          return [
+            formatDate(row.date),
+            row.description || "—",
+            { content: (row.category || "—").toUpperCase(), styles: { halign: "center", fontSize: 6.5 } },
+            cr > 0 ? { content: `Rs. ${formatMoney(cr)}`, styles: { textColor: RED,   fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            d > 0  ? { content: `Rs. ${formatMoney(d)}`,  styles: { textColor: GREEN, fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            { content: `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Dr" : "Cr"}`,
+              styles: { fontStyle: "bold", halign: "right", textColor: runningBalance >= 0 ? INDIGO : RED } }
+          ];
+        })];
+
+        tableConfig = {
+          head: [["Date", "Description / Party", "Category", "Outflow / Credit", "Inflow / Debit", "Running Balance"]],
+          body,
+          foot: [["", "Grand Totals", "", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
+            `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Dr" : "Cr"}`]],
+          columnStyles: {
+            0: { cellWidth: 24 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 28, halign: "center" },
+            3: { cellWidth: 34, halign: "right" }, 4: { cellWidth: 34, halign: "right" },
+            5: { cellWidth: 38, halign: "right", fontStyle: "bold" }
+          }
+        };
+
+      } else if (cat.key === 'mazdoors') {
+        runningBalance = openBal;
+        const openRow = [
+          { content: "—", styles: { textColor: [100,100,100] } },
+          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
+          { content: "—", styles: { halign: "center" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Cr" : "Dr"}`,
+            styles: { fontStyle: "bold", textColor: GREEN, halign: "right" } }
+        ];
+
+        const body = [openRow, ...entity.ledger.map(row => {
+          const d  = Number(row.debit)  || 0;
+          const cr = Number(row.credit) || 0;
+          totalDr += d; totalCr += cr;
+          runningBalance += (cr - d);
+          return [
+            formatDate(row.date),
+            row.description || (cr > 0 ? "Work Earned" : "Payment Made"),
+            { content: (row.category || "wage").toUpperCase(), styles: { halign: "center", fontSize: 6.5 } },
+            cr > 0 ? { content: `Rs. ${formatMoney(cr)}`, styles: { textColor: GREEN, fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            d > 0  ? { content: `Rs. ${formatMoney(d)}`,  styles: { textColor: RED,   fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            { content: `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Cr" : "Dr"}`,
+              styles: { fontStyle: "bold", halign: "right", textColor: runningBalance >= 0 ? GREEN : RED } }
+          ];
+        })];
+
+        tableConfig = {
+          head: [["Date", "Description / Work Detail", "Category", "Earned / Credit", "Paid / Debit", "Running Balance"]],
+          body,
+          foot: [["", "Total Movement", "", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
+            `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Cr" : "Dr"}`]],
+          columnStyles: {
+            0: { cellWidth: 24 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 28, halign: "center" },
+            3: { cellWidth: 34, halign: "right" }, 4: { cellWidth: 34, halign: "right" },
+            5: { cellWidth: 38, halign: "right", fontStyle: "bold" }
+          }
+        };
+
+      } else if (cat.key === 'rawMaterials') {
+        runningBalance = openBal;
+        const openRow = [
+          { content: "—", styles: { textColor: [100,100,100] } },
+          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
+          { content: "—", styles: { halign: "right" } },
+          { content: "—", styles: { halign: "right" } },
+          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Cr" : "Dr"}`,
+            styles: { fontStyle: "bold", textColor: TEAL, halign: "right" } }
+        ];
+
+        const body = [openRow, ...entity.ledger.map(row => {
+          const d  = Number(row.debit)  || 0;
+          const cr = Number(row.credit) || 0;
+          totalDr += d; totalCr += cr;
+          runningBalance += (cr - d);
+          return [
+            formatDate(row.date),
+            row.description || (cr > 0 ? "Stock In" : "Stock Out"),
+            cr > 0 ? { content: `Rs. ${formatMoney(cr)}`, styles: { textColor: GREEN, fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            d > 0  ? { content: `Rs. ${formatMoney(d)}`,  styles: { textColor: RED,   fontStyle: "bold", halign: "right" } }
+                   : { content: "—", styles: { halign: "right" } },
+            { content: `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Cr" : "Dr"}`,
+              styles: { fontStyle: "bold", halign: "right", textColor: runningBalance >= 0 ? TEAL : RED } }
+          ];
+        })];
+
+        tableConfig = {
+          head: [["Date", "Description", "Stock In / Credit", "Stock Out / Debit", "Running Balance"]],
+          body,
+          foot: [["", "Net Totals", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
+            `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Cr" : "Dr"}`]],
+          columnStyles: {
+            0: { cellWidth: 28 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 42, halign: "right" }, 3: { cellWidth: 42, halign: "right" },
+            4: { cellWidth: 44, halign: "right", fontStyle: "bold" }
+          }
+        };
+
+      } else {
+        // Expenses, Taxes, Machinery, Mill Overhead
+        const label = cat.key === "expenses"    ? "Expense"
+                    : cat.key === "taxes"        ? "Tax"
+                    : cat.key === "machinery"    ? "Asset Purchase"
+                    :                             "Mill Expense";
+        let cumulative = openBal;
+
+        const body = entity.ledger.map(row => {
+          const d = Number(row.debit) || 0;
+          totalDr += d;
+          cumulative += d;
+          return [
+            formatDate(row.date),
+            row.description || label,
+            row.accountName || "Cash",
+            { content: `Rs. ${formatMoney(d)}`, styles: { textColor: RED, fontStyle: "bold", halign: "right" } },
+            { content: `Rs. ${formatMoney(cumulative)}`, styles: { halign: "right" } }
+          ];
+        });
+
+        tableConfig = {
+          head: [["Date", "Description / Note", "Account / Source", "Amount", "Cumulative Total"]],
+          body,
+          foot: [["", `Total ${label}`, "", `Rs. ${formatMoney(totalDr)}`, `Rs. ${formatMoney(cumulative)}`]],
+          columnStyles: {
+            0: { cellWidth: 28 }, 1: { cellWidth: "auto" }, 2: { cellWidth: 50 },
+            3: { cellWidth: 38, halign: "right" }, 4: { cellWidth: 38, halign: "right" }
           }
         };
       }
 
-      autoTable(doc, {
-        startY,
-        ...tableConfig,
-        ...tableTheme,
-        theme: "grid",
-        styles: { ...tableTheme.styles, fontSize: 8, lineWidth: 0.1, textColor: [0,0,0] },
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
-        footStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold", fontSize: 8.5 },
-        didDrawPage: (d) => { startY = d.cursor.y; }
-      });
-
+      autoTable(doc, { startY, ...tableConfig, ...baseTheme });
       startY = doc.lastAutoTable.finalY + 10;
     });
   });
 
   // APPEND INVOICES AT THE END
   if (data.salesInvoices && data.salesInvoices.length > 0) {
-    data.salesInvoices.forEach(sale => {
-      doc.addPage();
-      drawSaleInvoice(doc, sale);
-    });
+    data.salesInvoices.forEach(sale => { doc.addPage(); drawSaleInvoice(doc, sale); });
   }
-
   if (data.purchaseInvoices && data.purchaseInvoices.length > 0) {
-    data.purchaseInvoices.forEach(purchase => {
-      doc.addPage();
-      drawPurchaseInvoice(doc, purchase);
-    });
+    data.purchaseInvoices.forEach(purchase => { doc.addPage(); drawPurchaseInvoice(doc, purchase); });
   }
 
   addPageNumbers(doc);
   doc.save(`Daily_Ledger_Book_${filters.dateFrom || 'report'}.pdf`);
 }
+
 
 /**
  * Gate Pass PDF (Roman Urdu)
