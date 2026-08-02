@@ -341,7 +341,7 @@ function FootTd({ children, right, center, className = "" }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   TABLE IMPLEMENTATIONS
+   TABLE IMPLEMENTATIONS (No Opening Balance row in body)
 ───────────────────────────────────────────────────────────────────────*/
 
 // CUSTOMER / SUPPLIER — Date | Description | Bags | Credit | Debit | Running Balance
@@ -363,13 +363,6 @@ function CustomerSupplierTable({ entity, type, openBal }) {
         <Th right>Balance</Th>
       </tr></thead>
       <tbody className="divide-y divide-slate-50">
-        <tr className="bg-amber-50">
-          <Td muted>—</Td><Td bold className="text-amber-700">Opening Balance</Td>
-          <Td center muted>—</Td><Td right muted>—</Td><Td right muted>—</Td>
-          <Td right bold className={openBal >= 0 ? "text-rose-600" : "text-emerald-700"}>
-            Rs. {fmt(Math.abs(openBal))} {openBal >= 0 ? "Dr" : "Cr"}
-          </Td>
-        </tr>
         {entity.ledger.map((row, i) => {
           const d = Number(row.debit) || 0;
           const cr = Number(row.credit) || 0;
@@ -478,13 +471,6 @@ function AccountTable({ entity, openBal }) {
         <Th right>Balance</Th>
       </tr></thead>
       <tbody className="divide-y divide-slate-50">
-        <tr className="bg-amber-50">
-          <Td muted>—</Td><Td bold className="text-amber-700">Opening Balance</Td>
-          <Td muted>—</Td><Td right muted>—</Td><Td right muted>—</Td>
-          <Td right bold className={openBal >= 0 ? "text-indigo-700" : "text-rose-600"}>
-            Rs. {fmt(Math.abs(openBal))} {openBal >= 0 ? "Dr" : "Cr"}
-          </Td>
-        </tr>
         {entity.ledger.map((row, i) => {
           const d = Number(row.debit) || 0;
           const cr = Number(row.credit) || 0;
@@ -536,13 +522,6 @@ function MazdoorTable({ entity, openBal }) {
         <Th right>Balance</Th>
       </tr></thead>
       <tbody className="divide-y divide-slate-50">
-        <tr className="bg-amber-50">
-          <Td muted>—</Td><Td bold className="text-amber-700">Opening Balance</Td>
-          <Td muted>—</Td><Td right muted>—</Td><Td right muted>—</Td>
-          <Td right bold className={openBal >= 0 ? "text-emerald-700" : "text-rose-600"}>
-            Rs. {fmt(Math.abs(openBal))} {openBal >= 0 ? "Cr" : "Dr"}
-          </Td>
-        </tr>
         {entity.ledger.map((row, i) => {
           const d = Number(row.debit) || 0;
           const cr = Number(row.credit) || 0;
@@ -593,11 +572,6 @@ function RawMaterialTable({ entity, openBal }) {
         <Th right>Balance</Th>
       </tr></thead>
       <tbody className="divide-y divide-slate-50">
-        <tr className="bg-amber-50">
-          <Td muted>—</Td><Td bold className="text-amber-700">Opening Balance</Td>
-          <Td right muted>—</Td><Td right muted>—</Td>
-          <Td right bold className="text-teal-700">Rs. {fmt(Math.abs(openBal))} {openBal >= 0 ? "Cr" : "Dr"}</Td>
-        </tr>
         {entity.ledger.map((row, i) => {
           const d = Number(row.debit) || 0;
           const cr = Number(row.credit) || 0;
@@ -645,13 +619,6 @@ function SimpleDebitTable({ entity, openBal, type }) {
         <Th right>Cumulative</Th>
       </tr></thead>
       <tbody className="divide-y divide-slate-50">
-        {openBal !== 0 && (
-          <tr className="bg-amber-50">
-            <Td muted>—</Td><Td bold className="text-amber-700">Opening Balance</Td>
-            <Td muted>—</Td><Td right muted>—</Td>
-            <Td right bold className="text-rose-700">Rs. {fmt(Math.abs(openBal))}</Td>
-          </tr>
-        )}
         {entity.ledger.map((row, i) => {
           running += Number(row.debit) || 0;
           return (

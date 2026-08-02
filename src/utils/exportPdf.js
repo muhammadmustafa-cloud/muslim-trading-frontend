@@ -1623,17 +1623,7 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
         const crLabel = isCustomer ? "Credit / Jama" : "Credit / Purchase";
         const drLabel = isCustomer ? "Debit / Naam"  : "Debit / Paid";
 
-        const openRow = [
-          { content: "—", styles: { textColor: [100,100,100] } },
-          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
-          { content: "—", styles: { halign: "center" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Dr" : "Cr"}`,
-            styles: { fontStyle: "bold", textColor: openBal >= 0 ? RED : GREEN, halign: "right" } }
-        ];
-
-        const body = [openRow, ...entity.ledger.map(row => {
+        const body = [ ...entity.ledger.map(row => {
           const d  = Number(row.debit)  || 0;
           const cr = Number(row.credit) || 0;
           totalDr += d; totalCr += cr;
@@ -1708,17 +1698,8 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
         };
 
       } else if (cat.key === 'accounts') {
-        const openRow = [
-          { content: "—", styles: { textColor: [100,100,100] } },
-          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
-          { content: "—", styles: { halign: "center" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Dr" : "Cr"}`,
-            styles: { fontStyle: "bold", textColor: INDIGO, halign: "right" } }
-        ];
 
-        const body = [openRow, ...entity.ledger.map(row => {
+        const body = [ ...entity.ledger.map(row => {
           const d  = Number(row.debit)  || 0;
           const cr = Number(row.credit) || 0;
           totalDr += d; totalCr += cr;
@@ -1751,17 +1732,8 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
 
       } else if (cat.key === 'mazdoors') {
         runningBalance = openBal;
-        const openRow = [
-          { content: "—", styles: { textColor: [100,100,100] } },
-          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
-          { content: "—", styles: { halign: "center" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Cr" : "Dr"}`,
-            styles: { fontStyle: "bold", textColor: GREEN, halign: "right" } }
-        ];
 
-        const body = [openRow, ...entity.ledger.map(row => {
+        const body = [ ...entity.ledger.map(row => {
           const d  = Number(row.debit)  || 0;
           const cr = Number(row.credit) || 0;
           totalDr += d; totalCr += cr;
@@ -1794,16 +1766,8 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
 
       } else if (cat.key === 'rawMaterials') {
         runningBalance = openBal;
-        const openRow = [
-          { content: "—", styles: { textColor: [100,100,100] } },
-          { content: "Opening Balance", styles: { fontStyle: "bold", textColor: AMBER } },
-          { content: "—", styles: { halign: "right" } },
-          { content: "—", styles: { halign: "right" } },
-          { content: `Rs. ${formatMoney(Math.abs(openBal))} ${openBal >= 0 ? "Cr" : "Dr"}`,
-            styles: { fontStyle: "bold", textColor: TEAL, halign: "right" } }
-        ];
 
-        const body = [openRow, ...entity.ledger.map(row => {
+        const body = [ ...entity.ledger.map(row => {
           const d  = Number(row.debit)  || 0;
           const cr = Number(row.credit) || 0;
           totalDr += d; totalCr += cr;
