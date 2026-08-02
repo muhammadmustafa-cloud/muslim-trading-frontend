@@ -880,7 +880,6 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
     // Debit
     row.type === 'OUT' && row.bagsOut > 0 ? row.bagsOut : "—",
     row.type === 'OUT' && row.weightOut > 0 ? (row.weightOut / 40).toFixed(3) : "—",
-    row.type === 'OUT' && row.masterWeightOut > 0 ? `${row.masterWeightOut.toLocaleString()} kg` : "—",
     row.type === 'OUT' && row.fsdWeightOut > 0 ? `${row.fsdWeightOut.toLocaleString()} kg` : "—",
     // Balance
     row.balanceBags !== undefined ? row.balanceBags : "—",
@@ -897,7 +896,7 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
         { content: "Particulars", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
         { content: "Item", rowSpan: 2, styles: { valign: "middle", halign: "left" } },
         { content: "Credit (Stock In)", colSpan: 4, styles: { halign: "center", fillColor: [4, 120, 87] } },
-        { content: "Debit (Stock Out)", colSpan: 4, styles: { halign: "center", fillColor: [67, 56, 202] } },
+        { content: "Debit (Stock Out)", colSpan: 3, styles: { halign: "center", fillColor: [67, 56, 202] } },
         { content: "Balance", colSpan: 4, styles: { halign: "center", fillColor: [180, 83, 9] } },
       ],
       [
@@ -908,7 +907,6 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
 
         { content: "Bags", styles: { halign: "center", fillColor: [99, 102, 241] } },
         { content: "MUN", styles: { halign: "center", fillColor: [99, 102, 241] } },
-        { content: "JCD", styles: { halign: "center", fillColor: [79, 70, 229] } },
         { content: "FSD", styles: { halign: "center", fillColor: [67, 56, 202] } },
 
         { content: "Bags", styles: { halign: "center", fillColor: [217, 119, 6] } },
@@ -928,7 +926,6 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
       // Debit
       { content: String(totals.totalOutBags || 0), styles: { halign: "center" } },
       { content: (totals.totalOutWeight / 40 || 0).toFixed(3), styles: { halign: "center", fontStyle: "bold" } },
-      { content: `${(totals.totalOutMasterWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
       { content: `${(totals.totalOutFsdWeight || 0).toLocaleString()} kg`, styles: { halign: "center" } },
       // Balance
       { content: String(totals.balanceBags || 0), styles: { halign: "center" } },
@@ -953,11 +950,10 @@ export function downloadWarehouseLedgerPdf(data, filters = {}) {
       7: { halign: "center", cellWidth: 10 },
       8: { halign: "center", cellWidth: 15, fontStyle: "bold" },
       9: { halign: "center", cellWidth: 18 },
-      10: { halign: "center", cellWidth: 18 },
-      11: { halign: "center", cellWidth: 10 },
-      12: { halign: "center", cellWidth: 15, fontStyle: "bold" },
+      10: { halign: "center", cellWidth: 10 },
+      11: { halign: "center", cellWidth: 15, fontStyle: "bold" },
+      12: { halign: "center", cellWidth: 18 },
       13: { halign: "center", cellWidth: 18 },
-      14: { halign: "center", cellWidth: 18 },
     },
   });
 
