@@ -44,6 +44,7 @@ export default function Purchases() {
       addKg: "",
       bardanaAmount: "",
       extrasAmount: "",
+      fsdWeight: "",
     }],
     truckNumber: "",
     gatePassNo: "",
@@ -132,6 +133,7 @@ export default function Purchases() {
         addKg: "",
         bardanaAmount: "",
         extrasAmount: "",
+        fsdWeight: "",
       }],
       truckNumber: "",
       gatePassNo: "",
@@ -171,6 +173,7 @@ export default function Purchases() {
         addKg: String(it.addKg || ""),
         bardanaAmount: String(it.bardanaAmount || ""),
         extrasAmount: String(it.extrasAmount || ""),
+        fsdWeight: String(it.fsdWeight || ""),
       })) || [{
         itemId: row.itemId?._id || row.itemId || "",
         subItemId: row.subItemId?._id || row.subItemId || "",
@@ -318,6 +321,7 @@ export default function Purchases() {
         addKg: "",
         bardanaAmount: "",
         extrasAmount: "",
+        fsdWeight: "",
       }]
     }));
   };
@@ -373,6 +377,7 @@ export default function Purchases() {
           addKg: Number(it.addKg) || 0,
           bardanaAmount: Number(it.bardanaAmount) || 0,
           extrasAmount: Number(it.extrasAmount) || 0,
+          fsdWeight: Number(it.fsdWeight) || 0,
         }))),
         truckNumber: (form.truckNumber || "").trim(),
         gatePassNo: (form.gatePassNo || "").trim(),
@@ -526,10 +531,7 @@ export default function Purchases() {
                   {form.netWeight} Kg
                 </div>
               </div>
-              <div>
-                <label className="input-label font-bold text-indigo-800">FSD Weight (Kg)</label>
-                <input type="number" value={form.fsdWeight} onChange={(e) => updateFormWithAutoCalc({ fsdWeight: e.target.value })} className="input-field border-indigo-300 shadow-sm" placeholder="Optional" />
-              </div>
+
               <div>
                 <label className="input-label">GP# / Remark / Goods</label>
                 <div className="flex gap-2">
@@ -555,6 +557,7 @@ export default function Purchases() {
                     <th className="px-4 py-3 text-left w-24 text-emerald-800">Add (Kg)</th>
                     <th className="px-4 py-3 text-left w-24 bg-amber-50 font-black text-amber-900 border-x border-amber-100">Net MUN</th>
                     <th className="px-4 py-3 text-left w-36">Rate (MUN) *</th>
+                    <th className="px-4 py-3 text-left w-24 text-amber-700 bg-amber-50">FSD Wt (Kg)</th>
                     <th className="px-4 py-3 text-right font-bold bg-slate-200/50">Line Total</th>
                     <th className="px-4 py-3 text-center w-12"></th>
                   </tr>
@@ -616,7 +619,7 @@ export default function Purchases() {
                         }} className="input-field py-1.5 px-2 bg-emerald-50 border-emerald-200 placeholder:text-emerald-300 text-center" placeholder="0" />
                       </td>
                       <td className="p-3 text-center bg-amber-50 font-black text-amber-900 border-x border-amber-100">
-                        {item.itemNetWeight !== undefined && item.itemNetWeight !== "" ? (Number(item.itemNetWeight) / 40).toFixed(4) : "â"}
+                        {item.itemNetWeight !== undefined && item.itemNetWeight !== "" ? (Number(item.itemNetWeight) / 40).toFixed(4) : "—"}
                       </td>
                       <td className="p-3">
                         <input type="number" value={item.rate} onChange={(e) => {
@@ -625,8 +628,15 @@ export default function Purchases() {
                           updateFormWithAutoCalc({ items: newItems });
                         }} className="input-field py-1.5 px-2 font-bold text-amber-700 bg-amber-50/50" placeholder="0" />
                       </td>
+                      <td className="p-3 bg-amber-50/30">
+                        <input type="number" value={item.fsdWeight} onChange={(e) => {
+                          const newItems = [...form.items];
+                          newItems[idx].fsdWeight = e.target.value;
+                          updateFormWithAutoCalc({ items: newItems });
+                        }} className="input-field py-1.5 px-2 text-center border-amber-300 bg-amber-50 font-bold" placeholder="0" />
+                      </td>
                       <td className="p-3 text-right font-black text-indigo-700 bg-slate-50/50 text-base">
-                        {item.totalAmount ? Number(item.totalAmount).toLocaleString("en-PK") : "â"}
+                        {item.totalAmount ? Number(item.totalAmount).toLocaleString("en-PK") : "—"}
                       </td>
                       <td className="p-3 text-center">
                         {form.items.length > 1 && (

@@ -47,6 +47,7 @@ export default function Sales() {
       quantity: "",
       deductionKg: "",
       addKg: "",
+      fsdWeight: "",
     }],
     truckNumber: "",
     gatePassNo: "",
@@ -152,6 +153,7 @@ export default function Sales() {
         quantity: "",
         deductionKg: "",
         addKg: "",
+        fsdWeight: "",
       }],
       truckNumber: "",
       gatePassNo: "",
@@ -216,9 +218,7 @@ export default function Sales() {
       const totalMun = totalNet / 40;
       
       next.netWeight = String(totalNet);
-      if (!updates.fsdWeight && next.fsdWeight === undefined) {
-        next.fsdWeight = "";
-      }
+
 
       const nextItems = next.items.map((item, idx) => {
         const lineGross = lineGrosses[idx];
@@ -307,6 +307,7 @@ export default function Sales() {
         quantity: String(item.quantity || ""),
         deductionKg: String(item.deductionKg || ""),
         addKg: String(item.addKg || ""),
+        fsdWeight: String(item.fsdWeight || ""),
       })) : [{
         itemId: "",
         subItemId: "",
@@ -371,7 +372,6 @@ export default function Sales() {
         customerId: form.customerId,
         totalGrossWeight: Number(form.totalGrossWeight) || 0,
         totalSHCut: Number(form.totalSHCut) || 0,
-        fsdWeight: Number(form.fsdWeight) || 0,
         items: form.items.map(item => ({
           itemId: item.itemId,
           subItemId: item.subItemId || undefined,
@@ -382,6 +382,7 @@ export default function Sales() {
           totalAmount: Number(item.totalAmount) || 0,
           deductionKg: Number(item.deductionKg) || 0,
           addKg: Number(item.addKg) || 0,
+          fsdWeight: Number(item.fsdWeight) || 0,
         })),
         truckNumber: (form.truckNumber || "").trim(),
         gatePassNo: (form.gatePassNo || "").trim(),
@@ -524,10 +525,7 @@ export default function Sales() {
                 <label className="input-label font-black text-amber-900 tracking-tight">Master Net (Kg)</label>
                 <div className="bg-amber-100 border border-amber-300 rounded-lg h-[42px] flex items-center px-3 font-black text-amber-900 text-lg shadow-inner">{form.netWeight} Kg</div>
               </div>
-              <div>
-                <label className="input-label font-bold text-amber-900 tracking-tight">FSD Weight (Kg)</label>
-                <input type="number" value={form.fsdWeight} onChange={(e) => updateFormWithAutoCalc({ fsdWeight: e.target.value })} className="input-field border-amber-300 shadow-sm font-bold" placeholder="Optional" />
-              </div>
+
               <div>
                  {(() => {
                    const sumItems = form.items.reduce((sum, it) => sum + (Number(it.grossWeight) || 0), 0);
@@ -567,6 +565,7 @@ export default function Sales() {
                     <th className="px-4 py-3 text-left w-24 bg-amber-50">Total KG</th>
                     <th className="px-4 py-3 text-left w-24 bg-amber-100/50">Net MUN</th>
                     <th className="px-4 py-3 text-left w-32">Rate (MUN) *</th>
+                    <th className="px-4 py-3 text-left w-24 text-amber-700 bg-amber-50">FSD Wt (Kg)</th>
                     <th className="px-4 py-3 text-right font-bold bg-slate-200/50">Line Total</th>
                     <th className="px-4 py-3 text-center w-12"></th>
                   </tr>
@@ -613,6 +612,7 @@ export default function Sales() {
                         <td className="p-3 bg-amber-50/50"><div className="font-bold text-amber-900 text-center">{item.grossWeight ? Number(item.grossWeight).toLocaleString() : "—"}</div></td>
                         <td className="p-3 bg-amber-100/30"><div className="font-black text-amber-900 text-center">{(Number(item.quantity) / 40).toFixed(4)}</div></td>
                         <td className="p-3"><input type="number" value={item.rate} onChange={(e) => { const newItems = [...form.items]; newItems[idx].rate = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 font-bold text-emerald-700 bg-emerald-50/20" placeholder="0" /></td>
+                        <td className="p-3 bg-amber-50/30"><input type="number" value={item.fsdWeight} onChange={(e) => { const newItems = [...form.items]; newItems[idx].fsdWeight = e.target.value; updateFormWithAutoCalc({ items: newItems }); }} className="input-field py-1.5 px-2 text-center border-amber-300 bg-amber-50 font-bold" placeholder="0" /></td>
                         <td className="p-3 text-right font-black text-slate-900 bg-slate-50/50 text-base">{formatMoney(item.totalAmount)}</td>
                         <td className="p-3 text-center">{form.items.length > 1 && <button type="button" onClick={() => removeItemRow(idx)} className="text-red-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded"><FaPlus className="w-4 h-4 rotate-45" /></button>}</td>
                       </tr>
