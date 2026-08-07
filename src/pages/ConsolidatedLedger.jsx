@@ -346,7 +346,7 @@ function FootTd({ children, right, center, className = "" }) {
 
 // CUSTOMER / SUPPLIER — Date | Description | Bags | Credit | Debit | Running Balance
 function CustomerSupplierTable({ entity, type, openBal }) {
-  let running = openBal;
+  let running = 0;
   const isCustomer = type === "customers";
   const crLabel = isCustomer ? "Credit / Jama" : "Credit / Purchase";
   const drLabel = isCustomer ? "Debit / Naam" : "Debit / Paid";
@@ -457,7 +457,7 @@ function ItemTable({ entity, openBal }) {
 
 // ACCOUNT — Date | Description | Category | Outflow (Credit) | Inflow (Debit) | Balance
 function AccountTable({ entity, openBal }) {
-  let running = openBal;
+  let running = 0;
   const totalDr = entity.ledger.reduce((s, r) => s + (Number(r.debit) || 0), 0);
   const totalCr = entity.ledger.reduce((s, r) => s + (Number(r.credit) || 0), 0);
   return (
@@ -508,7 +508,7 @@ function AccountTable({ entity, openBal }) {
 
 // MAZDOOR — Date | Description | Category | Earned (Cr) | Paid (Dr) | Balance
 function MazdoorTable({ entity, openBal }) {
-  let running = openBal;
+  let running = 0;
   const totalDr = entity.ledger.reduce((s, r) => s + (Number(r.debit) || 0), 0);
   const totalCr = entity.ledger.reduce((s, r) => s + (Number(r.credit) || 0), 0);
   return (
@@ -559,7 +559,7 @@ function MazdoorTable({ entity, openBal }) {
 
 // RAW MATERIAL — Date | Description | Stock In (Cr) | Stock Out (Dr) | Balance
 function RawMaterialTable({ entity, openBal }) {
-  let running = openBal;
+  let running = 0;
   const totalDr = entity.ledger.reduce((s, r) => s + (Number(r.debit) || 0), 0);
   const totalCr = entity.ledger.reduce((s, r) => s + (Number(r.credit) || 0), 0);
   return (
@@ -606,7 +606,7 @@ function RawMaterialTable({ entity, openBal }) {
 
 // SIMPLE DEBIT (Expenses / Taxes / Machinery / Mill Overhead) — Date | Description | Account | Amount | Cumulative
 function SimpleDebitTable({ entity, openBal, type }) {
-  let running = openBal;
+  let running = 0;
   const totalAmt = entity.ledger.reduce((s, r) => s + (Number(r.debit) || 0), 0);
   const label = type === "expenses" ? "Expense" : type === "taxes" ? "Tax" : type === "machinery" ? "Asset Purchase" : "Mill Expense";
   return (

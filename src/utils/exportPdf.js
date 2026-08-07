@@ -1615,7 +1615,7 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
       drawEntityHeader(entity, cat.label, openBal);
 
       let tableConfig = {};
-      let runningBalance = openBal;
+      let runningBalance = 0;
       let totalDr = 0, totalCr = 0;
 
       if (cat.key === 'customers' || cat.key === 'suppliers') {
@@ -1731,7 +1731,7 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
         };
 
       } else if (cat.key === 'mazdoors') {
-        runningBalance = openBal;
+        runningBalance = 0;
 
         const body = [ ...entity.ledger.map(row => {
           const d  = Number(row.debit)  || 0;
@@ -1765,7 +1765,7 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
         };
 
       } else if (cat.key === 'rawMaterials') {
-        runningBalance = openBal;
+        runningBalance = 0;
 
         const body = [ ...entity.ledger.map(row => {
           const d  = Number(row.debit)  || 0;
@@ -1802,7 +1802,7 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
                     : cat.key === "taxes"        ? "Tax"
                     : cat.key === "machinery"    ? "Asset Purchase"
                     :                             "Mill Expense";
-        let cumulative = openBal;
+        let cumulative = 0;
 
         const body = entity.ledger.map(row => {
           const d = Number(row.debit) || 0;
