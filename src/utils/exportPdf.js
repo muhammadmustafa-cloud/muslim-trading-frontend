@@ -55,7 +55,7 @@ const tableTheme = {
  * Sales report PDF — full list with filters.
  */
 export function downloadSalesPdf(sales, filters = {}) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
   if (filters.customerId) subtitleLines.push("Filter: Customer");
@@ -1543,7 +1543,7 @@ export function downloadAuditSummaryPdf(data, filters = {}) {
  * matching the individual ledger pages (Customer, Supplier, Account, Item, etc.)
  */
 export function downloadConsolidatedLedgersPdf(data, filters = {}) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) {
     subtitleLines.push(`Period: ${filters.dateFrom || "Start"} to ${filters.dateTo || "Today"}`);
