@@ -55,7 +55,7 @@ const tableTheme = {
  * Sales report PDF — full list with filters.
  */
 export function downloadSalesPdf(sales, filters = {}) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const subtitleLines = [];
   if (filters.dateFrom || filters.dateTo) subtitleLines.push(`Date: ${filters.dateFrom || "—"} to ${filters.dateTo || "—"}`);
   if (filters.customerId) subtitleLines.push("Filter: Customer");
@@ -1647,10 +1647,10 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
           foot: [["", "Grand Totals", "", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
             `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Dr" : "Cr"}`]],
           columnStyles: {
-            0: { cellWidth: 24 }, 1: { cellWidth: "auto" },
-            2: { cellWidth: 14, halign: "center" },
-            3: { cellWidth: 34, halign: "right" }, 4: { cellWidth: 34, halign: "right" },
-            5: { cellWidth: 38, halign: "right", fontStyle: "bold" }
+            0: { cellWidth: 20 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 12, halign: "center" },
+            3: { cellWidth: 26, halign: "right" }, 4: { cellWidth: 26, halign: "right" },
+            5: { cellWidth: 30, halign: "right", fontStyle: "bold" }
           }
         };
 
@@ -1690,10 +1690,10 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
             `Rs. ${formatMoney(totalAmtIn)}`
           ]],
           columnStyles: {
-            0: { cellWidth: 23 }, 1: { cellWidth: "auto" },
-            2: { cellWidth: 18, halign: "center" }, 3: { cellWidth: 14, halign: "center" },
-            4: { cellWidth: 22, halign: "right" }, 5: { cellWidth: 24, halign: "right" },
-            6: { cellWidth: 30, halign: "right" }, 7: { cellWidth: 30, halign: "right" }
+            0: { cellWidth: 20 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 15, halign: "center" }, 3: { cellWidth: 12, halign: "center" },
+            4: { cellWidth: 18, halign: "right" }, 5: { cellWidth: 20, halign: "right" },
+            6: { cellWidth: 24, halign: "right" }, 7: { cellWidth: 24, halign: "right" }
           }
         };
 
@@ -1723,10 +1723,10 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
           foot: [["", "Grand Totals", "", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
             `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Dr" : "Cr"}`]],
           columnStyles: {
-            0: { cellWidth: 24 }, 1: { cellWidth: "auto" },
-            2: { cellWidth: 28, halign: "center" },
-            3: { cellWidth: 34, halign: "right" }, 4: { cellWidth: 34, halign: "right" },
-            5: { cellWidth: 38, halign: "right", fontStyle: "bold" }
+            0: { cellWidth: 20 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 22, halign: "center" },
+            3: { cellWidth: 26, halign: "right" }, 4: { cellWidth: 26, halign: "right" },
+            5: { cellWidth: 30, halign: "right", fontStyle: "bold" }
           }
         };
 
@@ -1757,10 +1757,10 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
           foot: [["", "Total Movement", "", `Rs. ${formatMoney(totalCr)}`, `Rs. ${formatMoney(totalDr)}`,
             `Rs. ${formatMoney(Math.abs(runningBalance))} ${runningBalance >= 0 ? "Cr" : "Dr"}`]],
           columnStyles: {
-            0: { cellWidth: 24 }, 1: { cellWidth: "auto" },
-            2: { cellWidth: 28, halign: "center" },
-            3: { cellWidth: 34, halign: "right" }, 4: { cellWidth: 34, halign: "right" },
-            5: { cellWidth: 38, halign: "right", fontStyle: "bold" }
+            0: { cellWidth: 20 }, 1: { cellWidth: "auto" },
+            2: { cellWidth: 22, halign: "center" },
+            3: { cellWidth: 26, halign: "right" }, 4: { cellWidth: 26, halign: "right" },
+            5: { cellWidth: 30, halign: "right", fontStyle: "bold" }
           }
         };
 
@@ -1822,8 +1822,8 @@ export function downloadConsolidatedLedgersPdf(data, filters = {}) {
           body,
           foot: [["", `Total ${label}`, "", `Rs. ${formatMoney(totalDr)}`, `Rs. ${formatMoney(cumulative)}`]],
           columnStyles: {
-            0: { cellWidth: 28 }, 1: { cellWidth: "auto" }, 2: { cellWidth: 50 },
-            3: { cellWidth: 38, halign: "right" }, 4: { cellWidth: 38, halign: "right" }
+            0: { cellWidth: 22 }, 1: { cellWidth: "auto" }, 2: { cellWidth: 35 },
+            3: { cellWidth: 28, halign: "right" }, 4: { cellWidth: 28, halign: "right" }
           }
         };
       }
